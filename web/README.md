@@ -1,4 +1,4 @@
-# PRISM
+# PRISM-web
 
 - App name: PRISM
 - Full form: Parent's Real-time Insight into School Matters
