@@ -2,40 +2,34 @@
 
 namespace Database\Seeders;
 
-use Illuminate\Database\Console\Seeds\WithoutModelEvents;
+use App\Models\User;
 use Illuminate\Database\Seeder;
-use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 
 class UsersTableSeeder extends Seeder
 {
-    /**
-     * Run the database seeds.
-     */
     public function run(): void
     {
-        DB::table('users')->insert([
-            [
-                'name' => 'Super Admin',
-                'email' => 'superadmin@lask.com',
-                'password' => Hash::make('S.Admin.123'),
-                'created_at' => now(),
-                'updated_at' => now(),
-            ],
-            [
-                'name' => 'Admin',
-                'email' => 'admin@lask.com',
-                'password' => Hash::make('Admin.123'),
-                'created_at' => now(),
-                'updated_at' => now(),
-            ],
-            [
-                'name' => 'Developer',
-                'email' => 'developer@lask.com',
-                'password' => Hash::make('Developer.123'),
-                'created_at' => now(),
-                'updated_at' => now(),
-            ],
-        ]);
+        $users = [
+            ['name' => 'Super Admin', 'email' => 'superadmin@lask.com', 'password' => 'S.Admin.123'],
+            ['name' => 'Admin', 'email' => 'admin@lask.com', 'password' => 'Admin.123'],
+            ['name' => 'Developer', 'email' => 'developer@lask.com', 'password' => 'Developer.123'],
+            ['name' => 'Principal User', 'email' => 'principal@school.test', 'password' => 'Parent.123'],
+            ['name' => 'Class Incharge', 'email' => 'incharge@school.test', 'password' => 'Parent.123'],
+            ['name' => 'Teacher User', 'email' => 'teacher@school.test', 'password' => 'Parent.123'],
+            ['name' => 'Parent User', 'email' => 'parent@school.test', 'password' => 'Parent.123'],
+            ['name' => 'Accountant', 'email' => 'accountant@school.test', 'password' => 'Parent.123'],
+            ['name' => 'Computer Operator', 'email' => 'operator@school.test', 'password' => 'Parent.123'],
+        ];
+
+        foreach ($users as $u) {
+            User::updateOrCreate(
+                ['email' => $u['email']],
+                [
+                    'name' => $u['name'],
+                    'password' => Hash::make($u['password']),
+                ]
+            );
+        }
     }
 }

@@ -1,0 +1,17 @@
+{
+  "expo": {
+    "name": "PRISM",
+    "slug": "prism-school",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "userInterfaceStyle": "light",
+    "assetBundlePatterns": ["**/*"],
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "com.school.prism"
+    },
+    "android": {
+      "package": "com.school.prism"
+    }
+  }
+}

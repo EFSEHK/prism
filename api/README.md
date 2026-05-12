@@ -67,6 +67,23 @@ It provides a robust foundation with essential features pre-configured, so you c
 LASK is a backend-only starter kit. Any frontend framework (Vue, React, Angular, mobile apps) can consume APIs via REST calls.  
 Extend or replace default models, controllers, middleware, and routes as needed for your application.
 
+### PRISM school modules (MVP)
+
+After `php artisan migrate --seed`, JSON APIs are under **`/api/prism/*`** (Bearer Sanctum token).
+
+- **Aggregate parent dashboard:** `GET /api/prism/parent/dashboard?include=homework,timetable`
+- **Attendance:** `POST /api/prism/attendance/batches`, reports `.../reports/monthly`, `.../reports/weekly`
+- **Marks:** `GET|POST /api/prism/mark-sheets`, entries, `POST .../notify-parents` (creates approval-gated dispatch)
+- **Notification approvals:** `GET /api/prism/notification-dispatches/pending`, `POST .../approve`, `.../reject`
+- **Queues:** set `QUEUE_CONNECTION=database` and run **`php artisan queue:work`** so approved dispatches deliver in-app + FCM stub logs.
+
+**Seeded test users (password `Parent.123` where noted, else see `UsersTableSeeder`):**  
+`parent@school.test`, `teacher@school.test`, `incharge@school.test`, `principal@school.test`, `admin@lask.com`, etc.
+
+**CORS:** `config/cors.php` reads `CORS_ALLOWED_ORIGINS` or `LARAVEL_CORS_ALLOWED_ORIGINS` (e.g. `http://localhost:5173`).
+
+**cPanel / MySQL `max_user_connections`:** keep **one** `queue:work` process on small plans; avoid N+1 (use eager loads); use list pagination defaults on Prism routes.
+
 ---
 
 ## Why LASK?

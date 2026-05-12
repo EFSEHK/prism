@@ -59,10 +59,12 @@ class AuthController extends Controller
             
             event(new \Illuminate\Auth\Events\Login('web', $user, false));
 
+            $user->load(['roles:id,name', 'permissions:id,name']);
+
             return response()->json([
                 'access_token' => $token->plainTextToken,
                 'token_type' => 'Bearer',
-                'user' => $user
+                'user' => $user,
             ]);
         } catch (ValidationException $e) {
             Log::error('Validation error during login: ' . json_encode($e->errors()));

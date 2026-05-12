@@ -11,11 +11,16 @@ use Laravel\Sanctum\HasApiTokens;
 use Spatie\Activitylog\LogOptions;
 use Spatie\Activitylog\Traits\LogsActivity;
 use Spatie\Permission\Traits\HasRoles;
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class User extends Authenticatable
 {
     /** @use HasFactory<\Database\Factories\UserFactory> */
     use HasApiTokens, HasFactory, Notifiable, SoftDeletes, LogsActivity, HasRoles;
+
+    /** Spatie roles/permissions guard (Sanctum uses api auth but permissions are stored for `web`). */
+    protected string $guard_name = 'web';
     
     public function getActivitylogOptions(): LogOptions
     {
@@ -58,5 +63,26 @@ class User extends Authenticatable
             'email_verified_at' => 'datetime',
             'password' => 'hashed',
         ];
+    }
+
+    public function children(): BelongsToMany
+    {
+        return $this->belongsToMany(Student::class, 'parent_student', 'parent_user_id', 'student_id')
+            ->withTimestamps();
+    }
+
+    public function staffAssignments(): HasMany
+    {
+        return $this->hasMany(StaffClassAssignment::class);
+    }
+
+    public function deviceTokens(): HasMany
+    {
+        return $this->hasMany(DeviceToken::class);
+    }
+
+    public function inAppNotifications(): HasMany
+    {
+        return $this->hasMany(UserNotification::class);
     }
 }

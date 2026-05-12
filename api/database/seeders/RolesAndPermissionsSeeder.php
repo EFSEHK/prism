@@ -2,61 +2,123 @@
 
 namespace Database\Seeders;
 
-use Illuminate\Database\Seeder;
-use Spatie\Permission\Models\Role;
-use Spatie\Permission\Models\Permission;
 use App\Models\User;
+use Illuminate\Database\Seeder;
+use Spatie\Permission\Models\Permission;
+use Spatie\Permission\Models\Role;
 
 class RolesAndPermissionsSeeder extends Seeder
 {
     public function run(): void
     {
-        // Reset cached roles and permissions
         app()[\Spatie\Permission\PermissionRegistrar::class]->forgetCachedPermissions();
 
-        // Create permissions
         $permissions = [
             'view_dashboard',
             'manage_users',
             'manage_roles',
             'manage_permissions',
-            'view_reports',
-            'manage_settings',
+            'manage_academic',
+            'manage_attendance',
+            'view_attendance_reports',
+            'approve_notification_dispatches',
+            'manage_marks',
+            'view_marks',
+            'manage_timetable',
+            'manage_homework',
+            'manage_online_classes',
+            'manage_fee_vouchers',
+            'view_fee_accounting',
+            'manage_feed',
+            'manage_leave_requests',
+            'view_parent_dashboard',
         ];
 
-        foreach ($permissions as $permission) {
-            Permission::create(['name' => $permission]);
+        foreach ($permissions as $p) {
+            Permission::firstOrCreate(['name' => $p, 'guard_name' => 'web']);
         }
 
-        // Create roles and assign permissions
-        $superAdmin = Role::create(['name' => 'superadmin']);
-        $admin = Role::create(['name' => 'admin']);
-        $developer = Role::create(['name' => 'developer']);
+        $roleNames = [
+            'superadmin',
+            'admin',
+            'principal',
+            'vice_principal',
+            'section_head',
+            'class_incharge',
+            'teacher',
+            'parent',
+            'computer_operator',
+            'accountant',
+            'developer',
+        ];
 
-        // Super Admin gets all permissions
-        $superAdmin->givePermissionTo(Permission::all());
+        foreach ($roleNames as $r) {
+            Role::firstOrCreate(['name' => $r, 'guard_name' => 'web']);
+        }
 
-        // Admin permissions
-        $admin->givePermissionTo([
-            'view_dashboard',
-            'manage_users',
-            'view_reports',
-            'manage_settings',
+        Role::findByName('superadmin', 'web')->syncPermissions(Permission::all());
+        Role::findByName('developer', 'web')->syncPermissions(Permission::all());
+
+        Role::findByName('admin', 'web')->syncPermissions([
+            'view_dashboard', 'manage_users', 'manage_academic', 'manage_roles',
+            'manage_attendance', 'view_attendance_reports', 'approve_notification_dispatches',
+            'manage_marks', 'view_marks', 'manage_timetable', 'manage_homework',
+            'manage_online_classes', 'manage_fee_vouchers', 'manage_feed', 'manage_leave_requests',
         ]);
 
-        // Developer permissions
-        $developer->givePermissionTo(Permission::all());
+        Role::findByName('principal', 'web')->syncPermissions([
+            'view_dashboard', 'manage_academic', 'view_attendance_reports',
+            'approve_notification_dispatches', 'view_marks', 'manage_leave_requests', 'manage_feed',
+        ]);
 
-        // Create a super admin user
-        $superAdminUser = User::where('email', 'superadmin@lask.com')->first();
-        $superAdminUser->assignRole('superadmin');
+        Role::findByName('vice_principal', 'web')->syncPermissions([
+            'view_dashboard', 'view_attendance_reports', 'approve_notification_dispatches',
+            'view_marks', 'manage_leave_requests', 'manage_feed',
+        ]);
 
-        // Create an admin user
-        $adminUser = User::where('email', 'admin@lask.com')->first();
-        $adminUser->assignRole('admin');
+        Role::findByName('section_head', 'web')->syncPermissions([
+            'view_dashboard', 'view_attendance_reports', 'approve_notification_dispatches',
+            'view_marks', 'manage_marks', 'manage_leave_requests',
+        ]);
 
-        // Create a user
-        $developerUser = User::where('email', 'developer@lask.com')->first();
-        $developerUser->assignRole('developer');
+        Role::findByName('class_incharge', 'web')->syncPermissions([
+            'view_dashboard', 'view_attendance_reports', 'approve_notification_dispatches',
+        ]);
+
+        Role::findByName('teacher', 'web')->syncPermissions([
+            'view_dashboard', 'manage_attendance', 'view_attendance_reports',
+            'manage_marks', 'manage_homework', 'manage_online_classes', 'manage_leave_requests',
+        ]);
+
+        Role::findByName('parent', 'web')->syncPermissions([
+            'view_parent_dashboard',
+        ]);
+
+        Role::findByName('computer_operator', 'web')->syncPermissions([
+            'view_dashboard', 'manage_academic', 'manage_timetable', 'manage_fee_vouchers',
+        ]);
+
+        Role::findByName('accountant', 'web')->syncPermissions([
+            'view_dashboard', 'view_fee_accounting', 'manage_fee_vouchers',
+        ]);
+
+        $map = [
+            'superadmin@lask.com' => 'superadmin',
+            'admin@lask.com' => 'admin',
+            'developer@lask.com' => 'developer',
+            'principal@school.test' => 'principal',
+            'incharge@school.test' => 'class_incharge',
+            'teacher@school.test' => 'teacher',
+            'parent@school.test' => 'parent',
+            'accountant@school.test' => 'accountant',
+            'operator@school.test' => 'computer_operator',
+        ];
+
+        foreach ($map as $email => $role) {
+            $user = User::where('email', $email)->first();
+            if ($user) {
+                $user->syncRoles([$role]);
+            }
+        }
     }
-} 
+}
