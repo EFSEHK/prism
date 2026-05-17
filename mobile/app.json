@@ -5,13 +5,18 @@
     "version": "1.0.0",
     "orientation": "portrait",
     "userInterfaceStyle": "light",
-    "assetBundlePatterns": ["**/*"],
+    "assetBundlePatterns": [
+      "**/*"
+    ],
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "com.school.prism"
     },
     "android": {
       "package": "com.school.prism"
-    }
+    },
+    "plugins": [
+      "expo-asset"
+    ]
   }
 }

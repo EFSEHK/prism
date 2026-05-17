@@ -11,8 +11,14 @@ npx expo start
 
 ## API URL
 
-- **Android emulator:** default `http://10.0.2.2:8000/api` in `App.js` (host machine Laravel `php artisan serve`).
-- **Physical device:** set `EXPO_PUBLIC_API_URL=http://YOUR_LAN_IP:8000/api` or add `extra.apiUrl` in `app.json` under `expo.extra`.
+Laragon serves the API at **`http://prism.test/api`** (see repo root `.htaccess`).
+
+Copy `.env.example` to `.env`:
+
+- `EXPO_PUBLIC_API_URL=http://prism.test/api`
+- `EXPO_PUBLIC_API_LAN_IP=` your PC Wi‑Fi IP (`ipconfig`) — required on a **physical phone**
+
+The app calls your LAN IP with `Host: prism.test` so Laragon’s vhost matches. **Android emulator** can omit `LAN_IP` (uses `10.0.2.2` automatically).
 
 ## FCM
 
