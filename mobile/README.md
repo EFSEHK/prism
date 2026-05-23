@@ -1,6 +1,6 @@
 # PRISM Mobile (Expo + React Native)
 
-Parent/staff shell: login + parent aggregate dashboard.
+Parent app: login + tabs for Home, Homework, Marks, Attendance, Timetable, Feed, Fees, Online class, Leave, Notifications.
 
 ## Setup
 
@@ -8,6 +8,16 @@ Parent/staff shell: login + parent aggregate dashboard.
 npm install
 npx expo start
 ```
+
+## Test in browser (fastest on Laragon)
+
+```bash
+npm run web
+```
+
+Opens the app at `http://localhost:8081` (or the port Expo prints). Uses `http://prism.test/api` directly — no LAN IP needed. Good for login, dashboard, and UI work.
+
+For push notifications and device behavior, use **Expo Go** (`npx expo start` → scan QR).
 
 ## API URL
 

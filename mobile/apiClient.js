@@ -23,7 +23,8 @@ function resolveApi() {
 
   try {
     const { hostname } = new URL(configured)
-    if (hostname === 'prism.test') {
+    // Browser on the dev PC can use prism.test directly (same hosts file as Laragon).
+    if (hostname === 'prism.test' && Platform.OS !== 'web') {
       const targetIp =
         lanIp || (Platform.OS === 'android' ? '10.0.2.2' : '')
       if (targetIp) {
@@ -49,3 +50,12 @@ export const API_DISPLAY = api.displayUrl
 export const API_BRIDGE_HOST = api.bridgeHost
 export const apiClient = api.client
 export const USES_EMULATOR_API = api.displayUrl.includes('10.0.2.2')
+
+/** Set Bearer token immediately (use before async calls right after login). */
+export function setAuthToken(token) {
+  if (token) {
+    apiClient.defaults.headers.common.Authorization = `Bearer ${token}`
+  } else {
+    delete apiClient.defaults.headers.common.Authorization
+  }
+}

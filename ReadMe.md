@@ -119,10 +119,13 @@ Demo class/section/student data is created by `SchoolPrismDataSeeder`.
 3. **Marks → notify parents**  
    Teacher updates entries on a mark sheet, then `POST /api/prism/mark-sheets/{id}/notify-parents`. Principal (or policy-defined role) approves in the web UI.
 
-4. **Parent view**  
-   Web does not yet mirror full parent UI; use **mobile** or call `GET /api/prism/parent/dashboard?include=homework,timetable` with parent token.
+4. **Parent view (mobile)**  
+   `npm run web` or Expo Go as `parent@school.test` — tabs: Home, Homework, Marks, Attendance, Timetable, Feed, Fees, Online class, Leave, Alerts.
 
-5. **API-only testing**  
+5. **Staff view (web)**  
+   `npm run dev` in `web/` as `teacher@school.test` or `incharge@school.test` — modules: Attendance, Marks, Homework, Timetable, Fees, Feed, Leave, Approvals.
+
+6. **API-only testing**  
    Use Postman/Insomnia: `POST /api/login` → copy `access_token` → `Authorization: Bearer …` on `GET/POST` under `/api/prism/…`.
 
 ---

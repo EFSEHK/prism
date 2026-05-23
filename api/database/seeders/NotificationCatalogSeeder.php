@@ -52,6 +52,17 @@ class NotificationCatalogSeeder extends Seeder
             ['approver_role_name' => 'principal', 'requires_approval' => true, 'is_active' => true]
         );
 
+        $datesheetF = NotificationFeature::where('feature_key', NotificationFeatureKeys::TIMETABLE_DATESHEET)->first();
+        NotificationApprovalPolicy::updateOrCreate(
+            [
+                'notification_feature_id' => $datesheetF->id,
+                'sequence' => 1,
+                'school_class_id' => null,
+                'section_id' => null,
+            ],
+            ['approver_role_name' => 'principal', 'requires_approval' => true, 'is_active' => true]
+        );
+
         foreach ([
             NotificationFeatureKeys::HOMEWORK_NEW,
             NotificationFeatureKeys::FEE_VOUCHER_AVAILABLE,

@@ -5,6 +5,14 @@
       <nav>
         <RouterLink to="/">Dashboard</RouterLink>
         <RouterLink v-if="canApprove" to="/approvals">Approvals</RouterLink>
+        <RouterLink v-if="canStaff" to="/attendance">Attendance</RouterLink>
+        <RouterLink v-if="canStaff" to="/marks">Marks</RouterLink>
+        <RouterLink v-if="canStaff" to="/homework">Homework</RouterLink>
+        <RouterLink v-if="canTimetable" to="/timetable">Timetable</RouterLink>
+        <RouterLink v-if="canStaff" to="/online-classes">Online</RouterLink>
+        <RouterLink v-if="canFees" to="/fees">Fees</RouterLink>
+        <RouterLink v-if="canFeed" to="/feed">Feed</RouterLink>
+        <RouterLink v-if="canLeave" to="/leave">Leave</RouterLink>
         <button type="button" class="link" @click="logout">Logout</button>
       </nav>
     </header>
@@ -22,12 +30,33 @@ import { useAuthStore } from './stores/auth'
 const auth = useAuthStore()
 const router = useRouter()
 
-const canApprove = computed(() => {
-  const names = (auth.user?.roles || []).map((r) => r.name)
-  return names.some((n) =>
+const roles = computed(() => (auth.user?.roles || []).map((r) => r.name))
+
+const canApprove = computed(() =>
+  roles.value.some((n) =>
     ['superadmin', 'admin', 'principal', 'vice_principal', 'section_head', 'class_incharge'].includes(n)
   )
-})
+)
+
+const canStaff = computed(() =>
+  roles.value.some((n) => ['superadmin', 'admin', 'teacher', 'section_head'].includes(n))
+)
+
+const canTimetable = computed(() =>
+  roles.value.some((n) => ['superadmin', 'admin', 'computer_operator', 'teacher'].includes(n))
+)
+
+const canFees = computed(() =>
+  roles.value.some((n) => ['superadmin', 'admin', 'accountant', 'computer_operator'].includes(n))
+)
+
+const canFeed = computed(() =>
+  roles.value.some((n) => ['superadmin', 'admin', 'principal', 'vice_principal'].includes(n))
+)
+
+const canLeave = computed(() =>
+  roles.value.some((n) => ['superadmin', 'admin', 'teacher', 'principal', 'vice_principal', 'section_head'].includes(n))
+)
 
 async function logout() {
   await auth.logout()
@@ -51,16 +80,23 @@ async function logout() {
   padding: 0.75rem 1.25rem;
   background: #18181b;
   color: #fafafa;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+.top nav {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
 }
 .top a,
 .link {
   color: #a1a1aa;
-  margin-left: 1rem;
+  margin-left: 0.75rem;
   text-decoration: none;
   background: none;
   border: none;
   cursor: pointer;
-  font-size: 1rem;
+  font-size: 0.9rem;
 }
 .top a.router-link-active {
   color: #fff;
@@ -91,8 +127,18 @@ button.primary {
   padding: 0.5rem 1rem;
   border-radius: 6px;
   cursor: pointer;
+  margin-top: 0.5rem;
 }
-input {
+button.secondary {
+  background: #fff;
+  border: 1px solid #d4d4d8;
+  padding: 0.5rem 1rem;
+  border-radius: 6px;
+  cursor: pointer;
+}
+input,
+textarea,
+select {
   display: block;
   width: 100%;
   max-width: 320px;

@@ -16,7 +16,7 @@ class FeedPostController extends Controller
         $q = FeedPost::query()->with('author:id,name')->whereNotNull('published_at');
 
         if ($request->user()->hasRole('parent')) {
-            $studentIds = $request->user()->children()->pluck('id');
+            $studentIds = $request->user()->children()->pluck('students.id');
             $classIds = $request->user()->children()->pluck('school_class_id')->unique();
             $q->where(function ($qq) use ($studentIds, $classIds) {
                 $qq->where('scope', 'school')

@@ -15,7 +15,7 @@ class FeeVoucherController extends Controller
         $q = FeeVoucher::query()->with(['student:id,first_name,last_name,admission_no']);
 
         if ($request->user()->hasRole('parent')) {
-            $ids = $request->user()->children()->pluck('id');
+            $ids = $request->user()->children()->pluck('students.id');
             $q->whereIn('student_id', $ids);
         }
 

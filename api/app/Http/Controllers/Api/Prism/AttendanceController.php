@@ -12,6 +12,30 @@ use Illuminate\Support\Facades\DB;
 
 class AttendanceController extends Controller
 {
+    public function index(Request $request)
+    {
+        abort_unless(
+            $request->user()->can('manage_attendance') || $request->user()->can('view_attendance_reports'),
+            403
+        );
+
+        $q = AttendanceBatch::query()
+            ->with(['schoolClass:id,name', 'section:id,name'])
+            ->withCount('records');
+
+        if ($request->filled('school_class_id')) {
+            $q->where('school_class_id', $request->query('school_class_id'));
+        }
+        if ($request->filled('section_id')) {
+            $q->where('section_id', $request->query('section_id'));
+        }
+        if ($request->filled('date')) {
+            $q->whereDate('date', $request->query('date'));
+        }
+
+        return response()->json($q->orderByDesc('date')->paginate(min((int) $request->query('per_page', 20), 50)));
+    }
+
     public function store(Request $request, NotificationDispatchService $dispatchService)
     {
         abort_unless($request->user()->can('manage_attendance'), 403);

@@ -8,6 +8,7 @@ use App\Http\Middleware\LogAllRequests;
 use App\Http\Controllers\Api\RoleController;
 use App\Http\Controllers\Api\PermissionController;
 use App\Http\Controllers\Api\NavigationController;
+use App\Http\Controllers\Api\Prism\AcademicController;
 use App\Http\Controllers\Api\Prism\AssessmentController;
 use App\Http\Controllers\Api\Prism\AttendanceController;
 use App\Http\Controllers\Api\Prism\DeviceTokenController;
@@ -67,8 +68,12 @@ Route::middleware([LogAllRequests::class, 'auth:sanctum', CheckInactivity::class
     Route::prefix('prism')->group(function () {
         Route::get('parent/dashboard', [ParentDashboardController::class, 'show']);
 
+        Route::get('academic/classes', [AcademicController::class, 'classesIndex']);
+        Route::get('academic/subjects', [AcademicController::class, 'subjectsIndex']);
+
         Route::get('students', [StudentController::class, 'index']);
 
+        Route::get('attendance/batches', [AttendanceController::class, 'index']);
         Route::post('attendance/batches', [AttendanceController::class, 'store']);
         Route::get('attendance/batches/{attendanceBatch}', [AttendanceController::class, 'show']);
         Route::get('attendance/reports/monthly', [AttendanceController::class, 'reportMonthly']);

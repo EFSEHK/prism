@@ -4,6 +4,9 @@ namespace App\Http\Controllers\Api\Prism;
 
 use App\Http\Controllers\Controller;
 use App\Models\OnlineClassLink;
+use App\Models\Student;
+use App\Services\Notifications\NotificationDispatchService;
+use App\Support\NotificationFeatureKeys;
 use Illuminate\Http\Request;
 
 class OnlineClassController extends Controller
@@ -26,7 +29,7 @@ class OnlineClassController extends Controller
         return response()->json($q->orderBy('label')->paginate(min((int) $request->query('per_page', 30), 100)));
     }
 
-    public function store(Request $request)
+    public function store(Request $request, NotificationDispatchService $dispatchService)
     {
         abort_unless($request->user()->can('manage_online_classes'), 403);
 
@@ -39,8 +42,42 @@ class OnlineClassController extends Controller
             'day_of_week' => 'nullable|integer|min:0|max:6',
             'start_time' => 'nullable|date_format:H:i',
             'minutes_before' => 'nullable|integer|min:0|max:180',
+            'schedule_reminder' => 'nullable|boolean',
         ]);
 
-        return response()->json(OnlineClassLink::create($data), 201);
+        $link = OnlineClassLink::create(collect($data)->except('schedule_reminder')->all());
+
+        if ($request->boolean('schedule_reminder') && $data['start_time'] ?? null) {
+            $minutesBefore = (int) ($data['minutes_before'] ?? 30);
+            $scheduledFor = now()->setTimeFromTimeString($data['start_time'])->subMinutes($minutesBefore);
+            if ($scheduledFor->isPast()) {
+                $scheduledFor = $scheduledFor->addDay();
+            }
+
+            $studentIds = Student::query()
+                ->where('school_class_id', $link->school_class_id)
+                ->when($link->section_id, fn ($q) => $q->where('section_id', $link->section_id))
+                ->pluck('id')
+                ->all();
+
+            $dispatchService->create(
+                NotificationFeatureKeys::ONLINE_CLASS_REMINDER,
+                'OnlineClassLink',
+                $link->id,
+                'class',
+                ['student_ids' => $studentIds],
+                [
+                    'title' => 'Online class reminder',
+                    'body' => $link->label.' starts soon. Join: '.$link->url,
+                    'data' => ['type' => 'online_class', 'online_class_link_id' => $link->id],
+                ],
+                (int) $link->school_class_id,
+                $link->section_id ? (int) $link->section_id : null,
+                $request->user()->id,
+                $scheduledFor,
+            );
+        }
+
+        return response()->json($link->load(['subject', 'schoolClass', 'section']), 201);
     }
 }

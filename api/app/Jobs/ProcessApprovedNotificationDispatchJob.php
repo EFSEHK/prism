@@ -3,6 +3,7 @@
 namespace App\Jobs;
 
 use App\Models\NotificationDispatchRequest;
+use App\Models\Student;
 use App\Models\UserNotification;
 use App\Services\Notifications\FcmNotificationSender;
 use Illuminate\Bus\Queueable;
