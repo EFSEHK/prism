@@ -1,0 +1,111 @@
+import { View, Text, Pressable, ScrollView, StyleSheet, Modal } from 'react-native'
+
+export const NAV_ITEMS = [
+  { id: 'home', label: 'Home' },
+  { id: 'homework', label: 'Homework' },
+  { id: 'marks', label: 'Marks' },
+  { id: 'attendance', label: 'Attendance' },
+  { id: 'timetable', label: 'Timetable' },
+  { id: 'feed', label: 'Feed' },
+  { id: 'fees', label: 'Fees' },
+  { id: 'online', label: 'Online Class' },
+  { id: 'leave', label: 'Leave' },
+  { id: 'alerts', label: 'Alerts' },
+]
+
+export function HamburgerIcon() {
+  return (
+    <View style={styles.hamburger}>
+      <View style={styles.bar} />
+      <View style={styles.bar} />
+      <View style={styles.bar} />
+    </View>
+  )
+}
+
+export default function SideMenu({ visible, active, onChange, onClose }) {
+  function select(id) {
+    onChange(id)
+    onClose()
+  }
+
+  return (
+    <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}>
+      <View style={styles.overlay}>
+        <View style={styles.drawer}>
+          <Text style={styles.drawerTitle}>Menu</Text>
+          <ScrollView showsVerticalScrollIndicator={false}>
+            {NAV_ITEMS.map((item) => (
+              <Pressable
+                key={item.id}
+                onPress={() => select(item.id)}
+                style={[styles.item, active === item.id && styles.itemActive]}
+              >
+                <Text style={[styles.label, active === item.id && styles.labelActive]}>
+                  {item.label}
+                </Text>
+              </Pressable>
+            ))}
+          </ScrollView>
+        </View>
+        <Pressable style={styles.backdrop} onPress={onClose} accessibilityLabel="Close menu" />
+      </View>
+    </Modal>
+  )
+}
+
+const styles = StyleSheet.create({
+  overlay: {
+    flex: 1,
+    flexDirection: 'row',
+  },
+  backdrop: {
+    flex: 1,
+    backgroundColor: 'rgba(15, 23, 42, 0.45)',
+  },
+  drawer: {
+    width: 260,
+    backgroundColor: '#fff',
+    paddingTop: 48,
+    paddingBottom: 16,
+    borderRightWidth: 1,
+    borderRightColor: '#e2e8f0',
+  },
+  drawerTitle: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: '#64748b',
+    textTransform: 'uppercase',
+    letterSpacing: 0.8,
+    paddingHorizontal: 20,
+    marginBottom: 12,
+  },
+  item: {
+    paddingHorizontal: 20,
+    paddingVertical: 14,
+    borderLeftWidth: 3,
+    borderLeftColor: 'transparent',
+  },
+  itemActive: {
+    backgroundColor: '#eff6ff',
+    borderLeftColor: '#2563eb',
+  },
+  label: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#334155',
+  },
+  labelActive: {
+    color: '#2563eb',
+  },
+  hamburger: {
+    width: 22,
+    height: 16,
+    justifyContent: 'space-between',
+  },
+  bar: {
+    height: 2,
+    borderRadius: 1,
+    backgroundColor: '#0f172a',
+  },
+})

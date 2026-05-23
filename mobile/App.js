@@ -17,7 +17,7 @@ import {
   USES_EMULATOR_API,
   setAuthToken,
 } from './apiClient'
-import TabBar from './components/TabBar'
+import SideMenu, { HamburgerIcon, NAV_ITEMS } from './components/SideMenu'
 import {
   HomeScreen,
   HomeworkScreen,
@@ -43,6 +43,7 @@ export default function App() {
   const [user, setUser] = useState(null)
   const [dashboard, setDashboard] = useState(null)
   const [tab, setTab] = useState('home')
+  const [menuOpen, setMenuOpen] = useState(false)
   const [loading, setLoading] = useState(false)
   const [err, setErr] = useState('')
 
@@ -93,10 +94,12 @@ export default function App() {
     setUser(null)
     setDashboard(null)
     setTab('home')
+    setMenuOpen(false)
     setErr('')
   }
 
   const showApp = token && dashboard && !err
+  const activeLabel = NAV_ITEMS.find((item) => item.id === tab)?.label ?? 'Home'
   const children = dashboard?.children ?? []
 
   function renderTab() {
@@ -186,13 +189,29 @@ export default function App() {
       ) : (
         <>
           <View style={styles.header}>
-            <Text style={styles.headerTitle}>PRISM</Text>
+            <Pressable
+              onPress={() => setMenuOpen(true)}
+              style={styles.menuBtn}
+              hitSlop={8}
+              accessibilityLabel="Open menu"
+            >
+              <HamburgerIcon />
+            </Pressable>
+            <View style={styles.headerCenter}>
+              <Text style={styles.headerTitle}>PRISM</Text>
+              <Text style={styles.headerSubtitle}>{activeLabel}</Text>
+            </View>
             <Pressable onPress={logout}>
               <Text style={styles.headerLogout}>Logout</Text>
             </Pressable>
           </View>
           <View style={styles.body}>{renderTab()}</View>
-          <TabBar active={tab} onChange={setTab} />
+          <SideMenu
+            visible={menuOpen}
+            active={tab}
+            onChange={setTab}
+            onClose={() => setMenuOpen(false)}
+          />
         </>
       )}
     </View>
@@ -234,7 +253,6 @@ const styles = StyleSheet.create({
   logoutText: { color: '#475569', fontWeight: '600' },
   header: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
     alignItems: 'center',
     paddingHorizontal: 16,
     paddingTop: 48,
@@ -243,7 +261,15 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
     borderBottomColor: '#e2e8f0',
   },
+  menuBtn: {
+    padding: 4,
+    marginRight: 12,
+  },
+  headerCenter: {
+    flex: 1,
+  },
   headerTitle: { fontSize: 18, fontWeight: '700', color: '#0f172a' },
+  headerSubtitle: { fontSize: 12, color: '#64748b', marginTop: 2 },
   headerLogout: { color: '#2563eb', fontWeight: '600' },
   body: { flex: 1 },
 })
