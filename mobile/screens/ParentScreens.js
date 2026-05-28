@@ -267,15 +267,11 @@ export function AttendanceScreen({ children, selectedChildId }) {
   return (
     <ScreenWrap>
       <Text style={styles.h1}>Attendance</Text>
-      {children.map((c) => (
-        <Pressable
-          key={c.id}
-          onPress={() => setStudentId(c.id)}
-          style={[styles.chip, studentId === c.id && styles.chipOn]}
-        >
-          <Text style={studentId === c.id ? styles.chipTextOn : styles.chipText}>{childName(c)}</Text>
-        </Pressable>
-      ))}
+      {studentId ? (
+        <Text style={styles.childLockText}>
+          Showing report for {childName(children.find((c) => c.id === studentId))}
+        </Text>
+      ) : null}
       <Text style={styles.label}>Month (YYYY-MM)</Text>
       <TextInput style={styles.input} value={month} onChangeText={setMonth} onSubmitEditing={load} />
       <Pressable style={styles.btn} onPress={load}>
@@ -479,15 +475,11 @@ export function LeaveScreen({ children, selectedChildId }) {
     <ScreenWrap refreshing={false} onRefresh={load}>
       <Text style={styles.h1}>Leave requests</Text>
       <Text style={styles.label}>New request</Text>
-      {children.map((c) => (
-        <Pressable
-          key={c.id}
-          onPress={() => setStudentId(c.id)}
-          style={[styles.chip, studentId === c.id && styles.chipOn]}
-        >
-          <Text style={studentId === c.id ? styles.chipTextOn : styles.chipText}>{childName(c)}</Text>
-        </Pressable>
-      ))}
+      {studentId ? (
+        <Text style={styles.childLockText}>
+          Submitting leave for {childName(children.find((c) => c.id === studentId))}
+        </Text>
+      ) : null}
       <TextInput style={styles.input} placeholder="Start date YYYY-MM-DD" value={startDate} onChangeText={setStartDate} />
       <TextInput style={styles.input} placeholder="End date YYYY-MM-DD" value={endDate} onChangeText={setEndDate} />
       <TextInput style={styles.input} placeholder="Reason" value={reason} onChangeText={setReason} />
@@ -569,6 +561,7 @@ const styles = StyleSheet.create({
   childHeaderMeta: { fontSize: 14, color: '#64748b', marginTop: 4 },
   childHeaderSub: { fontSize: 12, color: '#94a3b8', marginTop: 2 },
   h1: { fontSize: 22, fontWeight: '700', color: '#0f172a', marginBottom: 12 },
+  childLockText: { fontSize: 13, color: '#1e40af', marginBottom: 8, fontWeight: '600' },
   back: { color: '#2563eb', marginBottom: 12, fontSize: 16 },
   label: { fontSize: 13, color: '#64748b', marginBottom: 4 },
   input: {
@@ -588,16 +581,4 @@ const styles = StyleSheet.create({
   },
   btnText: { color: '#fff', fontWeight: '600' },
   ok: { color: '#15803d', marginBottom: 8 },
-  chip: {
-    alignSelf: 'flex-start',
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 16,
-    backgroundColor: '#e2e8f0',
-    marginRight: 8,
-    marginBottom: 8,
-  },
-  chipOn: { backgroundColor: '#2563eb' },
-  chipText: { color: '#475569', fontWeight: '600' },
-  chipTextOn: { color: '#fff', fontWeight: '600' },
 })

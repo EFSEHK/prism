@@ -35,6 +35,7 @@ export function HamburgerIcon() {
 
 export default function SideMenu({ visible, active, items, onChange, onClose }) {
   const navItems = items ?? NAV_ITEMS_CHILD
+  const hasMultipleItems = navItems.length > 1
 
   function select(id) {
     onChange(id)
@@ -48,15 +49,17 @@ export default function SideMenu({ visible, active, items, onChange, onClose }) 
           <Text style={styles.drawerTitle}>Menu</Text>
           <ScrollView showsVerticalScrollIndicator={false}>
             {navItems.map((item) => (
-              <Pressable
-                key={item.id}
-                onPress={() => select(item.id)}
-                style={[styles.item, active === item.id && styles.itemActive]}
-              >
-                <Text style={[styles.label, active === item.id && styles.labelActive]}>
-                  {item.label}
-                </Text>
-              </Pressable>
+              <View key={item.id}>
+                {hasMultipleItems && item.id === 'home' ? <View style={styles.menuSeparator} /> : null}
+                <Pressable
+                  onPress={() => select(item.id)}
+                  style={[styles.item, active === item.id && styles.itemActive]}
+                >
+                  <Text style={[styles.label, active === item.id && styles.labelActive]}>
+                    {item.label}
+                  </Text>
+                </Pressable>
+              </View>
             ))}
           </ScrollView>
         </View>
@@ -91,6 +94,13 @@ const styles = StyleSheet.create({
     letterSpacing: 0.8,
     paddingHorizontal: 20,
     marginBottom: 12,
+  },
+  menuSeparator: {
+    borderTopWidth: 1,
+    borderTopColor: '#e2e8f0',
+    marginTop: 8,
+    marginBottom: 8,
+    marginHorizontal: 20,
   },
   item: {
     paddingHorizontal: 20,

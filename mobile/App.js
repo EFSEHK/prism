@@ -37,6 +37,17 @@ import { ui } from './components/ui'
 const DASHBOARD_INCLUDE =
   'homework,timetable,marks,feed,fees,online_classes,leave,datesheet,notifications'
 
+function LogoutIcon() {
+  return (
+    <View style={styles.logoutIconWrap}>
+      <View style={styles.logoutDoor} />
+      <View style={styles.logoutArrowBody} />
+      <View style={styles.logoutArrowHeadUp} />
+      <View style={styles.logoutArrowHeadDown} />
+    </View>
+  )
+}
+
 export default function App() {
   const [email, setEmail] = useState('parent@school.test')
   const [password, setPassword] = useState('Parent.123')
@@ -139,9 +150,9 @@ export default function App() {
   const navItems = navItemsForContext(hasSelectedChild)
   const activeLabel = navItems.find((item) => item.id === tab)?.label ?? 'Home'
   const children = dashboard?.children ?? []
-  const headerSubtitle = hasSelectedChild
-    ? `${activeLabel} · ${childName(selectedChild)}`
-    : activeLabel
+  const headerSubtitle = activeLabel
+  const selectedChildLabel = hasSelectedChild ? childName(selectedChild) : ''
+  const headerRightName = selectedChildLabel || user?.name || ''
 
   function renderTab() {
     if (!hasSelectedChild) {
@@ -248,9 +259,13 @@ export default function App() {
               <Text style={styles.headerTitle}>PRISM</Text>
               <Text style={styles.headerSubtitle}>{headerSubtitle}</Text>
             </View>
-            <Pressable onPress={logout}>
-              <Text style={styles.headerLogout}>Logout</Text>
-            </Pressable>
+            <View style={styles.headerRight}>
+              <Text numberOfLines={1} style={styles.headerRightName}>{headerRightName}</Text>
+              <View style={styles.headerSeparator} />
+              <Pressable onPress={logout} style={styles.headerLogoutBtn} hitSlop={8} accessibilityLabel="Logout">
+                <LogoutIcon />
+              </Pressable>
+            </View>
           </View>
           {loading ? (
             <View style={styles.loadingOverlay}>
@@ -323,7 +338,71 @@ const styles = StyleSheet.create({
   },
   headerTitle: { fontSize: 18, fontWeight: '700', color: '#0f172a' },
   headerSubtitle: { fontSize: 12, color: '#64748b', marginTop: 2 },
-  headerLogout: { color: '#2563eb', fontWeight: '600' },
+  headerRight: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    maxWidth: '48%',
+  },
+  headerRightName: {
+    color: '#334155',
+    fontWeight: '600',
+    fontSize: 13,
+    maxWidth: 140,
+  },
+  headerSeparator: {
+    width: 1,
+    height: 18,
+    backgroundColor: '#cbd5e1',
+    marginHorizontal: 10,
+  },
+  headerLogoutBtn: {
+    width: 28,
+    height: 28,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  logoutIconWrap: {
+    width: 16,
+    height: 16,
+    position: 'relative',
+  },
+  logoutDoor: {
+    position: 'absolute',
+    right: 1,
+    top: 2,
+    width: 7,
+    height: 12,
+    borderWidth: 1.5,
+    borderColor: '#2563eb',
+    borderLeftWidth: 0,
+    borderRadius: 1,
+  },
+  logoutArrowBody: {
+    position: 'absolute',
+    left: 1,
+    top: 7,
+    width: 8,
+    height: 1.8,
+    backgroundColor: '#2563eb',
+  },
+  logoutArrowHeadUp: {
+    position: 'absolute',
+    left: 6,
+    top: 5,
+    width: 5,
+    height: 1.8,
+    backgroundColor: '#2563eb',
+    transform: [{ rotate: '35deg' }],
+  },
+  logoutArrowHeadDown: {
+    position: 'absolute',
+    left: 6,
+    top: 9,
+    width: 5,
+    height: 1.8,
+    backgroundColor: '#2563eb',
+    transform: [{ rotate: '-35deg' }],
+  },
   body: { flex: 1 },
   loadingOverlay: {
     ...StyleSheet.absoluteFillObject,
