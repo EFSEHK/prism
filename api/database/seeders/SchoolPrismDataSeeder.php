@@ -44,15 +44,31 @@ class SchoolPrismDataSeeder extends Seeder
             ['admission_no' => 'STU-001'],
             [
                 'first_name' => 'Ali',
-                'last_name' => 'Student',
+                'last_name' => 'Khan',
                 'school_class_id' => $class->id,
                 'section_id' => $section->id,
             ]
         );
 
+        $class9 = SchoolClass::firstOrCreate(['name' => 'Grade 9'], ['grade_level' => '9']);
+        $section9 = Section::firstOrCreate(
+            ['school_class_id' => $class9->id, 'name' => 'B'],
+            []
+        );
+
+        $student2 = Student::firstOrCreate(
+            ['admission_no' => 'STU-002'],
+            [
+                'first_name' => 'Sara',
+                'last_name' => 'Khan',
+                'school_class_id' => $class9->id,
+                'section_id' => $section9->id,
+            ]
+        );
+
         $parent = User::where('email', 'parent@school.test')->first();
         if ($parent) {
-            $parent->children()->syncWithoutDetaching([$student->id]);
+            $parent->children()->syncWithoutDetaching([$student->id, $student2->id]);
         }
 
         $teacher = User::where('email', 'teacher@school.test')->first();
@@ -157,10 +173,20 @@ class SchoolPrismDataSeeder extends Seeder
         FeedPost::firstOrCreate(
             ['title' => 'Sports day announcement', 'type' => 'announcement'],
             [
-                'body' => 'Annual sports day next month.',
+                'body' => 'Annual sports day next month. All families are welcome.',
                 'scope' => 'school',
                 'author_user_id' => $principal?->id ?? $teacher?->id,
                 'published_at' => now(),
+            ]
+        );
+
+        FeedPost::firstOrCreate(
+            ['title' => 'School holiday schedule', 'type' => 'announcement'],
+            [
+                'body' => 'The institute will be closed on the upcoming public holiday. Classes resume as per the calendar.',
+                'scope' => 'school',
+                'author_user_id' => $principal?->id ?? $teacher?->id,
+                'published_at' => now()->subDay(),
             ]
         );
 

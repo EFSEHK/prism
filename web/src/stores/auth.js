@@ -1,6 +1,7 @@
 import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
 import api from '../api/client'
+import { useParentStore } from './parent'
 
 export const useAuthStore = defineStore('auth', () => {
   const token = ref(localStorage.getItem('prism_token') || '')
@@ -22,6 +23,7 @@ export const useAuthStore = defineStore('auth', () => {
     localStorage.removeItem('prism_token')
     localStorage.removeItem('prism_user')
     delete api.defaults.headers.common.Authorization
+    useParentStore().clearAll()
   }
 
   if (token.value) {

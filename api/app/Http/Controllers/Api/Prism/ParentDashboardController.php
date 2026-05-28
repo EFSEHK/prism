@@ -29,13 +29,21 @@ class ParentDashboardController extends Controller
             return response()->json($this->emptyPayload());
         }
 
-        $students = Student::query()
+        $allChildren = Student::query()
             ->whereIn('id', $studentIds)
             ->with(['schoolClass:id,name', 'section:id,name,school_class_id'])
             ->get(['id', 'first_name', 'last_name', 'school_class_id', 'section_id', 'admission_no']);
 
-        $classIds = $students->pluck('school_class_id')->unique()->filter();
-        $sectionIds = $students->pluck('section_id')->unique()->filter();
+        $focusStudentId = $request->query('student_id');
+        $scopedStudents = $allChildren;
+        if ($focusStudentId !== null && $focusStudentId !== '') {
+            abort_unless($studentIds->contains((int) $focusStudentId), 403);
+            $scopedStudents = $allChildren->where('id', (int) $focusStudentId)->values();
+        }
+
+        $classIds = $scopedStudents->pluck('school_class_id')->unique()->filter();
+        $sectionIds = $scopedStudents->pluck('section_id')->unique()->filter();
+        $focusStudentIds = $scopedStudents->pluck('id');
 
         $unread = UserNotification::query()
             ->where('user_id', $request->user()->id)
@@ -48,8 +56,15 @@ class ParentDashboardController extends Controller
         )));
 
         $payload = [
-            'children' => $students,
+            'children' => $allChildren,
             'unread_notifications' => $unread,
+            'school_announcements' => FeedPost::query()
+                ->whereNotNull('published_at')
+                ->where('scope', 'school')
+                ->where('type', 'announcement')
+                ->orderByDesc('published_at')
+                ->limit(10)
+                ->get(['id', 'type', 'title', 'body', 'scope', 'published_at']),
         ];
 
         if (in_array('homework', $include, true)) {
@@ -90,13 +105,13 @@ class ParentDashboardController extends Controller
         if (in_array('feed', $include, true)) {
             $payload['feed'] = FeedPost::query()
                 ->whereNotNull('published_at')
-                ->where(function ($qq) use ($studentIds, $classIds) {
+                ->where(function ($qq) use ($focusStudentIds, $classIds) {
                     $qq->where('scope', 'school')
                         ->orWhere(function ($q2) use ($classIds) {
                             $q2->where('scope', 'class')->whereIn('scope_school_class_id', $classIds);
                         })
-                        ->orWhere(function ($q3) use ($studentIds) {
-                            $q3->where('scope', 'student')->whereIn('scope_student_id', $studentIds);
+                        ->orWhere(function ($q3) use ($focusStudentIds) {
+                            $q3->where('scope', 'student')->whereIn('scope_student_id', $focusStudentIds);
                         });
                 })
                 ->orderByDesc('published_at')
@@ -106,7 +121,7 @@ class ParentDashboardController extends Controller
 
         if (in_array('fees', $include, true)) {
             $payload['fee_vouchers'] = FeeVoucher::query()
-                ->whereIn('student_id', $studentIds)
+                ->whereIn('student_id', $focusStudentIds)
                 ->with('student:id,first_name,last_name')
                 ->orderByDesc('updated_at')
                 ->limit(10)
@@ -162,6 +177,7 @@ class ParentDashboardController extends Controller
     {
         return [
             'children' => [],
+            'school_announcements' => [],
             'unread_notifications' => 0,
             'homework' => [],
             'timetable_today' => [],

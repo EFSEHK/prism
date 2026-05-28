@@ -18,8 +18,8 @@ import { ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { useAuthStore } from '../stores/auth'
 
-const email = ref('admin@lask.com')
-const password = ref('Admin.123')
+const email = ref('parent@school.test')
+const password = ref('Parent.123')
 const err = ref('')
 const auth = useAuthStore()
 const router = useRouter()

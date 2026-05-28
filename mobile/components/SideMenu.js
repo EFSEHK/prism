@@ -1,7 +1,9 @@
 import { View, Text, Pressable, ScrollView, StyleSheet, Modal } from 'react-native'
 
-export const NAV_ITEMS = [
-  { id: 'home', label: 'Home' },
+export const NAV_ITEMS_HOME = [{ id: 'home', label: 'Home' }]
+
+export const NAV_ITEMS_CHILD = [
+  { id: 'dashboard', label: 'Dashboard' },
   { id: 'homework', label: 'Homework' },
   { id: 'marks', label: 'Marks' },
   { id: 'attendance', label: 'Attendance' },
@@ -11,7 +13,15 @@ export const NAV_ITEMS = [
   { id: 'online', label: 'Online Class' },
   { id: 'leave', label: 'Leave' },
   { id: 'alerts', label: 'Alerts' },
+  { id: 'home', label: 'Switch child' },
 ]
+
+/** @deprecated Use NAV_ITEMS_HOME or NAV_ITEMS_CHILD */
+export const NAV_ITEMS = NAV_ITEMS_CHILD
+
+export function navItemsForContext(hasSelectedChild) {
+  return hasSelectedChild ? NAV_ITEMS_CHILD : NAV_ITEMS_HOME
+}
 
 export function HamburgerIcon() {
   return (
@@ -23,7 +33,9 @@ export function HamburgerIcon() {
   )
 }
 
-export default function SideMenu({ visible, active, onChange, onClose }) {
+export default function SideMenu({ visible, active, items, onChange, onClose }) {
+  const navItems = items ?? NAV_ITEMS_CHILD
+
   function select(id) {
     onChange(id)
     onClose()
@@ -35,7 +47,7 @@ export default function SideMenu({ visible, active, onChange, onClose }) {
         <View style={styles.drawer}>
           <Text style={styles.drawerTitle}>Menu</Text>
           <ScrollView showsVerticalScrollIndicator={false}>
-            {NAV_ITEMS.map((item) => (
+            {navItems.map((item) => (
               <Pressable
                 key={item.id}
                 onPress={() => select(item.id)}

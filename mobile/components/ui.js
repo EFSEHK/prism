@@ -78,4 +78,10 @@ export const ui = StyleSheet.create({
   heroGreeting: { color: '#bfdbfe', fontSize: 13 },
   heroName: { color: '#fff', fontSize: 22, fontWeight: '700', marginTop: 4 },
   heroMeta: { color: '#dbeafe', fontSize: 13, marginTop: 8 },
+  heroCompact: {
+    backgroundColor: '#1e40af',
+    borderRadius: 12,
+    padding: 14,
+    marginBottom: 16,
+  },
 })

@@ -17,9 +17,10 @@ import {
   USES_EMULATOR_API,
   setAuthToken,
 } from './apiClient'
-import SideMenu, { HamburgerIcon, NAV_ITEMS } from './components/SideMenu'
+import SideMenu, { HamburgerIcon, navItemsForContext } from './components/SideMenu'
 import {
-  HomeScreen,
+  ParentHomeScreen,
+  ChildDashboardScreen,
   HomeworkScreen,
   MarksScreen,
   AttendanceScreen,
@@ -30,7 +31,7 @@ import {
   LeaveScreen,
   AlertsScreen,
 } from './screens/ParentScreens'
-import { formatError } from './utils/format'
+import { childName, formatError } from './utils/format'
 import { ui } from './components/ui'
 
 const DASHBOARD_INCLUDE =
@@ -42,6 +43,7 @@ export default function App() {
   const [token, setToken] = useState('')
   const [user, setUser] = useState(null)
   const [dashboard, setDashboard] = useState(null)
+  const [selectedChild, setSelectedChild] = useState(null)
   const [tab, setTab] = useState('home')
   const [menuOpen, setMenuOpen] = useState(false)
   const [loading, setLoading] = useState(false)
@@ -51,10 +53,12 @@ export default function App() {
     setAuthToken(token)
   }, [token])
 
-  const loadDashboard = useCallback(async () => {
-    const { data } = await apiClient.get('/prism/parent/dashboard', {
-      params: { include: DASHBOARD_INCLUDE },
-    })
+  const loadDashboard = useCallback(async (studentId = null) => {
+    const params = { include: DASHBOARD_INCLUDE }
+    if (studentId) {
+      params.student_id = studentId
+    }
+    const { data } = await apiClient.get('/prism/parent/dashboard', { params })
     setDashboard(data)
     return data
   }, [])
@@ -65,6 +69,8 @@ export default function App() {
     setLoading(true)
     setDashboard(null)
     setUser(null)
+    setSelectedChild(null)
+    setTab('home')
     try {
       const { data } = await apiClient.post('/login', { email, password })
       if (!data?.access_token) throw new Error('No access token in response')
@@ -77,6 +83,7 @@ export default function App() {
       setToken('')
       setUser(null)
       setDashboard(null)
+      setSelectedChild(null)
       setErr(formatError(e))
     } finally {
       setLoading(false)
@@ -93,25 +100,65 @@ export default function App() {
     setToken('')
     setUser(null)
     setDashboard(null)
+    setSelectedChild(null)
     setTab('home')
     setMenuOpen(false)
     setErr('')
   }
 
+  async function selectChild(child) {
+    setLoading(true)
+    setErr('')
+    try {
+      await loadDashboard(child.id)
+      setSelectedChild(child)
+      setTab('dashboard')
+    } catch (e) {
+      setErr(formatError(e))
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  function switchChild() {
+    setSelectedChild(null)
+    setTab('home')
+    loadDashboard().catch(() => {})
+  }
+
+  function handleNavChange(id) {
+    if (id === 'home' && selectedChild) {
+      switchChild()
+      return
+    }
+    setTab(id)
+  }
+
   const showApp = token && dashboard && !err
-  const activeLabel = NAV_ITEMS.find((item) => item.id === tab)?.label ?? 'Home'
+  const hasSelectedChild = Boolean(selectedChild)
+  const navItems = navItemsForContext(hasSelectedChild)
+  const activeLabel = navItems.find((item) => item.id === tab)?.label ?? 'Home'
   const children = dashboard?.children ?? []
+  const headerSubtitle = hasSelectedChild
+    ? `${activeLabel} · ${childName(selectedChild)}`
+    : activeLabel
 
   function renderTab() {
+    if (!hasSelectedChild) {
+      return (
+        <ParentHomeScreen dashboard={dashboard} user={user} onSelectChild={selectChild} />
+      )
+    }
+
     switch (tab) {
-      case 'home':
-        return <HomeScreen dashboard={dashboard} user={user} />
+      case 'dashboard':
+        return <ChildDashboardScreen dashboard={dashboard} child={selectedChild} user={user} />
       case 'homework':
         return <HomeworkScreen />
       case 'marks':
         return <MarksScreen />
       case 'attendance':
-        return <AttendanceScreen children={children} />
+        return <AttendanceScreen children={children} selectedChildId={selectedChild.id} />
       case 'timetable':
         return <TimetableScreen />
       case 'feed':
@@ -121,11 +168,11 @@ export default function App() {
       case 'online':
         return <OnlineClassScreen />
       case 'leave':
-        return <LeaveScreen children={children} />
+        return <LeaveScreen children={children} selectedChildId={selectedChild.id} />
       case 'alerts':
         return <AlertsScreen />
       default:
-        return <HomeScreen dashboard={dashboard} user={user} />
+        return <ChildDashboardScreen dashboard={dashboard} child={selectedChild} user={user} />
     }
   }
 
@@ -177,7 +224,7 @@ export default function App() {
               <Text style={styles.ok}>Logged in as {user?.name}</Text>
               {loading ? <ActivityIndicator /> : null}
               {err ? <Text style={ui.err}>{err}</Text> : null}
-              <Pressable style={styles.button} onPress={loadDashboard}>
+              <Pressable style={styles.button} onPress={() => loadDashboard()}>
                 <Text style={styles.buttonText}>Retry</Text>
               </Pressable>
               <Pressable style={styles.logout} onPress={logout}>
@@ -199,17 +246,23 @@ export default function App() {
             </Pressable>
             <View style={styles.headerCenter}>
               <Text style={styles.headerTitle}>PRISM</Text>
-              <Text style={styles.headerSubtitle}>{activeLabel}</Text>
+              <Text style={styles.headerSubtitle}>{headerSubtitle}</Text>
             </View>
             <Pressable onPress={logout}>
               <Text style={styles.headerLogout}>Logout</Text>
             </Pressable>
           </View>
+          {loading ? (
+            <View style={styles.loadingOverlay}>
+              <ActivityIndicator size="large" color="#2563eb" />
+            </View>
+          ) : null}
           <View style={styles.body}>{renderTab()}</View>
           <SideMenu
             visible={menuOpen}
             active={tab}
-            onChange={setTab}
+            items={navItems}
+            onChange={handleNavChange}
             onClose={() => setMenuOpen(false)}
           />
         </>
@@ -272,4 +325,12 @@ const styles = StyleSheet.create({
   headerSubtitle: { fontSize: 12, color: '#64748b', marginTop: 2 },
   headerLogout: { color: '#2563eb', fontWeight: '600' },
   body: { flex: 1 },
+  loadingOverlay: {
+    ...StyleSheet.absoluteFillObject,
+    top: 88,
+    backgroundColor: 'rgba(248, 250, 252, 0.75)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    zIndex: 10,
+  },
 })

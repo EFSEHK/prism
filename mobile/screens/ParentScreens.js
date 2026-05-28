@@ -13,6 +13,7 @@ import {
 import { apiClient } from '../apiClient'
 import { formatDate, formatTime, childName, formatError, paginatedItems } from '../utils/format'
 import { Section, Card, EmptyNote, ui } from '../components/ui'
+import ChildAvatar from '../components/ChildAvatar'
 
 function ScreenWrap({ children, refreshing, onRefresh }) {
   return (
@@ -25,10 +26,10 @@ function ScreenWrap({ children, refreshing, onRefresh }) {
   )
 }
 
-export function HomeScreen({ dashboard, user }) {
+/** Parent home: pick a child, then institute-wide announcements. */
+export function ParentHomeScreen({ dashboard, user, onSelectChild }) {
   const children = dashboard?.children ?? []
-  const homework = dashboard?.homework ?? []
-  const timetable = dashboard?.timetable_today ?? []
+  const announcements = dashboard?.school_announcements ?? []
   const unread = dashboard?.unread_notifications ?? 0
 
   return (
@@ -37,23 +38,73 @@ export function HomeScreen({ dashboard, user }) {
         <Text style={ui.heroGreeting}>Welcome back</Text>
         <Text style={ui.heroName}>{user?.name || 'Parent'}</Text>
         <Text style={ui.heroMeta}>
-          {unread > 0 ? `${unread} unread notification${unread === 1 ? '' : 's'}` : 'All caught up'}
+          {unread > 0 ? `${unread} unread notification${unread === 1 ? '' : 's'}` : 'Select a child to view their dashboard'}
         </Text>
       </View>
-      <Section title="My children" badge={children.length || null}>
+
+      <Section title="Select a child" badge={children.length || null}>
         {children.length === 0 ? (
           <EmptyNote text="No linked students." />
         ) : (
-          children.map((s) => (
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.childRow}>
+            {children.map((s) => (
+              <ChildAvatar key={s.id} student={s} onPress={() => onSelectChild(s)} />
+            ))}
+          </ScrollView>
+        )}
+      </Section>
+
+      <Section title="General announcements" badge={announcements.length || null}>
+        <Text style={styles.sectionHint}>Institute-wide updates for all families.</Text>
+        {announcements.length === 0 ? (
+          <EmptyNote text="No institute announcements." />
+        ) : (
+          announcements.map((a) => (
             <Card
-              key={s.id}
-              title={childName(s)}
-              meta={`${s.school_class?.name || ''} · Section ${s.section?.name || ''}`}
-              sub={s.admission_no ? `Admission ${s.admission_no}` : null}
+              key={a.id}
+              title={a.title}
+              meta={a.published_at ? formatDate(a.published_at) : null}
+              body={a.body}
             />
           ))
         )}
       </Section>
+    </ScreenWrap>
+  )
+}
+
+/** Per-child dashboard after selection. */
+export function ChildDashboardScreen({ dashboard, child, user }) {
+  const homework = dashboard?.homework ?? []
+  const timetable = dashboard?.timetable_today ?? []
+  const unread = dashboard?.unread_notifications ?? 0
+  const classLabel = child?.school_class?.name || ''
+  const sectionLabel = child?.section?.name || ''
+
+  return (
+    <ScreenWrap>
+      <View style={styles.childHeader}>
+        <ChildAvatar student={child} selected />
+        <View style={styles.childHeaderText}>
+          <Text style={styles.childHeaderName}>{childName(child)}</Text>
+          <Text style={styles.childHeaderMeta}>
+            {classLabel}
+            {sectionLabel ? ` · Section ${sectionLabel}` : ''}
+          </Text>
+          {child?.admission_no ? (
+            <Text style={styles.childHeaderSub}>Admission {child.admission_no}</Text>
+          ) : null}
+        </View>
+      </View>
+
+      <View style={ui.heroCompact}>
+        <Text style={ui.heroGreeting}>Dashboard</Text>
+        <Text style={ui.heroName}>{user?.name || 'Parent'}</Text>
+        <Text style={ui.heroMeta}>
+          {unread > 0 ? `${unread} unread notification${unread === 1 ? '' : 's'}` : 'All caught up'}
+        </Text>
+      </View>
+
       <Section title="Today" badge={timetable.length || null}>
         {timetable.length === 0 ? (
           <EmptyNote text="No classes today." />
@@ -67,6 +118,7 @@ export function HomeScreen({ dashboard, user }) {
           ))
         )}
       </Section>
+
       <Section title="Recent homework" badge={homework.length || null}>
         {homework.length === 0 ? (
           <EmptyNote text="No homework." />
@@ -78,6 +130,14 @@ export function HomeScreen({ dashboard, user }) {
       </Section>
     </ScreenWrap>
   )
+}
+
+/** @deprecated Use ParentHomeScreen or ChildDashboardScreen */
+export function HomeScreen(props) {
+  if (props.child) {
+    return <ChildDashboardScreen {...props} />
+  }
+  return <ParentHomeScreen {...props} onSelectChild={props.onSelectChild} />
 }
 
 export function HomeworkScreen() {
@@ -177,8 +237,11 @@ export function MarksScreen() {
   )
 }
 
-export function AttendanceScreen({ children }) {
-  const [studentId, setStudentId] = useState(children[0]?.id)
+export function AttendanceScreen({ children, selectedChildId }) {
+  const [studentId, setStudentId] = useState(selectedChildId ?? children[0]?.id)
+  useEffect(() => {
+    if (selectedChildId) setStudentId(selectedChildId)
+  }, [selectedChildId])
   const [month, setMonth] = useState(new Date().toISOString().slice(0, 7))
   const [days, setDays] = useState([])
   const [loading, setLoading] = useState(false)
@@ -370,9 +433,12 @@ export function OnlineClassScreen() {
   )
 }
 
-export function LeaveScreen({ children }) {
+export function LeaveScreen({ children, selectedChildId }) {
   const [items, setItems] = useState([])
-  const [studentId, setStudentId] = useState(children[0]?.id)
+  const [studentId, setStudentId] = useState(selectedChildId ?? children[0]?.id)
+  useEffect(() => {
+    if (selectedChildId) setStudentId(selectedChildId)
+  }, [selectedChildId])
   const [startDate, setStartDate] = useState('')
   const [endDate, setEndDate] = useState('')
   const [reason, setReason] = useState('')
@@ -486,6 +552,22 @@ export function AlertsScreen() {
 const styles = StyleSheet.create({
   scroll: { padding: 16, paddingBottom: 24 },
   center: { marginTop: 40 },
+  childRow: { paddingVertical: 4, paddingRight: 8 },
+  sectionHint: { fontSize: 13, color: '#64748b', marginBottom: 8 },
+  childHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 12,
+    backgroundColor: '#fff',
+    borderRadius: 12,
+    padding: 14,
+    borderWidth: 1,
+    borderColor: '#e2e8f0',
+  },
+  childHeaderText: { flex: 1, marginLeft: 8 },
+  childHeaderName: { fontSize: 18, fontWeight: '700', color: '#0f172a' },
+  childHeaderMeta: { fontSize: 14, color: '#64748b', marginTop: 4 },
+  childHeaderSub: { fontSize: 12, color: '#94a3b8', marginTop: 2 },
   h1: { fontSize: 22, fontWeight: '700', color: '#0f172a', marginBottom: 12 },
   back: { color: '#2563eb', marginBottom: 12, fontSize: 16 },
   label: { fontSize: 13, color: '#64748b', marginBottom: 4 },

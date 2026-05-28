@@ -3,16 +3,34 @@
     <header v-if="auth.token" class="top">
       <span class="brand">PRISM</span>
       <nav>
-        <RouterLink to="/">Dashboard</RouterLink>
-        <RouterLink v-if="canApprove" to="/approvals">Approvals</RouterLink>
-        <RouterLink v-if="canStaff" to="/attendance">Attendance</RouterLink>
-        <RouterLink v-if="canStaff" to="/marks">Marks</RouterLink>
-        <RouterLink v-if="canStaff" to="/homework">Homework</RouterLink>
-        <RouterLink v-if="canTimetable" to="/timetable">Timetable</RouterLink>
-        <RouterLink v-if="canStaff" to="/online-classes">Online</RouterLink>
-        <RouterLink v-if="canFees" to="/fees">Fees</RouterLink>
-        <RouterLink v-if="canFeed" to="/feed">Feed</RouterLink>
-        <RouterLink v-if="canLeave" to="/leave">Leave</RouterLink>
+        <template v-if="isParent">
+          <RouterLink to="/">Home</RouterLink>
+          <template v-if="selectedChild">
+            <RouterLink to="/dashboard">Dashboard</RouterLink>
+            <RouterLink to="/homework">Homework</RouterLink>
+            <RouterLink to="/marks">Marks</RouterLink>
+            <RouterLink to="/attendance">Attendance</RouterLink>
+            <RouterLink to="/timetable">Timetable</RouterLink>
+            <RouterLink to="/feed">Feed</RouterLink>
+            <RouterLink to="/fees">Fees</RouterLink>
+            <RouterLink to="/online-classes">Online</RouterLink>
+            <RouterLink to="/leave">Leave</RouterLink>
+            <RouterLink to="/alerts">Alerts</RouterLink>
+            <button type="button" class="link" @click="switchChild">Switch child</button>
+          </template>
+        </template>
+        <template v-else>
+          <RouterLink to="/">Dashboard</RouterLink>
+          <RouterLink v-if="canApprove" to="/approvals">Approvals</RouterLink>
+          <RouterLink v-if="canStaff" to="/attendance">Attendance</RouterLink>
+          <RouterLink v-if="canStaff" to="/marks">Marks</RouterLink>
+          <RouterLink v-if="canStaff" to="/homework">Homework</RouterLink>
+          <RouterLink v-if="canTimetable" to="/timetable">Timetable</RouterLink>
+          <RouterLink v-if="canStaff" to="/online-classes">Online</RouterLink>
+          <RouterLink v-if="canFees" to="/fees">Fees</RouterLink>
+          <RouterLink v-if="canFeed" to="/feed">Feed</RouterLink>
+          <RouterLink v-if="canLeave" to="/leave">Leave</RouterLink>
+        </template>
         <button type="button" class="link" @click="logout">Logout</button>
       </nav>
     </header>
@@ -26,41 +44,25 @@
 import { computed } from 'vue'
 import { useRouter } from 'vue-router'
 import { useAuthStore } from './stores/auth'
+import { useParentStore } from './stores/parent'
+import { useRoles } from './composables/useRoles'
 
 const auth = useAuthStore()
+const parent = useParentStore()
 const router = useRouter()
 
-const roles = computed(() => (auth.user?.roles || []).map((r) => r.name))
+const { isParent, canApprove, canStaff, canTimetable, canFees, canFeed, canLeave } = useRoles()
 
-const canApprove = computed(() =>
-  roles.value.some((n) =>
-    ['superadmin', 'admin', 'principal', 'vice_principal', 'section_head', 'class_incharge'].includes(n)
-  )
-)
-
-const canStaff = computed(() =>
-  roles.value.some((n) => ['superadmin', 'admin', 'teacher', 'section_head'].includes(n))
-)
-
-const canTimetable = computed(() =>
-  roles.value.some((n) => ['superadmin', 'admin', 'computer_operator', 'teacher'].includes(n))
-)
-
-const canFees = computed(() =>
-  roles.value.some((n) => ['superadmin', 'admin', 'accountant', 'computer_operator'].includes(n))
-)
-
-const canFeed = computed(() =>
-  roles.value.some((n) => ['superadmin', 'admin', 'principal', 'vice_principal'].includes(n))
-)
-
-const canLeave = computed(() =>
-  roles.value.some((n) => ['superadmin', 'admin', 'teacher', 'principal', 'vice_principal', 'section_head'].includes(n))
-)
+const selectedChild = computed(() => parent.selectedChild)
 
 async function logout() {
   await auth.logout()
   router.push('/login')
+}
+
+async function switchChild() {
+  await parent.clearChild()
+  router.push('/')
 }
 </script>
 
