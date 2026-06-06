@@ -12,7 +12,7 @@
       </label>
       <div v-for="l in items" :key="l.id" class="item">
         <strong>{{ l.student?.first_name }} {{ l.student?.last_name }}</strong>
-        {{ l.start_date }} – {{ l.end_date }} — <em>{{ l.status }}</em>
+        {{ formatDate(l.start_date) }} – {{ formatDate(l.end_date) }} — <em>{{ l.status }}</em>
         <template v-if="l.status === 'pending'">
           <button type="button" class="primary small" @click="decide(l.id, 'approved')">Approve</button>
           <button type="button" class="secondary small" @click="decide(l.id, 'rejected')">Reject</button>
@@ -26,7 +26,7 @@
 <script setup>
 import { ref, onMounted } from 'vue'
 import api from '../api/client'
-import { paginated } from '../composables/format'
+import { paginated, formatDate } from '../composables/format'
 
 const items = ref([])
 const status = ref('pending')

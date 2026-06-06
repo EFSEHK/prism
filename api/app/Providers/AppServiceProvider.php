@@ -8,6 +8,7 @@ use App\Checks\CacheStoreCheck;
 use App\Checks\DatabaseSizeCheck;
 use App\Checks\OptimizationCheck;
 use App\Checks\TableSizesCheck;
+use Illuminate\Support\Carbon;
 use Illuminate\Support\ServiceProvider;
 use Spatie\Health\Facades\Health;
 use Spatie\Health\Checks\Checks\DatabaseCheck;
@@ -28,6 +29,10 @@ class AppServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
+        Carbon::serializeUsing(function ($date) {
+            return $date->copy()->timezone(config('app.timezone'))->format('Y-m-d H:i:s');
+        });
+
         Health::checks([
             DatabaseCheck::new()->label('MySQL Database'),
             DatabaseSizeCheck::new()->label('MySQL Database Size'),

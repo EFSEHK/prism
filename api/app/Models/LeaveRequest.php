@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Casts\AppDate;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\SoftDeletes;
@@ -24,8 +25,8 @@ class LeaveRequest extends Model
     protected function casts(): array
     {
         return [
-            'start_date' => 'date',
-            'end_date' => 'date',
+            'start_date' => AppDate::class,
+            'end_date' => AppDate::class,
             'decided_at' => 'datetime',
         ];
     }

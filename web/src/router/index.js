@@ -2,6 +2,7 @@ import { createRouter, createWebHistory } from 'vue-router'
 import { useAuthStore } from '../stores/auth'
 import { useParentStore } from '../stores/parent'
 import { useRoles } from '../composables/useRoles'
+import { usePermissions } from '../composables/usePermissions'
 import { roleView } from '../composables/useRoleView'
 import LoginView from '../views/LoginView.vue'
 import DashboardView from '../views/DashboardView.vue'
@@ -16,6 +17,7 @@ import LeaveView from '../views/LeaveView.vue'
 import NotificationsView from '../views/NotificationsView.vue'
 import ComingSoonView from '../views/ComingSoonView.vue'
 import PermissionsAdminView from '../views/admin/PermissionsAdminView.vue'
+import AcademicConfigView from '../views/admin/AcademicConfigView.vue'
 import ParentHomeworkView from '../views/parent/ParentHomeworkView.vue'
 import ParentMarksView from '../views/parent/ParentMarksView.vue'
 import ParentAttendanceView from '../views/parent/ParentAttendanceView.vue'
@@ -33,6 +35,7 @@ const router = createRouter({
     { path: '/', component: roleView(ParentHomeView, DashboardView), meta: { auth: true } },
     { path: '/dashboard', component: ChildDashboardView, meta: { auth: true, requiresChild: true } },
     { path: '/admin/permissions', component: PermissionsAdminView, meta: { auth: true, superadminOnly: true } },
+    { path: '/admin/academic', component: AcademicConfigView, meta: { auth: true, configAccess: true } },
     { path: '/approvals', component: ApprovalsView, meta: { auth: true, staffOnly: true } },
     {
       path: '/attendance',
@@ -80,6 +83,10 @@ router.beforeEach((to) => {
   const { isLearner, isParent, isSuperadmin } = useRoles()
 
   if (to.meta.superadminOnly && !isSuperadmin.value) return '/'
+  if (to.meta.configAccess) {
+    const { canConfigure } = usePermissions()
+    if (!canConfigure.value) return '/'
+  }
   if (to.meta.staffOnly && isLearner.value) return '/'
   if (to.meta.parentOnly && !isParent.value) return '/'
 

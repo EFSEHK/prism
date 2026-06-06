@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Casts\AppDate;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\SoftDeletes;
@@ -27,7 +28,7 @@ class OnlineClassLink extends Model
     protected function casts(): array
     {
         return [
-            'scheduled_date' => 'date',
+            'scheduled_date' => AppDate::class,
             'reminder_sent_at' => 'datetime',
         ];
     }

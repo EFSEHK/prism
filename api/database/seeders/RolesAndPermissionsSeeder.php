@@ -107,8 +107,8 @@ class RolesAndPermissionsSeeder extends Seeder
         ]);
 
         Role::findByName('computer_operator', 'web')->syncPermissions([
-            'view_dashboard', 'manage_academic_structure', 'manage_assessments',
-            'manage_timetable', 'manage_fee_vouchers', 'publish_user_broadcasts',
+            'view_dashboard', 'manage_academic_structure', 'manage_student_roster',
+            'manage_assessments', 'manage_timetable', 'manage_fee_vouchers', 'publish_user_broadcasts',
         ]);
 
         Role::findByName('accountant', 'web')->syncPermissions([
@@ -116,6 +116,9 @@ class RolesAndPermissionsSeeder extends Seeder
         ]);
 
         $map = [
+            'superadmin@efsc-ya.test' => 'superadmin',
+            'admin@efsc-ya.test' => 'admin',
+            'developer@efsc-ya.test' => 'developer',
             'superadmin@lask.com' => 'superadmin',
             'admin@lask.com' => 'admin',
             'developer@lask.com' => 'developer',

@@ -32,7 +32,7 @@
       <p v-if="announcements.length === 0" class="muted">No institute announcements.</p>
       <article v-for="a in announcements" :key="a.id" class="announcement">
         <strong>{{ a.title }}</strong>
-        <span v-if="a.published_at" class="muted"> · {{ formatDate(a.published_at) }}</span>
+        <span v-if="a.published_at" class="muted"> · {{ formatDateTime(a.published_at) }}</span>
         <p v-if="a.body" class="body">{{ a.body }}</p>
       </article>
     </div>
@@ -45,7 +45,7 @@ import { useRouter } from 'vue-router'
 import { useAuthStore } from '../stores/auth'
 import { useParentStore } from '../stores/parent'
 import ChildAvatar from '../components/ChildAvatar.vue'
-import { formatDate } from '../composables/format'
+import { formatDateTime } from '../composables/format'
 
 const auth = useAuthStore()
 const parent = useParentStore()

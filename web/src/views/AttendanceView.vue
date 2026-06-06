@@ -32,8 +32,10 @@ import { ref, reactive } from 'vue'
 import api from '../api/client'
 import { useAcademic } from '../composables/useAcademic'
 
+import { todayInputDate } from '../composables/format'
+
 const academic = useAcademic()
-const date = ref(new Date().toISOString().slice(0, 10))
+const date = ref(todayInputDate())
 const students = ref([])
 const statuses = reactive({})
 const loading = ref(false)

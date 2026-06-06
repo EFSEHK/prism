@@ -21,11 +21,11 @@
 import { ref, watch, computed } from 'vue'
 import api from '../../api/client'
 import { useParentStore } from '../../stores/parent'
-import { childName, formatDate } from '../../composables/format'
+import { childName, formatDate, currentMonthInput } from '../../composables/format'
 
 const parent = useParentStore()
 const child = computed(() => parent.selectedChild)
-const month = ref(new Date().toISOString().slice(0, 7))
+const month = ref(currentMonthInput())
 const days = ref([])
 const loading = ref(false)
 const err = ref('')

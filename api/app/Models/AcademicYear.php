@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Casts\AppDate;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
@@ -12,8 +13,8 @@ class AcademicYear extends Model
     protected function casts(): array
     {
         return [
-            'starts_on' => 'date',
-            'ends_on' => 'date',
+            'starts_on' => AppDate::class,
+            'ends_on' => AppDate::class,
             'is_current' => 'boolean',
         ];
     }

@@ -14,7 +14,7 @@
         @click="markRead(n)"
       >
         <strong>{{ n.title }}</strong>
-        <span class="muted"> · {{ formatDate(n.created_at) }}</span>
+        <span class="muted"> · {{ formatDateTime(n.created_at) }}</span>
         <p v-if="n.body">{{ n.body }}</p>
         <p v-if="!n.read_at" class="hint">Click to mark read</p>
       </button>
@@ -25,7 +25,7 @@
 <script setup>
 import api from '../../api/client'
 import { useParentList } from '../../composables/useParentList'
-import { formatDate } from '../../composables/format'
+import { formatDateTime } from '../../composables/format'
 
 const { items, loading, err, load } = useParentList('/efsc/in-app-notifications')
 

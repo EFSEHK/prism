@@ -21,6 +21,7 @@
         </template>
         <template v-else>
           <RouterLink to="/">Dashboard</RouterLink>
+          <RouterLink v-if="canConfigure" to="/admin/academic">Configuration</RouterLink>
           <RouterLink v-if="isSuperadmin" to="/admin/permissions">Permissions</RouterLink>
           <RouterLink v-if="canApprove" to="/approvals">Approvals</RouterLink>
           <RouterLink v-if="canStaff" to="/attendance">Attendance</RouterLink>
@@ -47,6 +48,7 @@ import { useRouter } from 'vue-router'
 import { useAuthStore } from './stores/auth'
 import { useParentStore } from './stores/parent'
 import { useRoles } from './composables/useRoles'
+import { usePermissions } from './composables/usePermissions'
 
 const auth = useAuthStore()
 const parent = useParentStore()
@@ -56,6 +58,7 @@ const {
   isLearner, isParent, isStudent, isSuperadmin,
   canApprove, canStaff, canTimetable, canFees, canBroadcasts, canLeave,
 } = useRoles()
+const { canConfigure } = usePermissions()
 
 const selectedChild = computed(() => parent.selectedChild)
 

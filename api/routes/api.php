@@ -30,7 +30,10 @@ Route::post('/login', [AuthController::class, 'login']);
 
 Route::middleware([LogAllRequests::class, 'auth:sanctum', CheckInactivity::class])->group(function () {
     Route::get('/user', function (Request $request) {
-        return response()->json($request->user()->load(['roles:id,name', 'permissions:id,name']));
+        $user = $request->user()->load(['roles:id,name']);
+        $user->setRelation('permissions', $user->getAllPermissions());
+
+        return response()->json($user);
     });
 
     Route::get('/users', function (Request $request) {

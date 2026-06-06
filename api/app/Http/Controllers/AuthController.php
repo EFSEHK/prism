@@ -59,7 +59,8 @@ class AuthController extends Controller
             
             event(new \Illuminate\Auth\Events\Login('web', $user, false));
 
-            $user->load(['roles:id,name', 'permissions:id,name']);
+            $user->load(['roles:id,name']);
+            $user->setRelation('permissions', $user->getAllPermissions());
 
             return response()->json([
                 'access_token' => $token->plainTextToken,

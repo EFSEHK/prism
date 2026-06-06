@@ -9,7 +9,7 @@
         <strong>{{ f.title }}</strong>
         <span class="muted">
           · {{ f.type }} · {{ f.scope }}
-          <template v-if="f.published_at"> · {{ formatDate(f.published_at) }}</template>
+          <template v-if="f.published_at"> · {{ formatDateTime(f.published_at) }}</template>
         </span>
         <p v-if="f.body">{{ f.body }}</p>
       </article>
@@ -19,7 +19,7 @@
 
 <script setup>
 import { useParentList } from '../../composables/useParentList'
-import { formatDate } from '../../composables/format'
+import { formatDateTime } from '../../composables/format'
 
 const { items, loading, err } = useParentList('/efsc/feed')
 </script>

@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Casts\AppDate;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\SoftDeletes;
@@ -21,7 +22,7 @@ class DatesheetEntry extends Model
     protected function casts(): array
     {
         return [
-            'exam_date' => 'date',
+            'exam_date' => AppDate::class,
         ];
     }
 
