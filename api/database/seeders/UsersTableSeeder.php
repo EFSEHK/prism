@@ -11,9 +11,9 @@ class UsersTableSeeder extends Seeder
     public function run(): void
     {
         $users = [
-            ['name' => 'Super Admin', 'email' => 'superadmin@lask.com', 'password' => 'S.Admin.123'],
-            ['name' => 'Admin', 'email' => 'admin@lask.com', 'password' => 'Admin.123'],
-            ['name' => 'Developer', 'email' => 'developer@lask.com', 'password' => 'Developer.123'],
+            ['name' => 'Super Admin', 'email' => 'superadmin@efsc-ya.test', 'password' => 'S.Admin.123'],
+            ['name' => 'Admin', 'email' => 'admin@efsc-ya.test', 'password' => 'Admin.123'],
+            ['name' => 'Developer', 'email' => 'developer@efsc-ya.test', 'password' => 'Developer.123'],
             ['name' => 'Principal (test)', 'email' => 'principal@efsc-ya.test', 'password' => 'Test.123'],
             ['name' => 'Vice Principal (test)', 'email' => 'viceprincipal@efsc-ya.test', 'password' => 'Test.123'],
             ['name' => 'Section Head (test)', 'email' => 'sectionhead@efsc-ya.test', 'password' => 'Test.123'],

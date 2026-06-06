@@ -26,7 +26,7 @@
 <script setup>
 import { ref, onMounted } from 'vue'
 import api from '../api/client'
-import { paginated } from '../composables/useAcademic'
+import { paginated } from '../composables/format'
 
 const items = ref([])
 const status = ref('pending')

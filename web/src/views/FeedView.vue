@@ -33,7 +33,7 @@
 <script setup>
 import { reactive, ref, onMounted } from 'vue'
 import api from '../api/client'
-import { paginated } from '../composables/useAcademic'
+import { paginated } from '../composables/format'
 
 const form = reactive({
   type: 'announcement',

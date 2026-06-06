@@ -27,7 +27,7 @@
 <script setup>
 import { ref, reactive, onMounted } from 'vue'
 import api from '../api/client'
-import { paginated } from '../composables/useAcademic'
+import { paginated } from '../composables/format'
 
 const form = reactive({ student_id: '1', title: 'Term fee', file_path: '' })
 const items = ref([])

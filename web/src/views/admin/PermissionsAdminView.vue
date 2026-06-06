@@ -12,12 +12,14 @@
     <div v-if="msg" class="ok">{{ msg }}</div>
 
     <div v-if="tab === 'role'" class="card">
-      <label>Role
-        <select v-model="selectedRoleId" @change="loadRolePerms">
-          <option value="">Select…</option>
-          <option v-for="r in roles" :key="r.id" :value="r.id">{{ r.name }}</option>
-        </select>
-      </label>
+      <label class="field-label">Role</label>
+      <SearchableSelect
+        v-model="selectedRoleId"
+        :options="roleOptions"
+        placeholder="Select…"
+        search-placeholder="Search roles…"
+        @change="loadRolePerms"
+      />
       <div v-if="selectedRoleId" class="perm-grid">
         <label v-for="p in permissions" :key="p.id" class="perm-item">
           <input type="checkbox" :value="p.id" v-model="rolePermIds" />
@@ -30,12 +32,14 @@
     </div>
 
     <div v-else class="card">
-      <label>User
-        <select v-model="selectedUserId" @change="loadUserPerms">
-          <option value="">Select…</option>
-          <option v-for="u in users" :key="u.id" :value="u.id">{{ u.name }} ({{ u.email }})</option>
-        </select>
-      </label>
+      <label class="field-label">User</label>
+      <SearchableSelect
+        v-model="selectedUserId"
+        :options="userOptions"
+        placeholder="Select…"
+        search-placeholder="Search users…"
+        @change="loadUserPerms"
+      />
       <p v-if="userRoles.length"><strong>Roles:</strong> {{ userRoles.map((r) => r.name).join(', ') }}</p>
       <p class="muted small">Check permissions granted directly to this user (in addition to role permissions).</p>
       <div v-if="selectedUserId" class="perm-grid">
@@ -52,8 +56,9 @@
 </template>
 
 <script setup>
-import { onMounted, ref } from 'vue'
+import { computed, onMounted, ref } from 'vue'
 import api from '../../api/client'
+import SearchableSelect from '../../components/SearchableSelect.vue'
 
 const tab = ref('role')
 const roles = ref([])
@@ -67,6 +72,13 @@ const userDirectPermIds = ref([])
 const saving = ref(false)
 const err = ref('')
 const msg = ref('')
+
+const roleOptions = computed(() =>
+  roles.value.map((r) => ({ value: r.id, label: r.name })),
+)
+const userOptions = computed(() =>
+  users.value.map((u) => ({ value: u.id, label: `${u.name} (${u.email})` })),
+)
 
 onMounted(async () => {
   try {
@@ -148,5 +160,25 @@ async function saveUserPerms() {
 .tabs button { padding: 0.5rem 1rem; border: 1px solid #d4d4d8; background: #fff; cursor: pointer; border-radius: 6px; }
 .tabs button.active { background: #2563eb; color: #fff; border-color: #2563eb; }
 .perm-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 0.35rem; margin: 1rem 0; max-height: 360px; overflow: auto; }
-.perm-item { font-size: 0.85rem; display: flex; gap: 0.35rem; align-items: center; }
+.perm-item {
+  font-size: 0.85rem;
+  display: flex;
+  gap: 0.35rem;
+  align-items: flex-start;
+  justify-content: flex-start;
+  text-align: left;
+  width: 100%;
+  cursor: pointer;
+}
+.perm-item input[type="checkbox"] {
+  display: inline-block;
+  width: auto;
+  margin: 0.15rem 0 0;
+  flex-shrink: 0;
+}
+.field-label {
+  display: block;
+  font-size: 0.85rem;
+  font-weight: 600;
+}
 </style>
