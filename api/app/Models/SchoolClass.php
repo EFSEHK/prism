@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
 
@@ -12,15 +13,15 @@ class SchoolClass extends Model
 
     protected $table = 'school_classes';
 
-    protected $fillable = ['name', 'grade_level'];
+    protected $fillable = ['area_id', 'name', 'grade_level'];
+
+    public function area(): BelongsTo
+    {
+        return $this->belongsTo(Area::class);
+    }
 
     public function sections(): HasMany
     {
         return $this->hasMany(Section::class);
-    }
-
-    public function students(): HasMany
-    {
-        return $this->hasMany(Student::class);
     }
 }

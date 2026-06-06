@@ -33,14 +33,14 @@ const status = ref('pending')
 const msg = ref('')
 
 async function load() {
-  const { data } = await api.get('/prism/leave-requests', {
+  const { data } = await api.get('/efsc/leave-requests', {
     params: status.value ? { status: status.value } : {},
   })
   items.value = paginated(data)
 }
 
 async function decide(id, s) {
-  await api.post(`/prism/leave-requests/${id}/decide`, { status: s })
+  await api.post(`/efsc/leave-requests/${id}/decide`, { status: s })
   msg.value = `Leave ${s}. Parent notified.`
   await load()
 }

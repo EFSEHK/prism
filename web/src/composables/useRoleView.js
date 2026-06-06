@@ -1,12 +1,12 @@
 import { computed, defineComponent, h } from 'vue'
 import { useRoles } from './useRoles'
 
-export function roleView(ParentComponent, StaffComponent) {
+export function roleView(LearnerComponent, StaffComponent) {
   return defineComponent({
     name: 'RoleView',
     setup() {
-      const { isParent } = useRoles()
-      const resolved = computed(() => (isParent.value ? ParentComponent : StaffComponent))
+      const { isLearner } = useRoles()
+      const resolved = computed(() => (isLearner.value ? LearnerComponent : StaffComponent))
       return () => h(resolved.value)
     },
   })

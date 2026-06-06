@@ -22,7 +22,7 @@ import { childName } from '../../composables/format'
 
 const parent = useParentStore()
 const child = computed(() => parent.selectedChild)
-const { items, loading, err } = useParentList('/prism/online-classes')
+const { items, loading, err } = useParentList('/efsc/online-classes')
 </script>
 
 <style scoped>

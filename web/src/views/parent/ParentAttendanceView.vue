@@ -35,7 +35,7 @@ async function load() {
   loading.value = true
   err.value = ''
   try {
-    const { data } = await api.get('/prism/attendance/reports/monthly', {
+    const { data } = await api.get('/efsc/attendance/reports/monthly', {
       params: { student_id: child.value.id, month: month.value },
     })
     days.value = data.days || []

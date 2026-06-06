@@ -17,8 +17,10 @@ class NotificationDispatchRequest extends Model
         'payload_json',
         'status',
         'current_sequence',
+        'area_id',
         'school_class_id',
         'section_id',
+        'study_group_id',
         'scheduled_for',
         'sent_at',
         'created_by_user_id',
@@ -39,6 +41,11 @@ class NotificationDispatchRequest extends Model
         return $this->belongsTo(NotificationFeature::class, 'notification_feature_id');
     }
 
+    public function area(): BelongsTo
+    {
+        return $this->belongsTo(Area::class);
+    }
+
     public function schoolClass(): BelongsTo
     {
         return $this->belongsTo(SchoolClass::class);
@@ -47,6 +54,11 @@ class NotificationDispatchRequest extends Model
     public function section(): BelongsTo
     {
         return $this->belongsTo(Section::class);
+    }
+
+    public function studyGroup(): BelongsTo
+    {
+        return $this->belongsTo(StudyGroup::class);
     }
 
     public function createdBy(): BelongsTo

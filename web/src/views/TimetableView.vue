@@ -43,7 +43,7 @@ const err = ref('')
 
 async function addSlot() {
   try {
-    await api.post('/prism/timetable/slots', {
+    await api.post('/efsc/timetable/slots', {
       school_class_id: Number(academic.classId),
       section_id: Number(academic.sectionId),
       day_of_week: slot.day_of_week,
@@ -59,7 +59,7 @@ async function addSlot() {
 
 async function addExam() {
   try {
-    await api.post('/prism/timetable/datesheet', {
+    await api.post('/efsc/timetable/datesheet', {
       title: exam.title,
       exam_date: exam.exam_date,
       school_class_id: Number(academic.classId),

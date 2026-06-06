@@ -27,7 +27,7 @@ async function load() {
   loading.value = true
   err.value = ''
   try {
-    const { data } = await api.get('/prism/notification-dispatches/pending')
+    const { data } = await api.get('/efsc/notification-dispatches/pending')
     items.value = data.data || []
   } catch (e) {
     err.value = e.response?.data?.message || 'Failed to load'
@@ -37,12 +37,12 @@ async function load() {
 }
 
 async function approve(id) {
-  await api.post(`/prism/notification-dispatches/${id}/approve`, {})
+  await api.post(`/efsc/notification-dispatches/${id}/approve`, {})
   await load()
 }
 
 async function reject(id) {
-  await api.post(`/prism/notification-dispatches/${id}/reject`, {})
+  await api.post(`/efsc/notification-dispatches/${id}/reject`, {})
   await load()
 }
 

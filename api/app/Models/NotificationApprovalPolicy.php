@@ -11,8 +11,10 @@ class NotificationApprovalPolicy extends Model
         'notification_feature_id',
         'sequence',
         'approver_role_name',
+        'area_id',
         'school_class_id',
         'section_id',
+        'study_group_id',
         'requires_approval',
         'is_active',
     ];
@@ -30,6 +32,11 @@ class NotificationApprovalPolicy extends Model
         return $this->belongsTo(NotificationFeature::class, 'notification_feature_id');
     }
 
+    public function area(): BelongsTo
+    {
+        return $this->belongsTo(Area::class);
+    }
+
     public function schoolClass(): BelongsTo
     {
         return $this->belongsTo(SchoolClass::class);
@@ -38,5 +45,10 @@ class NotificationApprovalPolicy extends Model
     public function section(): BelongsTo
     {
         return $this->belongsTo(Section::class);
+    }
+
+    public function studyGroup(): BelongsTo
+    {
+        return $this->belongsTo(StudyGroup::class);
     }
 }

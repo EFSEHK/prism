@@ -27,11 +27,11 @@ import api from '../../api/client'
 import { useParentList } from '../../composables/useParentList'
 import { formatDate } from '../../composables/format'
 
-const { items, loading, err, load } = useParentList('/prism/in-app-notifications')
+const { items, loading, err, load } = useParentList('/efsc/in-app-notifications')
 
 async function markRead(n) {
   if (n.read_at) return
-  await api.post(`/prism/in-app-notifications/${n.id}/read`)
+  await api.post(`/efsc/in-app-notifications/${n.id}/read`)
   await load()
 }
 </script>

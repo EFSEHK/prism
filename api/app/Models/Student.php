@@ -15,18 +15,18 @@ class Student extends Model
         'first_name',
         'last_name',
         'admission_no',
-        'school_class_id',
-        'section_id',
+        'study_group_id',
+        'user_id',
     ];
 
-    public function schoolClass(): BelongsTo
+    public function studyGroup(): BelongsTo
     {
-        return $this->belongsTo(SchoolClass::class);
+        return $this->belongsTo(StudyGroup::class);
     }
 
-    public function section(): BelongsTo
+    public function user(): BelongsTo
     {
-        return $this->belongsTo(Section::class);
+        return $this->belongsTo(User::class);
     }
 
     public function parents(): BelongsToMany

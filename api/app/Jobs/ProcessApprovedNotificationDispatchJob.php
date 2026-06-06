@@ -103,10 +103,24 @@ class ProcessApprovedNotificationDispatchJob implements ShouldQueue
                 ->all();
         }
 
+        if ($dispatch->scope_type === 'study_group' && $dispatch->study_group_id) {
+            $sids = Student::query()->where('study_group_id', $dispatch->study_group_id)->pluck('id');
+            if ($sids->isEmpty()) {
+                return [];
+            }
+
+            return DB::table('parent_student')
+                ->whereIn('student_id', $sids)
+                ->distinct()
+                ->pluck('parent_user_id')
+                ->map(fn ($id) => (int) $id)
+                ->all();
+        }
+
         if ($dispatch->scope_type === 'class' && $dispatch->school_class_id) {
-            $q = Student::query()->where('school_class_id', $dispatch->school_class_id);
+            $q = Student::query()->whereHas('studyGroup.section', fn ($sq) => $sq->where('school_class_id', $dispatch->school_class_id));
             if ($dispatch->section_id) {
-                $q->where('section_id', $dispatch->section_id);
+                $q->whereHas('studyGroup', fn ($sq) => $sq->where('section_id', $dispatch->section_id));
             }
             $sids = $q->pluck('id');
             if ($sids->isEmpty()) {

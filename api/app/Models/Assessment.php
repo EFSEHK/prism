@@ -4,7 +4,6 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
-use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
 
 class Assessment extends Model
@@ -17,6 +16,7 @@ class Assessment extends Model
         'name',
         'number',
         'held_on',
+        'created_by_user_id',
     ];
 
     protected function casts(): array
@@ -31,8 +31,8 @@ class Assessment extends Model
         return $this->belongsTo(AcademicYear::class);
     }
 
-    public function markSheets(): HasMany
+    public function createdBy(): BelongsTo
     {
-        return $this->hasMany(MarkSheet::class);
+        return $this->belongsTo(User::class, 'created_by_user_id');
     }
 }

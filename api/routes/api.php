@@ -8,73 +8,79 @@ use App\Http\Middleware\LogAllRequests;
 use App\Http\Controllers\Api\RoleController;
 use App\Http\Controllers\Api\PermissionController;
 use App\Http\Controllers\Api\NavigationController;
-use App\Http\Controllers\Api\Prism\AcademicController;
-use App\Http\Controllers\Api\Prism\AssessmentController;
-use App\Http\Controllers\Api\Prism\AttendanceController;
-use App\Http\Controllers\Api\Prism\DeviceTokenController;
-use App\Http\Controllers\Api\Prism\FeeVoucherController;
-use App\Http\Controllers\Api\Prism\FeedPostController;
-use App\Http\Controllers\Api\Prism\HomeworkController;
-use App\Http\Controllers\Api\Prism\LeaveRequestController;
-use App\Http\Controllers\Api\Prism\MarkSheetController;
-use App\Http\Controllers\Api\Prism\NotificationDispatchController;
-use App\Http\Controllers\Api\Prism\OnlineClassController;
-use App\Http\Controllers\Api\Prism\ParentDashboardController;
-use App\Http\Controllers\Api\Prism\StudentController;
-use App\Http\Controllers\Api\Prism\TimetableController;
-use App\Http\Controllers\Api\Prism\UserNotificationController;
+use App\Http\Controllers\Api\Efsc\AcademicController;
+use App\Http\Controllers\Api\Efsc\AssessmentController;
+use App\Http\Controllers\Api\Efsc\AttendanceController;
+use App\Http\Controllers\Api\Efsc\DashboardController;
+use App\Http\Controllers\Api\Efsc\DeviceTokenController;
+use App\Http\Controllers\Api\Efsc\FeeVoucherController;
+use App\Http\Controllers\Api\Efsc\HomeworkController;
+use App\Http\Controllers\Api\Efsc\LearnerDashboardController;
+use App\Http\Controllers\Api\Efsc\LeaveRequestController;
+use App\Http\Controllers\Api\Efsc\MarkSheetController;
+use App\Http\Controllers\Api\Efsc\NotificationDispatchController;
+use App\Http\Controllers\Api\Efsc\OnlineClassController;
+use App\Http\Controllers\Api\Efsc\StudentController;
+use App\Http\Controllers\Api\Efsc\TimetableController;
+use App\Http\Controllers\Api\Efsc\UserBroadcastController;
+use App\Http\Controllers\Api\Efsc\UserNotificationController;
 
-/*
-|--------------------------------------------------------------------------
-| API Routes
-|--------------------------------------------------------------------------
-|
-| Here is where you can register API routes for your application. These
-| routes are loaded by the RouteServiceProvider and all of them will
-| be assigned to the "api" middleware group. Make something great!
-|
-*/
-
-// Public routes
 Route::post('/register', [AuthController::class, 'register']);
 Route::post('/login', [AuthController::class, 'login']);
 
-// Protected routes
 Route::middleware([LogAllRequests::class, 'auth:sanctum', CheckInactivity::class])->group(function () {
     Route::get('/user', function (Request $request) {
-        return response()->json($request->user());
+        return response()->json($request->user()->load(['roles:id,name', 'permissions:id,name']));
+    });
+
+    Route::get('/users', function (Request $request) {
+        abort_unless($request->user()->hasRole('superadmin'), 403);
+
+        return response()->json(
+            \App\Models\User::query()->orderBy('name')->get(['id', 'name', 'email'])
+        );
     });
     Route::post('/logout', [AuthController::class, 'logout']);
-    
-    // Role Routes
+
     Route::get('roles/{id}/permissions', [RoleController::class, 'getPermissions']);
     Route::post('roles/{id}/permissions', [RoleController::class, 'assignPermissions']);
     Route::post('roles/assign-to-user', [RoleController::class, 'assignRoleToUser']);
     Route::post('roles/remove-from-user', [RoleController::class, 'removeRoleFromUser']);
     Route::get('users/{userId}/roles', [RoleController::class, 'getUserRoles']);
     Route::apiResource('roles', RoleController::class);
-    
-    // Permission Routes
+
     Route::post('permissions/assign-to-user', [PermissionController::class, 'assignPermissionToUser']);
     Route::post('permissions/remove-from-user', [PermissionController::class, 'removePermissionFromUser']);
     Route::get('users/{userId}/permissions', [PermissionController::class, 'getUserPermissions']);
     Route::apiResource('permissions', PermissionController::class);
 
-    // Navigation Routes
     Route::get('navigations/active', [NavigationController::class, 'active']);
     Route::apiResource('navigations', NavigationController::class);
 
-    // PRISM school modules (aggregate + domain APIs)
-    Route::prefix('prism')->group(function () {
-        Route::get('parent/dashboard', [ParentDashboardController::class, 'show']);
+    Route::prefix('efsc')->group(function () {
+        Route::get('dashboard', [DashboardController::class, 'show']);
+        Route::get('learner/dashboard', [LearnerDashboardController::class, 'show']);
 
+        Route::get('academic/years', [AcademicController::class, 'yearsIndex']);
+        Route::post('academic/years', [AcademicController::class, 'storeYear']);
+        Route::get('academic/areas', [AcademicController::class, 'areasIndex']);
+        Route::post('academic/areas', [AcademicController::class, 'storeArea']);
         Route::get('academic/classes', [AcademicController::class, 'classesIndex']);
+        Route::post('academic/classes', [AcademicController::class, 'storeClass']);
+        Route::get('academic/sections', [AcademicController::class, 'sectionsIndex']);
+        Route::post('academic/sections', [AcademicController::class, 'storeSection']);
+        Route::get('academic/study-groups', [AcademicController::class, 'studyGroupsIndex']);
+        Route::post('academic/study-groups', [AcademicController::class, 'storeStudyGroup']);
+        Route::put('academic/study-groups/{studyGroup}/subjects', [AcademicController::class, 'syncStudyGroupSubjects']);
         Route::get('academic/subjects', [AcademicController::class, 'subjectsIndex']);
+        Route::post('academic/subjects', [AcademicController::class, 'storeSubject']);
 
         Route::get('students', [StudentController::class, 'index']);
+        Route::post('students', [StudentController::class, 'store']);
 
         Route::get('attendance/batches', [AttendanceController::class, 'index']);
         Route::post('attendance/batches', [AttendanceController::class, 'store']);
+        Route::post('attendance/batches/{attendanceBatch}/verify', [AttendanceController::class, 'verify']);
         Route::get('attendance/batches/{attendanceBatch}', [AttendanceController::class, 'show']);
         Route::get('attendance/reports/monthly', [AttendanceController::class, 'reportMonthly']);
         Route::get('attendance/reports/weekly', [AttendanceController::class, 'reportWeekly']);
@@ -85,6 +91,7 @@ Route::middleware([LogAllRequests::class, 'auth:sanctum', CheckInactivity::class
         Route::post('mark-sheets', [MarkSheetController::class, 'store']);
         Route::get('mark-sheets/{markSheet}', [MarkSheetController::class, 'show']);
         Route::post('mark-sheets/{markSheet}/entries', [MarkSheetController::class, 'upsertEntries']);
+        Route::post('mark-sheets/{markSheet}/verify', [MarkSheetController::class, 'verify']);
         Route::post('mark-sheets/{markSheet}/notify-parents', [MarkSheetController::class, 'requestParentNotification']);
 
         Route::get('timetable/slots', [TimetableController::class, 'slotsIndex']);
@@ -94,16 +101,18 @@ Route::middleware([LogAllRequests::class, 'auth:sanctum', CheckInactivity::class
 
         Route::get('homework', [HomeworkController::class, 'index']);
         Route::post('homework', [HomeworkController::class, 'store']);
+        Route::post('homework/{homeworkPost}/approve', [HomeworkController::class, 'approve']);
 
         Route::get('online-classes', [OnlineClassController::class, 'index']);
         Route::post('online-classes', [OnlineClassController::class, 'store']);
+        Route::post('online-classes/{onlineClassLink}/approve', [OnlineClassController::class, 'approve']);
 
         Route::get('fee-vouchers', [FeeVoucherController::class, 'index']);
         Route::post('fee-vouchers', [FeeVoucherController::class, 'store']);
         Route::patch('fee-vouchers/{feeVoucher}/status', [FeeVoucherController::class, 'updateStatus']);
 
-        Route::get('feed', [FeedPostController::class, 'index']);
-        Route::post('feed', [FeedPostController::class, 'store']);
+        Route::get('broadcasts', [UserBroadcastController::class, 'index']);
+        Route::post('broadcasts', [UserBroadcastController::class, 'store']);
 
         Route::get('leave-requests', [LeaveRequestController::class, 'index']);
         Route::post('leave-requests', [LeaveRequestController::class, 'store']);

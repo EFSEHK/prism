@@ -11,26 +11,30 @@ class HomeworkPost extends Model
     use SoftDeletes;
 
     protected $fillable = [
-        'school_class_id',
+        'study_group_id',
         'section_id',
         'subject_id',
         'title',
         'body',
         'due_date',
         'attachment_path',
+        'status',
         'created_by_user_id',
+        'approved_by_user_id',
+        'approved_at',
     ];
 
     protected function casts(): array
     {
         return [
             'due_date' => 'date',
+            'approved_at' => 'datetime',
         ];
     }
 
-    public function schoolClass(): BelongsTo
+    public function studyGroup(): BelongsTo
     {
-        return $this->belongsTo(SchoolClass::class);
+        return $this->belongsTo(StudyGroup::class);
     }
 
     public function section(): BelongsTo
@@ -46,5 +50,15 @@ class HomeworkPost extends Model
     public function createdBy(): BelongsTo
     {
         return $this->belongsTo(User::class, 'created_by_user_id');
+    }
+
+    public function approvedBy(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'approved_by_user_id');
+    }
+
+    public function isApproved(): bool
+    {
+        return $this->status === 'approved';
     }
 }

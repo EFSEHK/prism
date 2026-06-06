@@ -34,7 +34,7 @@ import { childName, formatDate } from '../../composables/format'
 
 const parent = useParentStore()
 const child = computed(() => parent.selectedChild)
-const { items, loading, err, load } = useParentList('/prism/leave-requests')
+const { items, loading, err, load } = useParentList('/efsc/leave-requests')
 
 const startDate = ref('')
 const endDate = ref('')
@@ -46,7 +46,7 @@ async function submit() {
   ok.value = ''
   submitErr.value = ''
   try {
-    await api.post('/prism/leave-requests', {
+    await api.post('/efsc/leave-requests', {
       student_id: child.value?.id,
       start_date: startDate.value,
       end_date: endDate.value,

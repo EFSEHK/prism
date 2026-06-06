@@ -35,13 +35,13 @@ const statusPick = reactive({})
 const msg = ref('')
 
 async function load() {
-  const { data } = await api.get('/prism/fee-vouchers')
+  const { data } = await api.get('/efsc/fee-vouchers')
   items.value = paginated(data)
   for (const v of items.value) statusPick[v.id] = v.submission_status
 }
 
 async function create() {
-  await api.post('/prism/fee-vouchers', {
+  await api.post('/efsc/fee-vouchers', {
     student_id: Number(form.student_id),
     title: form.title,
     file_path: form.file_path || null,
@@ -51,7 +51,7 @@ async function create() {
 }
 
 async function updateStatus(id) {
-  await api.patch(`/prism/fee-vouchers/${id}/status`, {
+  await api.patch(`/efsc/fee-vouchers/${id}/status`, {
     submission_status: statusPick[id],
   })
   msg.value = 'Status updated.'

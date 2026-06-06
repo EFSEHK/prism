@@ -45,8 +45,8 @@ onMounted(async () => {
   err.value = ''
   try {
     const [s, d] = await Promise.all([
-      api.get('/prism/timetable/slots', { params: { per_page: 50 } }),
-      api.get('/prism/timetable/datesheet', { params: { per_page: 30 } }),
+      api.get('/efsc/timetable/slots', { params: { per_page: 50 } }),
+      api.get('/efsc/timetable/datesheet', { params: { per_page: 30 } }),
     ])
     slots.value = paginated(s.data)
     datesheet.value = paginated(d.data)

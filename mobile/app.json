@@ -1,7 +1,7 @@
 {
   "expo": {
-    "name": "PRISM",
-    "slug": "prism-school",
+    "name": "EFSC-YA",
+    "slug": "EFSC-YA-school",
     "version": "1.0.0",
     "orientation": "portrait",
     "userInterfaceStyle": "light",
@@ -10,10 +10,10 @@
     ],
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "com.school.prism"
+      "bundleIdentifier": "com.school.EFSC-YA"
     },
     "android": {
-      "package": "com.school.prism"
+      "package": "com.school.EFSC-YA"
     },
     "web": {
       "bundler": "metro",

@@ -1,6 +1,6 @@
 <?php
 
-namespace App\Http\Controllers\Api\Prism;
+namespace App\Http\Controllers\Api\Efsc;
 
 use App\Http\Controllers\Controller;
 use App\Models\FeeVoucher;

@@ -27,7 +27,7 @@ class RoleController extends Controller
     {
         try {
             $validated = $request->validated();
-            $validated['guard_name'] = 'api';
+            $validated['guard_name'] = 'web';
 
             $role = $this->roleRepository->create($validated);
             return response()->json([
@@ -54,7 +54,7 @@ class RoleController extends Controller
     {
         try {
             $validated = $request->validated();
-            $validated['guard_name'] = 'api';
+            $validated['guard_name'] = 'web';
 
             $role = $this->roleRepository->update($id, $validated);
             return response()->json([
@@ -79,6 +79,8 @@ class RoleController extends Controller
 
     public function assignPermissions(Request $request, $id): JsonResponse
     {
+        abort_unless($request->user()->hasRole('superadmin'), 403);
+
         $validated = $request->validate([
             'permission_ids' => 'required|array',
             'permission_ids.*' => 'exists:permissions,id'

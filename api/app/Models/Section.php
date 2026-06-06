@@ -18,8 +18,8 @@ class Section extends Model
         return $this->belongsTo(SchoolClass::class);
     }
 
-    public function students(): HasMany
+    public function studyGroups(): HasMany
     {
-        return $this->hasMany(Student::class);
+        return $this->hasMany(StudyGroup::class);
     }
 }

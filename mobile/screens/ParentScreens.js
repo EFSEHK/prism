@@ -147,7 +147,7 @@ export function HomeworkScreen() {
   const load = async () => {
     setErr('')
     try {
-      const { data } = await apiClient.get('/prism/homework', { params: { per_page: 30 } })
+      const { data } = await apiClient.get('/efsc/homework', { params: { per_page: 30 } })
       setItems(paginatedItems(data))
     } catch (e) {
       setErr(formatError(e))
@@ -183,7 +183,7 @@ export function MarksScreen() {
   const load = async () => {
     setErr('')
     try {
-      const { data } = await apiClient.get('/prism/mark-sheets', { params: { per_page: 30 } })
+      const { data } = await apiClient.get('/efsc/mark-sheets', { params: { per_page: 30 } })
       setItems(paginatedItems(data))
     } catch (e) {
       setErr(formatError(e))
@@ -193,7 +193,7 @@ export function MarksScreen() {
   }
   const open = async (id) => {
     try {
-      const { data } = await apiClient.get(`/prism/mark-sheets/${id}`)
+      const { data } = await apiClient.get(`/efsc/mark-sheets/${id}`)
       setDetail(data)
     } catch (e) {
       setErr(formatError(e))
@@ -251,7 +251,7 @@ export function AttendanceScreen({ children, selectedChildId }) {
     setLoading(true)
     setErr('')
     try {
-      const { data } = await apiClient.get('/prism/attendance/reports/monthly', {
+      const { data } = await apiClient.get('/efsc/attendance/reports/monthly', {
         params: { student_id: studentId, month },
       })
       setDays(data.days || [])
@@ -295,8 +295,8 @@ export function TimetableScreen() {
     setErr('')
     try {
       const [s, d] = await Promise.all([
-        apiClient.get('/prism/timetable/slots', { params: { per_page: 50 } }),
-        apiClient.get('/prism/timetable/datesheet', { params: { per_page: 30 } }),
+        apiClient.get('/efsc/timetable/slots', { params: { per_page: 50 } }),
+        apiClient.get('/efsc/timetable/datesheet', { params: { per_page: 30 } }),
       ])
       setSlots(paginatedItems(s.data))
       setDatesheet(paginatedItems(d.data))
@@ -338,7 +338,7 @@ export function FeedScreen() {
   const [err, setErr] = useState('')
   const load = async () => {
     try {
-      const { data } = await apiClient.get('/prism/feed')
+      const { data } = await apiClient.get('/efsc/broadcasts')
       setItems(paginatedItems(data))
     } catch (e) {
       setErr(formatError(e))
@@ -370,7 +370,7 @@ export function FeesScreen() {
   const [err, setErr] = useState('')
   const load = async () => {
     try {
-      const { data } = await apiClient.get('/prism/fee-vouchers')
+      const { data } = await apiClient.get('/efsc/fee-vouchers')
       setItems(paginatedItems(data))
     } catch (e) {
       setErr(formatError(e))
@@ -402,7 +402,7 @@ export function OnlineClassScreen() {
   const [err, setErr] = useState('')
   const load = async () => {
     try {
-      const { data } = await apiClient.get('/prism/online-classes')
+      const { data } = await apiClient.get('/efsc/online-classes')
       setItems(paginatedItems(data))
     } catch (e) {
       setErr(formatError(e))
@@ -443,7 +443,7 @@ export function LeaveScreen({ children, selectedChildId }) {
   const [ok, setOk] = useState('')
   const load = async () => {
     try {
-      const { data } = await apiClient.get('/prism/leave-requests')
+      const { data } = await apiClient.get('/efsc/leave-requests')
       setItems(paginatedItems(data))
     } catch (e) {
       setErr(formatError(e))
@@ -455,7 +455,7 @@ export function LeaveScreen({ children, selectedChildId }) {
     setErr('')
     setOk('')
     try {
-      await apiClient.post('/prism/leave-requests', {
+      await apiClient.post('/efsc/leave-requests', {
         student_id: studentId,
         start_date: startDate,
         end_date: endDate,
@@ -509,7 +509,7 @@ export function AlertsScreen() {
   const [err, setErr] = useState('')
   const load = async () => {
     try {
-      const { data } = await apiClient.get('/prism/in-app-notifications')
+      const { data } = await apiClient.get('/efsc/in-app-notifications')
       setItems(paginatedItems(data))
     } catch (e) {
       setErr(formatError(e))
@@ -518,7 +518,7 @@ export function AlertsScreen() {
     }
   }
   const markRead = async (id) => {
-    await apiClient.post(`/prism/in-app-notifications/${id}/read`)
+    await apiClient.post(`/efsc/in-app-notifications/${id}/read`)
     await load()
   }
   useEffect(() => { load() }, [])

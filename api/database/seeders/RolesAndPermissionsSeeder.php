@@ -18,20 +18,31 @@ class RolesAndPermissionsSeeder extends Seeder
             'manage_users',
             'manage_roles',
             'manage_permissions',
-            'manage_academic',
-            'manage_attendance',
+            'manage_academic_structure',
+            'manage_student_roster',
+            'mark_attendance',
+            'verify_attendance',
             'view_attendance_reports',
-            'approve_notification_dispatches',
-            'manage_marks',
-            'view_marks',
+            'view_own_attendance',
+            'manage_assessments',
+            'enter_marks',
+            'verify_marks',
+            'view_marks_reports',
+            'view_own_marks',
+            'post_homework',
+            'approve_homework',
+            'view_own_homework',
             'manage_timetable',
-            'manage_homework',
             'manage_online_classes',
+            'approve_online_classes',
+            'view_own_online_classes',
             'manage_fee_vouchers',
             'view_fee_accounting',
-            'manage_feed',
+            'publish_user_broadcasts',
             'manage_leave_requests',
             'view_parent_dashboard',
+            'view_student_dashboard',
+            'approve_notification_dispatches',
         ];
 
         foreach ($permissions as $p) {
@@ -39,17 +50,9 @@ class RolesAndPermissionsSeeder extends Seeder
         }
 
         $roleNames = [
-            'superadmin',
-            'admin',
-            'principal',
-            'vice_principal',
-            'section_head',
-            'class_incharge',
-            'teacher',
-            'parent',
-            'computer_operator',
-            'accountant',
-            'developer',
+            'superadmin', 'admin', 'developer', 'principal', 'vice_principal',
+            'section_head', 'class_incharge', 'teacher', 'parent', 'student',
+            'computer_operator', 'accountant',
         ];
 
         foreach ($roleNames as $r) {
@@ -60,44 +63,52 @@ class RolesAndPermissionsSeeder extends Seeder
         Role::findByName('developer', 'web')->syncPermissions(Permission::all());
 
         Role::findByName('admin', 'web')->syncPermissions([
-            'view_dashboard', 'manage_users', 'manage_academic', 'manage_roles',
-            'manage_attendance', 'view_attendance_reports', 'approve_notification_dispatches',
-            'manage_marks', 'view_marks', 'manage_timetable', 'manage_homework',
-            'manage_online_classes', 'manage_fee_vouchers', 'manage_feed', 'manage_leave_requests',
+            'view_dashboard', 'manage_users', 'manage_roles', 'manage_academic_structure',
+            'manage_student_roster', 'view_attendance_reports', 'view_marks_reports',
+            'publish_user_broadcasts', 'manage_leave_requests',
         ]);
 
         Role::findByName('principal', 'web')->syncPermissions([
-            'view_dashboard', 'manage_academic', 'view_attendance_reports',
-            'approve_notification_dispatches', 'view_marks', 'manage_leave_requests', 'manage_feed',
+            'view_dashboard', 'view_attendance_reports', 'view_marks_reports',
+            'publish_user_broadcasts', 'approve_notification_dispatches',
         ]);
 
         Role::findByName('vice_principal', 'web')->syncPermissions([
-            'view_dashboard', 'view_attendance_reports', 'approve_notification_dispatches',
-            'view_marks', 'manage_leave_requests', 'manage_feed',
+            'view_dashboard', 'view_attendance_reports', 'view_marks_reports',
+            'publish_user_broadcasts', 'approve_notification_dispatches',
         ]);
 
         Role::findByName('section_head', 'web')->syncPermissions([
-            'view_dashboard', 'view_attendance_reports', 'approve_notification_dispatches',
-            'view_marks', 'manage_marks', 'manage_leave_requests',
+            'view_dashboard', 'manage_student_roster', 'verify_attendance',
+            'view_attendance_reports', 'verify_marks', 'view_marks_reports',
+            'approve_homework', 'approve_online_classes', 'publish_user_broadcasts',
+            'manage_leave_requests', 'approve_notification_dispatches',
         ]);
 
         Role::findByName('class_incharge', 'web')->syncPermissions([
-            'view_dashboard', 'view_attendance_reports', 'approve_notification_dispatches',
+            'view_dashboard', 'manage_student_roster', 'mark_attendance',
+            'view_attendance_reports', 'post_homework', 'publish_user_broadcasts',
+            'approve_notification_dispatches',
         ]);
 
         Role::findByName('teacher', 'web')->syncPermissions([
-            'view_dashboard', 'manage_attendance', 'view_attendance_reports',
-            'manage_marks', 'view_marks', 'manage_homework', 'manage_online_classes', 'manage_leave_requests',
+            'view_dashboard', 'mark_attendance', 'enter_marks', 'post_homework',
+            'manage_online_classes', 'publish_user_broadcasts',
         ]);
 
         Role::findByName('parent', 'web')->syncPermissions([
-            'view_parent_dashboard',
-            'view_marks',
-            'view_attendance_reports',
+            'view_parent_dashboard', 'view_own_marks', 'view_own_attendance',
+            'view_own_homework', 'view_own_online_classes',
+        ]);
+
+        Role::findByName('student', 'web')->syncPermissions([
+            'view_student_dashboard', 'view_own_marks', 'view_own_attendance',
+            'view_own_homework', 'view_own_online_classes',
         ]);
 
         Role::findByName('computer_operator', 'web')->syncPermissions([
-            'view_dashboard', 'manage_academic', 'manage_timetable', 'manage_fee_vouchers',
+            'view_dashboard', 'manage_academic_structure', 'manage_assessments',
+            'manage_timetable', 'manage_fee_vouchers', 'publish_user_broadcasts',
         ]);
 
         Role::findByName('accountant', 'web')->syncPermissions([
@@ -108,12 +119,15 @@ class RolesAndPermissionsSeeder extends Seeder
             'superadmin@lask.com' => 'superadmin',
             'admin@lask.com' => 'admin',
             'developer@lask.com' => 'developer',
-            'principal@school.test' => 'principal',
-            'incharge@school.test' => 'class_incharge',
-            'teacher@school.test' => 'teacher',
-            'parent@school.test' => 'parent',
-            'accountant@school.test' => 'accountant',
-            'operator@school.test' => 'computer_operator',
+            'principal@efsc-ya.test' => 'principal',
+            'viceprincipal@efsc-ya.test' => 'vice_principal',
+            'sectionhead@efsc-ya.test' => 'section_head',
+            'incharge@efsc-ya.test' => 'class_incharge',
+            'teacher@efsc-ya.test' => 'teacher',
+            'parent@efsc-ya.test' => 'parent',
+            'student@efsc-ya.test' => 'student',
+            'accountant@efsc-ya.test' => 'accountant',
+            'operator@efsc-ya.test' => 'computer_operator',
         ];
 
         foreach ($map as $email => $role) {

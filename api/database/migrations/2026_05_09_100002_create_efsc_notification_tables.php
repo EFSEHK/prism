@@ -25,8 +25,10 @@ return new class extends Migration
             $table->foreignId('notification_feature_id')->constrained('notification_features')->cascadeOnDelete();
             $table->unsignedSmallInteger('sequence')->default(1);
             $table->string('approver_role_name', 64);
+            $table->foreignId('area_id')->nullable()->constrained('areas')->cascadeOnDelete();
             $table->foreignId('school_class_id')->nullable()->constrained('school_classes')->cascadeOnDelete();
             $table->foreignId('section_id')->nullable()->constrained('sections')->cascadeOnDelete();
+            $table->foreignId('study_group_id')->nullable()->constrained('study_groups')->cascadeOnDelete();
             $table->boolean('requires_approval')->default(true);
             $table->boolean('is_active')->default(true);
             $table->timestamps();
@@ -43,14 +45,16 @@ return new class extends Migration
             $table->json('payload_json')->nullable();
             $table->string('status', 32)->default('pending_approval');
             $table->unsignedSmallInteger('current_sequence')->default(1);
+            $table->foreignId('area_id')->nullable()->constrained('areas')->nullOnDelete();
             $table->foreignId('school_class_id')->nullable()->constrained('school_classes')->nullOnDelete();
             $table->foreignId('section_id')->nullable()->constrained('sections')->nullOnDelete();
+            $table->foreignId('study_group_id')->nullable()->constrained('study_groups')->nullOnDelete();
             $table->timestamp('scheduled_for')->nullable();
             $table->timestamp('sent_at')->nullable();
             $table->foreignId('created_by_user_id')->nullable()->constrained('users')->nullOnDelete();
             $table->timestamps();
             $table->index(['status', 'created_at'], 'notif_disp_status_created');
-            $table->index(['school_class_id', 'section_id', 'status'], 'notif_disp_class_status');
+            $table->index(['study_group_id', 'status'], 'notif_disp_group_status');
             $table->index(['context_type', 'context_id'], 'notif_disp_context');
         });
 

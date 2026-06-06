@@ -9,27 +9,25 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 class AttendanceBatch extends Model
 {
     protected $fillable = [
-        'school_class_id',
-        'section_id',
+        'study_group_id',
         'date',
+        'status',
         'submitted_by_user_id',
+        'verified_by_user_id',
+        'verified_at',
     ];
 
     protected function casts(): array
     {
         return [
             'date' => 'date',
+            'verified_at' => 'datetime',
         ];
     }
 
-    public function schoolClass(): BelongsTo
+    public function studyGroup(): BelongsTo
     {
-        return $this->belongsTo(SchoolClass::class);
-    }
-
-    public function section(): BelongsTo
-    {
-        return $this->belongsTo(Section::class);
+        return $this->belongsTo(StudyGroup::class);
     }
 
     public function submittedBy(): BelongsTo
@@ -37,8 +35,18 @@ class AttendanceBatch extends Model
         return $this->belongsTo(User::class, 'submitted_by_user_id');
     }
 
+    public function verifiedBy(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'verified_by_user_id');
+    }
+
     public function records(): HasMany
     {
         return $this->hasMany(AttendanceRecord::class);
+    }
+
+    public function isVerified(): bool
+    {
+        return $this->status === 'verified';
     }
 }

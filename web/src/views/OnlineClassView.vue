@@ -37,7 +37,7 @@ const form = reactive({
 const msg = ref('')
 
 async function create() {
-  await api.post('/prism/online-classes', {
+  await api.post('/efsc/online-classes', {
     school_class_id: Number(academic.classId),
     section_id: Number(academic.sectionId),
     ...form,

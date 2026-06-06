@@ -13,25 +13,29 @@ class MarkSheet extends Model
 
     protected $fillable = [
         'assessment_id',
-        'school_class_id',
-        'section_id',
+        'study_group_id',
         'subject_id',
+        'status',
         'submitted_by_user_id',
+        'verified_by_user_id',
+        'verified_at',
     ];
+
+    protected function casts(): array
+    {
+        return [
+            'verified_at' => 'datetime',
+        ];
+    }
 
     public function assessment(): BelongsTo
     {
         return $this->belongsTo(Assessment::class);
     }
 
-    public function schoolClass(): BelongsTo
+    public function studyGroup(): BelongsTo
     {
-        return $this->belongsTo(SchoolClass::class);
-    }
-
-    public function section(): BelongsTo
-    {
-        return $this->belongsTo(Section::class);
+        return $this->belongsTo(StudyGroup::class);
     }
 
     public function subject(): BelongsTo
@@ -44,8 +48,18 @@ class MarkSheet extends Model
         return $this->belongsTo(User::class, 'submitted_by_user_id');
     }
 
+    public function verifiedBy(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'verified_by_user_id');
+    }
+
     public function entries(): HasMany
     {
         return $this->hasMany(MarkEntry::class);
+    }
+
+    public function isVerified(): bool
+    {
+        return $this->status === 'verified';
     }
 }

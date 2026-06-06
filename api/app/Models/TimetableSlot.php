@@ -11,8 +11,7 @@ class TimetableSlot extends Model
     use SoftDeletes;
 
     protected $fillable = [
-        'school_class_id',
-        'section_id',
+        'study_group_id',
         'subject_id',
         'day_of_week',
         'start_time',
@@ -20,14 +19,9 @@ class TimetableSlot extends Model
         'room',
     ];
 
-    public function schoolClass(): BelongsTo
+    public function studyGroup(): BelongsTo
     {
-        return $this->belongsTo(SchoolClass::class);
-    }
-
-    public function section(): BelongsTo
-    {
-        return $this->belongsTo(Section::class);
+        return $this->belongsTo(StudyGroup::class);
     }
 
     public function subject(): BelongsTo

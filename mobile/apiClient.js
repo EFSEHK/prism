@@ -5,7 +5,7 @@ import { Platform } from 'react-native'
 const extra = Constants.expoConfig?.extra || {}
 
 /** Laragon API base (repo-root vhost + root .htaccess → api/public). */
-export const DEFAULT_API_URL = 'http://prism.test/api'
+export const DEFAULT_API_URL = 'http://EFSC-YA.test/api'
 
 function resolveApi() {
   const configured =
@@ -23,13 +23,13 @@ function resolveApi() {
 
   try {
     const { hostname } = new URL(configured)
-    // Browser on the dev PC can use prism.test directly (same hosts file as Laragon).
-    if (hostname === 'prism.test' && Platform.OS !== 'web') {
+    // Browser on the dev PC can use EFSC-YA.test directly (same hosts file as Laragon).
+    if (hostname === 'EFSC-YA.test' && Platform.OS !== 'web') {
       const targetIp =
         lanIp || (Platform.OS === 'android' ? '10.0.2.2' : '')
       if (targetIp) {
         baseURL = configured.replace(hostname, targetIp)
-        headers.Host = 'prism.test'
+        headers.Host = 'EFSC-YA.test'
         bridgeHost = targetIp
       }
     }

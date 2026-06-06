@@ -73,7 +73,12 @@ class User extends Authenticatable
 
     public function staffAssignments(): HasMany
     {
-        return $this->hasMany(StaffClassAssignment::class);
+        return $this->hasMany(StaffAssignment::class);
+    }
+
+    public function studentProfile(): \Illuminate\Database\Eloquent\Relations\HasOne
+    {
+        return $this->hasOne(Student::class);
     }
 
     public function deviceTokens(): HasMany

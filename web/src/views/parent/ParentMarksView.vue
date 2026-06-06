@@ -43,14 +43,14 @@ import { childName } from '../../composables/format'
 
 const parent = useParentStore()
 const child = computed(() => parent.selectedChild)
-const { items, loading, err } = useParentList('/prism/mark-sheets', { per_page: 30 })
+const { items, loading, err } = useParentList('/efsc/mark-sheets', { per_page: 30 })
 const detail = ref(null)
 const detailErr = ref('')
 
 async function open(id) {
   detailErr.value = ''
   try {
-    const { data } = await api.get(`/prism/mark-sheets/${id}`)
+    const { data } = await api.get(`/efsc/mark-sheets/${id}`)
     detail.value = data
   } catch (e) {
     detailErr.value = e.response?.data?.message || 'Failed to load'

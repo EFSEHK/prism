@@ -24,7 +24,7 @@ import { childName, formatDate } from '../../composables/format'
 
 const parent = useParentStore()
 const child = computed(() => parent.selectedChild)
-const { items, loading, err } = useParentList('/prism/homework', { per_page: 30 })
+const { items, loading, err } = useParentList('/efsc/homework', { per_page: 30 })
 </script>
 
 <style scoped>

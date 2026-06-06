@@ -47,12 +47,12 @@ const items = ref([])
 const msg = ref('')
 
 async function load() {
-  const { data } = await api.get('/prism/feed')
+  const { data } = await api.get('/efsc/feed')
   items.value = paginated(data)
 }
 
 async function create() {
-  await api.post('/prism/feed', {
+  await api.post('/efsc/feed', {
     ...form,
     scope_school_class_id: form.scope === 'class' ? Number(form.scope_school_class_id) : null,
     publish: form.publish,

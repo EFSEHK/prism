@@ -1,26 +1,27 @@
 <template>
   <div class="app">
     <header v-if="auth.token" class="top">
-      <span class="brand">PRISM</span>
+      <span class="brand">EFSC-YA</span>
       <nav>
-        <template v-if="isParent">
+        <template v-if="isLearner">
           <RouterLink to="/">Home</RouterLink>
-          <template v-if="selectedChild">
+          <template v-if="selectedChild || isStudent">
             <RouterLink to="/dashboard">Dashboard</RouterLink>
             <RouterLink to="/homework">Homework</RouterLink>
             <RouterLink to="/marks">Marks</RouterLink>
             <RouterLink to="/attendance">Attendance</RouterLink>
             <RouterLink to="/timetable">Timetable</RouterLink>
-            <RouterLink to="/feed">Feed</RouterLink>
+            <RouterLink to="/notifications">Notifications</RouterLink>
             <RouterLink to="/fees">Fees</RouterLink>
             <RouterLink to="/online-classes">Online</RouterLink>
             <RouterLink to="/leave">Leave</RouterLink>
-            <RouterLink to="/alerts">Alerts</RouterLink>
-            <button type="button" class="link" @click="switchChild">Switch child</button>
+            <RouterLink v-if="isParent" to="/alerts">Alerts</RouterLink>
+            <button v-if="isParent" type="button" class="link" @click="switchChild">Switch child</button>
           </template>
         </template>
         <template v-else>
           <RouterLink to="/">Dashboard</RouterLink>
+          <RouterLink v-if="isSuperadmin" to="/admin/permissions">Permissions</RouterLink>
           <RouterLink v-if="canApprove" to="/approvals">Approvals</RouterLink>
           <RouterLink v-if="canStaff" to="/attendance">Attendance</RouterLink>
           <RouterLink v-if="canStaff" to="/marks">Marks</RouterLink>
@@ -28,7 +29,7 @@
           <RouterLink v-if="canTimetable" to="/timetable">Timetable</RouterLink>
           <RouterLink v-if="canStaff" to="/online-classes">Online</RouterLink>
           <RouterLink v-if="canFees" to="/fees">Fees</RouterLink>
-          <RouterLink v-if="canFeed" to="/feed">Feed</RouterLink>
+          <RouterLink v-if="canBroadcasts" to="/notifications">Notifications</RouterLink>
           <RouterLink v-if="canLeave" to="/leave">Leave</RouterLink>
         </template>
         <button type="button" class="link" @click="logout">Logout</button>
@@ -51,7 +52,10 @@ const auth = useAuthStore()
 const parent = useParentStore()
 const router = useRouter()
 
-const { isParent, canApprove, canStaff, canTimetable, canFees, canFeed, canLeave } = useRoles()
+const {
+  isLearner, isParent, isStudent, isSuperadmin,
+  canApprove, canStaff, canTimetable, canFees, canBroadcasts, canLeave,
+} = useRoles()
 
 const selectedChild = computed(() => parent.selectedChild)
 

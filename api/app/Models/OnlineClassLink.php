@@ -11,28 +11,49 @@ class OnlineClassLink extends Model
     use SoftDeletes;
 
     protected $fillable = [
-        'school_class_id',
-        'section_id',
+        'study_group_id',
         'subject_id',
         'label',
         'url',
-        'day_of_week',
+        'scheduled_date',
         'start_time',
-        'minutes_before',
+        'end_time',
+        'status',
+        'created_by_user_id',
+        'approved_by_user_id',
+        'reminder_sent_at',
     ];
 
-    public function schoolClass(): BelongsTo
+    protected function casts(): array
     {
-        return $this->belongsTo(SchoolClass::class);
+        return [
+            'scheduled_date' => 'date',
+            'reminder_sent_at' => 'datetime',
+        ];
     }
 
-    public function section(): BelongsTo
+    public function studyGroup(): BelongsTo
     {
-        return $this->belongsTo(Section::class);
+        return $this->belongsTo(StudyGroup::class);
     }
 
     public function subject(): BelongsTo
     {
         return $this->belongsTo(Subject::class);
+    }
+
+    public function createdBy(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'created_by_user_id');
+    }
+
+    public function approvedBy(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'approved_by_user_id');
+    }
+
+    public function isApproved(): bool
+    {
+        return $this->status === 'approved';
     }
 }

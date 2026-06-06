@@ -2,50 +2,30 @@ import { defineStore } from 'pinia'
 import { ref } from 'vue'
 import api from '../api/client'
 
-const DASHBOARD_INCLUDE =
-  'homework,timetable,marks,feed,fees,online_classes,leave,datesheet,notifications'
-
 export const useParentStore = defineStore('parent', () => {
-  const selectedChild = ref(null)
+  const selectedChild = ref(JSON.parse(localStorage.getItem('efsc_child') || 'null'))
   const dashboard = ref(null)
-  const loading = ref(false)
 
   async function loadDashboard(studentId = null) {
-    loading.value = true
-    try {
-      const params = { include: DASHBOARD_INCLUDE }
-      if (studentId) params.student_id = studentId
-      const { data } = await api.get('/prism/parent/dashboard', { params })
-      dashboard.value = data
-      return data
-    } finally {
-      loading.value = false
+    const params = {
+      include: 'homework,timetable,marks,broadcasts,fees,online_classes,leave,datesheet,notifications',
     }
+    if (studentId) params.student_id = studentId
+    const { data } = await api.get('/efsc/learner/dashboard', { params })
+    dashboard.value = data
+    return data
   }
 
-  async function selectChild(child) {
+  function selectChild(child) {
     selectedChild.value = child
-    await loadDashboard(child.id)
+    localStorage.setItem('efsc_child', JSON.stringify(child))
   }
 
   async function clearChild() {
     selectedChild.value = null
-    await loadDashboard()
-  }
-
-  function clearAll() {
-    selectedChild.value = null
+    localStorage.removeItem('efsc_child')
     dashboard.value = null
-    loading.value = false
   }
 
-  return {
-    selectedChild,
-    dashboard,
-    loading,
-    loadDashboard,
-    selectChild,
-    clearChild,
-    clearAll,
-  }
+  return { selectedChild, dashboard, loadDashboard, selectChild, clearChild }
 })

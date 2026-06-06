@@ -21,7 +21,7 @@
 import { useParentList } from '../../composables/useParentList'
 import { formatDate } from '../../composables/format'
 
-const { items, loading, err } = useParentList('/prism/feed')
+const { items, loading, err } = useParentList('/efsc/feed')
 </script>
 
 <style scoped>

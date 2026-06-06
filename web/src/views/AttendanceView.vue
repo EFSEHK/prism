@@ -1,15 +1,12 @@
 <template>
   <div>
     <h1>Attendance</h1>
-    <p v-if="academic.error" class="error">{{ academic.error }}</p>
-    <ClassSectionPicker
-      v-model:class-id="academic.classId"
-      v-model:section-id="academic.sectionId"
-      :classes="academic.classes"
-      :sections="academic.sections()"
-      @class-change="academic.onClassChange"
-    />
     <div class="card">
+      <label>Study group
+        <select v-model="academic.studyGroupId">
+          <option v-for="g in academic.studyGroups" :key="g.id" :value="String(g.id)">{{ g.name }}</option>
+        </select>
+      </label>
       <label>Date <input v-model="date" type="date" /></label>
       <button type="button" class="primary" :disabled="loading" @click="loadStudents">Load students</button>
     </div>
@@ -34,7 +31,6 @@
 import { ref, reactive } from 'vue'
 import api from '../api/client'
 import { useAcademic } from '../composables/useAcademic'
-import ClassSectionPicker from '../components/ClassSectionPicker.vue'
 
 const academic = useAcademic()
 const date = ref(new Date().toISOString().slice(0, 10))
@@ -48,8 +44,8 @@ async function loadStudents() {
   loading.value = true
   err.value = ''
   try {
-    const { data } = await api.get('/prism/students', {
-      params: { school_class_id: academic.classId, section_id: academic.sectionId },
+    const { data } = await api.get('/efsc/students', {
+      params: { study_group_id: academic.studyGroupId },
     })
     students.value = data
     for (const s of data) statuses[s.id] = 'present'
@@ -64,13 +60,12 @@ async function save() {
   err.value = ''
   msg.value = ''
   try {
-    await api.post('/prism/attendance/batches', {
-      school_class_id: Number(academic.classId),
-      section_id: Number(academic.sectionId),
+    await api.post('/efsc/attendance/batches', {
+      study_group_id: Number(academic.studyGroupId),
       date: date.value,
       records: students.value.map((s) => ({ student_id: s.id, status: statuses[s.id] })),
     })
-    msg.value = 'Saved. Absent alerts queued for approval if applicable.'
+    msg.value = 'Saved — awaiting section head verification.'
   } catch (e) {
     err.value = e.response?.data?.message || 'Save failed'
   }

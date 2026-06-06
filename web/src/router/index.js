@@ -11,16 +11,16 @@ import ApprovalsView from '../views/ApprovalsView.vue'
 import AttendanceView from '../views/AttendanceView.vue'
 import MarksView from '../views/MarksView.vue'
 import HomeworkView from '../views/HomeworkView.vue'
-import TimetableView from '../views/TimetableView.vue'
 import OnlineClassView from '../views/OnlineClassView.vue'
-import FeeView from '../views/FeeView.vue'
-import FeedView from '../views/FeedView.vue'
 import LeaveView from '../views/LeaveView.vue'
+import NotificationsView from '../views/NotificationsView.vue'
+import ComingSoonView from '../views/ComingSoonView.vue'
+import PermissionsAdminView from '../views/admin/PermissionsAdminView.vue'
 import ParentHomeworkView from '../views/parent/ParentHomeworkView.vue'
 import ParentMarksView from '../views/parent/ParentMarksView.vue'
 import ParentAttendanceView from '../views/parent/ParentAttendanceView.vue'
 import ParentTimetableView from '../views/parent/ParentTimetableView.vue'
-import ParentFeedView from '../views/parent/ParentFeedView.vue'
+import ParentNotificationsView from '../views/parent/ParentNotificationsView.vue'
 import ParentFeesView from '../views/parent/ParentFeesView.vue'
 import ParentOnlineClassView from '../views/parent/ParentOnlineClassView.vue'
 import ParentLeaveView from '../views/parent/ParentLeaveView.vue'
@@ -32,6 +32,7 @@ const router = createRouter({
     { path: '/login', component: LoginView, meta: { guest: true } },
     { path: '/', component: roleView(ParentHomeView, DashboardView), meta: { auth: true } },
     { path: '/dashboard', component: ChildDashboardView, meta: { auth: true, requiresChild: true } },
+    { path: '/admin/permissions', component: PermissionsAdminView, meta: { auth: true, superadminOnly: true } },
     { path: '/approvals', component: ApprovalsView, meta: { auth: true, staffOnly: true } },
     {
       path: '/attendance',
@@ -46,16 +47,26 @@ const router = createRouter({
     },
     {
       path: '/timetable',
-      component: roleView(ParentTimetableView, TimetableView),
+      component: ComingSoonView,
       meta: { auth: true, requiresChild: true },
+      props: { title: 'Timetable' },
     },
     {
       path: '/online-classes',
       component: roleView(ParentOnlineClassView, OnlineClassView),
       meta: { auth: true, requiresChild: true },
     },
-    { path: '/fees', component: roleView(ParentFeesView, FeeView), meta: { auth: true, requiresChild: true } },
-    { path: '/feed', component: roleView(ParentFeedView, FeedView), meta: { auth: true, requiresChild: true } },
+    {
+      path: '/fees',
+      component: ComingSoonView,
+      meta: { auth: true, requiresChild: true },
+      props: { title: 'Fee vouchers' },
+    },
+    {
+      path: '/notifications',
+      component: roleView(ParentNotificationsView, NotificationsView),
+      meta: { auth: true, requiresChild: true },
+    },
     { path: '/leave', component: roleView(ParentLeaveView, LeaveView), meta: { auth: true, requiresChild: true } },
     { path: '/alerts', component: ParentAlertsView, meta: { auth: true, parentOnly: true, requiresChild: true } },
   ],
@@ -66,9 +77,10 @@ router.beforeEach((to) => {
   if (to.meta.auth && !auth.token) return '/login'
   if (to.meta.guest && auth.token) return '/'
 
-  const { isParent } = useRoles()
+  const { isLearner, isParent, isSuperadmin } = useRoles()
 
-  if (to.meta.staffOnly && isParent.value) return '/'
+  if (to.meta.superadminOnly && !isSuperadmin.value) return '/'
+  if (to.meta.staffOnly && isLearner.value) return '/'
   if (to.meta.parentOnly && !isParent.value) return '/'
 
   if (to.meta.requiresChild && isParent.value) {

@@ -12,7 +12,6 @@ import {
 import { StatusBar } from 'expo-status-bar'
 import {
   apiClient,
-  API_DISPLAY,
   API_BRIDGE_HOST,
   USES_EMULATOR_API,
   setAuthToken,
@@ -35,7 +34,7 @@ import { childName, formatError } from './utils/format'
 import { ui } from './components/ui'
 
 const DASHBOARD_INCLUDE =
-  'homework,timetable,marks,feed,fees,online_classes,leave,datesheet,notifications'
+  'homework,timetable,marks,broadcasts,fees,online_classes,leave,datesheet,notifications'
 
 function LogoutIcon() {
   return (
@@ -49,8 +48,8 @@ function LogoutIcon() {
 }
 
 export default function App() {
-  const [email, setEmail] = useState('parent@school.test')
-  const [password, setPassword] = useState('Parent.123')
+  const [email, setEmail] = useState('parent@efsc-ya.test')
+  const [password, setPassword] = useState('Test.123')
   const [token, setToken] = useState('')
   const [user, setUser] = useState(null)
   const [dashboard, setDashboard] = useState(null)
@@ -69,7 +68,7 @@ export default function App() {
     if (studentId) {
       params.student_id = studentId
     }
-    const { data } = await apiClient.get('/prism/parent/dashboard', { params })
+    const { data } = await apiClient.get('/efsc/learner/dashboard', { params })
     setDashboard(data)
     return data
   }, [])
@@ -88,7 +87,10 @@ export default function App() {
       setAuthToken(data.access_token)
       setToken(data.access_token)
       setUser(data.user ?? null)
-      await loadDashboard()
+      const roles = (data.user?.roles || []).map((r) => r.name)
+      if (roles.includes('parent') || roles.includes('student')) {
+        await loadDashboard()
+      }
     } catch (e) {
       setAuthToken('')
       setToken('')
@@ -145,7 +147,9 @@ export default function App() {
     setTab(id)
   }
 
-  const showApp = token && dashboard && !err
+  const roleNames = (user?.roles || []).map((r) => r.name)
+  const isLearnerRole = roleNames.includes('parent') || roleNames.includes('student')
+  const showApp = token && !err && (isLearnerRole ? !!dashboard : true)
   const hasSelectedChild = Boolean(selectedChild)
   const navItems = navItemsForContext(hasSelectedChild)
   const activeLabel = navItems.find((item) => item.id === tab)?.label ?? 'Home'
@@ -155,6 +159,14 @@ export default function App() {
   const headerRightName = selectedChildLabel || user?.name || ''
 
   function renderTab() {
+    if (!isLearnerRole) {
+      return (
+        <View style={styles.staffMsg}>
+          <Text style={styles.staffMsgTitle}>Staff account</Text>
+          <Text style={styles.hint}>Use the EFSC-YA web app for staff features. Mobile is optimized for parents and students.</Text>
+        </View>
+      )
+    }
     if (!hasSelectedChild) {
       return (
         <ParentHomeScreen dashboard={dashboard} user={user} onSelectChild={selectChild} />
@@ -172,7 +184,7 @@ export default function App() {
         return <AttendanceScreen children={children} selectedChildId={selectedChild.id} />
       case 'timetable':
         return <TimetableScreen />
-      case 'feed':
+      case 'notifications':
         return <FeedScreen />
       case 'fees':
         return <FeesScreen />
@@ -192,13 +204,12 @@ export default function App() {
       <StatusBar style="dark" />
       {!showApp ? (
         <ScrollView contentContainerStyle={styles.login} keyboardShouldPersistTaps="handled">
-          <Text style={styles.title}>PRISM</Text>
-          <Text style={styles.hint}>API: {API_DISPLAY}</Text>
+          <Text style={styles.title}>EFSC-YA</Text>
           {API_BRIDGE_HOST ? (
             <Text style={styles.hint}>LAN: {API_BRIDGE_HOST}</Text>
           ) : null}
           {USES_EMULATOR_API ? (
-            <Text style={styles.warn}>Set mobile/.env for Laragon (prism.test).</Text>
+            <Text style={styles.warn}>Set mobile/.env for Laragon (EFSC-YA.test).</Text>
           ) : null}
           {!token ? (
             <>
@@ -256,7 +267,7 @@ export default function App() {
               <HamburgerIcon />
             </Pressable>
             <View style={styles.headerCenter}>
-              <Text style={styles.headerTitle}>PRISM</Text>
+              <Text style={styles.headerTitle}>EFSC-YA</Text>
               <Text style={styles.headerSubtitle}>{headerSubtitle}</Text>
             </View>
             <View style={styles.headerRight}>
@@ -319,6 +330,8 @@ const styles = StyleSheet.create({
     borderRadius: 8,
   },
   logoutText: { color: '#475569', fontWeight: '600' },
+  staffMsg: { padding: 24 },
+  staffMsgTitle: { fontSize: 20, fontWeight: '700', marginBottom: 8 },
   header: {
     flexDirection: 'row',
     alignItems: 'center',

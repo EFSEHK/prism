@@ -27,8 +27,8 @@ class PermissionController extends Controller
     {
         try {
             $validated = $request->validated();
-            $validated['guard_name'] = 'api';
-            
+            $validated['guard_name'] = 'web';
+
             $permission = $this->permissionRepository->create($validated);
             return response()->json([
                 'status' => 'success',
@@ -54,8 +54,8 @@ class PermissionController extends Controller
     {
         try {
             $validated = $request->validated();
-            $validated['guard_name'] = 'api';
-            
+            $validated['guard_name'] = 'web';
+
             $permission = $this->permissionRepository->update($id, $validated);
             return response()->json([
                 'status' => 'success',
@@ -79,6 +79,8 @@ class PermissionController extends Controller
 
     public function assignPermissionToUser(Request $request): JsonResponse
     {
+        abort_unless($request->user()->hasRole('superadmin'), 403);
+
         $validated = $request->validate([
             'user_id' => 'required|exists:users,id',
             'permission_id' => 'required|exists:permissions,id'
@@ -93,6 +95,8 @@ class PermissionController extends Controller
 
     public function removePermissionFromUser(Request $request): JsonResponse
     {
+        abort_unless($request->user()->hasRole('superadmin'), 403);
+
         $validated = $request->validate([
             'user_id' => 'required|exists:users,id',
             'permission_id' => 'required|exists:permissions,id'

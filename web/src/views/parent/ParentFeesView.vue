@@ -23,7 +23,7 @@ import { childName } from '../../composables/format'
 
 const parent = useParentStore()
 const child = computed(() => parent.selectedChild)
-const { items, loading, err } = useParentList('/prism/fee-vouchers')
+const { items, loading, err } = useParentList('/efsc/fee-vouchers')
 </script>
 
 <style scoped>

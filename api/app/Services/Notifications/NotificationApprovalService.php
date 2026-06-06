@@ -4,7 +4,7 @@ namespace App\Services\Notifications;
 
 use App\Models\NotificationApprovalAction;
 use App\Models\NotificationDispatchRequest;
-use App\Models\StaffClassAssignment;
+use App\Models\StaffAssignment;
 use App\Models\User;
 use Illuminate\Support\Facades\DB;
 
@@ -50,7 +50,7 @@ class NotificationApprovalService
             }
 
             if (! $this->passesScope($actor, $pending->approver_role_name, $dispatch)) {
-                throw new \Illuminate\Auth\Access\AuthorizationException('Out of scope for this class/section.');
+                throw new \Illuminate\Auth\Access\AuthorizationException('Out of scope for this assignment.');
             }
 
             $pending->update([
@@ -89,7 +89,7 @@ class NotificationApprovalService
             }
 
             if (! $this->passesScope($actor, $pending->approver_role_name, $dispatch)) {
-                throw new \Illuminate\Auth\Access\AuthorizationException('Out of scope for this class/section.');
+                throw new \Illuminate\Auth\Access\AuthorizationException('Out of scope for this assignment.');
             }
 
             $pending->update([
@@ -108,7 +108,7 @@ class NotificationApprovalService
     public function passesScope(User $actor, string $roleName, NotificationDispatchRequest $dispatch): bool
     {
         if (in_array($roleName, [
-            'principal', 'vice_principal', 'admin', 'superadmin', 'hod_section_head',
+            'principal', 'vice_principal', 'admin', 'superadmin', 'developer',
         ], true)) {
             return true;
         }
@@ -117,16 +117,30 @@ class NotificationApprovalService
             return true;
         }
 
-        if (! $dispatch->school_class_id) {
+        if (! $dispatch->study_group_id && ! $dispatch->section_id && ! $dispatch->school_class_id && ! $dispatch->area_id) {
             return true;
         }
 
-        $q = StaffClassAssignment::query()->where('user_id', $actor->id)
-            ->where('school_class_id', $dispatch->school_class_id);
+        $q = StaffAssignment::query()->where('user_id', $actor->id);
 
+        if ($dispatch->area_id) {
+            $q->where(function ($qq) use ($dispatch) {
+                $qq->whereNull('area_id')->orWhere('area_id', $dispatch->area_id);
+            });
+        }
+        if ($dispatch->school_class_id) {
+            $q->where(function ($qq) use ($dispatch) {
+                $qq->whereNull('school_class_id')->orWhere('school_class_id', $dispatch->school_class_id);
+            });
+        }
         if ($dispatch->section_id) {
             $q->where(function ($qq) use ($dispatch) {
                 $qq->whereNull('section_id')->orWhere('section_id', $dispatch->section_id);
+            });
+        }
+        if ($dispatch->study_group_id) {
+            $q->where(function ($qq) use ($dispatch) {
+                $qq->whereNull('study_group_id')->orWhere('study_group_id', $dispatch->study_group_id);
             });
         }
 

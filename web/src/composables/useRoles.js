@@ -6,7 +6,10 @@ export function useRoles() {
 
   const roles = computed(() => (auth.user?.roles || []).map((r) => r.name))
 
+  const isSuperadmin = computed(() => roles.value.includes('superadmin'))
   const isParent = computed(() => roles.value.includes('parent'))
+  const isStudent = computed(() => roles.value.includes('student'))
+  const isLearner = computed(() => isParent.value || isStudent.value)
 
   const canApprove = computed(() =>
     roles.value.some((n) =>
@@ -15,7 +18,9 @@ export function useRoles() {
   )
 
   const canStaff = computed(() =>
-    roles.value.some((n) => ['superadmin', 'admin', 'teacher', 'section_head'].includes(n))
+    roles.value.some((n) =>
+      ['superadmin', 'admin', 'principal', 'vice_principal', 'section_head', 'class_incharge', 'teacher', 'computer_operator'].includes(n)
+    )
   )
 
   const canTimetable = computed(() =>
@@ -26,24 +31,29 @@ export function useRoles() {
     roles.value.some((n) => ['superadmin', 'admin', 'accountant', 'computer_operator'].includes(n))
   )
 
-  const canFeed = computed(() =>
-    roles.value.some((n) => ['superadmin', 'admin', 'principal', 'vice_principal'].includes(n))
+  const canBroadcasts = computed(() =>
+    roles.value.some((n) =>
+      ['superadmin', 'admin', 'principal', 'vice_principal', 'section_head', 'class_incharge', 'teacher', 'computer_operator'].includes(n)
+    )
   )
 
   const canLeave = computed(() =>
     roles.value.some((n) =>
-      ['superadmin', 'admin', 'teacher', 'principal', 'vice_principal', 'section_head'].includes(n)
+      ['superadmin', 'admin', 'section_head', 'parent'].includes(n)
     )
   )
 
   return {
     roles,
+    isSuperadmin,
     isParent,
+    isStudent,
+    isLearner,
     canApprove,
     canStaff,
     canTimetable,
     canFees,
-    canFeed,
+    canBroadcasts,
     canLeave,
   }
 }

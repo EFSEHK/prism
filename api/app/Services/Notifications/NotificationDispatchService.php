@@ -15,8 +15,6 @@ class NotificationDispatchService
     ) {}
 
     /**
-     * Create a dispatch for a domain context. Applies approval steps or sends immediately if policy allows.
-     *
      * @param  array<string, mixed>  $payloadJson
      * @param  array<string, mixed>|null  $scopeIds
      */
@@ -27,9 +25,11 @@ class NotificationDispatchService
         string $scopeType,
         ?array $scopeIds,
         array $payloadJson,
-        ?int $schoolClassId,
-        ?int $sectionId,
-        ?int $createdByUserId,
+        ?int $areaId = null,
+        ?int $schoolClassId = null,
+        ?int $sectionId = null,
+        ?int $studyGroupId = null,
+        ?int $createdByUserId = null,
         ?\DateTimeInterface $scheduledFor = null,
     ): NotificationDispatchRequest {
         $feature = $this->policyResolver->featureByKey($featureKey);
@@ -39,13 +39,16 @@ class NotificationDispatchService
 
         return DB::transaction(function () use (
             $feature,
+            $featureKey,
             $contextType,
             $contextId,
             $scopeType,
             $scopeIds,
             $payloadJson,
+            $areaId,
             $schoolClassId,
             $sectionId,
+            $studyGroupId,
             $createdByUserId,
             $scheduledFor,
         ) {
@@ -60,13 +63,15 @@ class NotificationDispatchService
                 return $existing;
             }
 
-            $policies = $this->policyResolver->policiesForFeature($feature, $schoolClassId, $sectionId);
+            $policies = $this->policyResolver->policiesForFeature(
+                $feature,
+                $areaId,
+                $schoolClassId,
+                $sectionId,
+                $studyGroupId,
+            );
 
-            if ($policies->isEmpty()) {
-                throw new \InvalidArgumentException("No active notification policies for feature: {$featureKey}");
-            }
-
-            $needsApproval = $policies->contains(fn ($p) => $p->requires_approval);
+            $needsApproval = $policies->isNotEmpty() && $policies->contains(fn ($p) => $p->requires_approval);
 
             $dispatch = NotificationDispatchRequest::create([
                 'notification_feature_id' => $feature->id,
@@ -77,8 +82,10 @@ class NotificationDispatchService
                 'payload_json' => $payloadJson,
                 'status' => $needsApproval ? 'pending_approval' : 'approved',
                 'current_sequence' => 1,
+                'area_id' => $areaId,
                 'school_class_id' => $schoolClassId,
                 'section_id' => $sectionId,
+                'study_group_id' => $studyGroupId,
                 'scheduled_for' => $scheduledFor,
                 'created_by_user_id' => $createdByUserId,
             ]);
