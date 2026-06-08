@@ -105,7 +105,6 @@ class AcademicController extends Controller
         $data = $request->validate([
             'area_id' => 'required|exists:areas,id',
             'name' => 'required|string|max:255',
-            'grade_level' => 'nullable|string|max:32',
         ]);
 
         return response()->json(SchoolClass::create($data), 201);

@@ -1,48 +1,21 @@
 <template>
   <div ref="root" class="searchable-select">
-    <button
-      type="button"
-      class="trigger"
-      :class="{ open }"
-      :aria-expanded="open"
-      @click="toggle"
-    >
+    <button type="button" class="trigger" :class="{ open, disabled }" :aria-expanded="open" :disabled="disabled" @click="toggle">
       <span :class="{ placeholder: !selectedLabel }">{{ selectedLabel || placeholder }}</span>
       <span class="caret" aria-hidden="true">▾</span>
     </button>
     <div v-if="open" class="dropdown">
-      <input
-        ref="searchInput"
-        v-model="query"
-        type="text"
-        class="search"
-        :placeholder="searchPlaceholder"
-        @keydown.esc="close"
-        @keydown.down.prevent="move(1)"
-        @keydown.up.prevent="move(-1)"
-        @keydown.enter.prevent="selectHighlighted"
-      />
+      <input ref="searchInput" v-model="query" type="text" class="search" :placeholder="searchPlaceholder" @keydown.esc="close" @keydown.down.prevent="move(1)" @keydown.up.prevent="move(-1)" @keydown.enter.prevent="selectHighlighted" />
       <ul class="options" role="listbox">
-        <li
-          v-if="allowEmpty"
-          role="option"
-          class="option"
-          :class="{ active: highlightIndex === -1, selected: modelValue === '' || modelValue == null }"
-          @click="select(null)"
-        >
+        <li v-if="allowEmpty" role="option" class="option" :class="{ active: highlightIndex === -1, selected: modelValue === '' || modelValue == null }" @click="select(null)">
           {{ placeholder }}
         </li>
-        <li
-          v-for="(opt, i) in filtered"
-          :key="opt.value"
-          role="option"
-          class="option"
-          :class="{ active: i === highlightIndex, selected: opt.value == modelValue }"
-          @click="select(opt)"
-        >
+        <li v-for="(opt, i) in filtered" :key="opt.value" role="option" class="option" :class="{ active: i === highlightIndex, selected: opt.value == modelValue }" @click="select(opt)">
           {{ opt.label }}
         </li>
-        <li v-if="!filtered.length" class="empty">No results</li>
+        <li v-if="!filtered.length" class="empty">
+          {{ query.trim() ? 'No results' : (options.length ? 'No results' : emptyOptionsText) }}
+        </li>
       </ul>
     </div>
   </div>
@@ -57,6 +30,8 @@ const props = defineProps({
   placeholder: { type: String, default: 'Select…' },
   searchPlaceholder: { type: String, default: 'Search…' },
   allowEmpty: { type: Boolean, default: true },
+  disabled: { type: Boolean, default: false },
+  emptyOptionsText: { type: String, default: 'Nothing available' },
 })
 
 const emit = defineEmits(['update:modelValue', 'change'])
@@ -95,6 +70,7 @@ watch(filtered, () => {
 })
 
 function toggle() {
+  if (props.disabled) return
   open.value = !open.value
 }
 
@@ -160,6 +136,13 @@ onUnmounted(() => document.removeEventListener('mousedown', onClickOutside))
   border-color: #2563eb;
   outline: none;
   box-shadow: 0 0 0 2px rgb(37 99 235 / 0.15);
+}
+
+.trigger.disabled,
+.trigger:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+  background: #f4f4f5;
 }
 
 .placeholder {

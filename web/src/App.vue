@@ -1,7 +1,13 @@
 <template>
   <div class="app">
     <header v-if="auth.token" class="top">
-      <span class="brand">EFSC-YA</span>
+      <div class="brand-block">
+        <span class="brand">EFSC-YA</span>
+        <template v-if="userName">
+          <span class="brand-sep" aria-hidden="true">|</span>
+          <span class="user-name">{{ userName }}</span>
+        </template>
+      </div>
       <nav>
         <template v-if="isLearner">
           <RouterLink to="/">Home</RouterLink>
@@ -60,6 +66,7 @@ const {
 } = useRoles()
 const { canConfigure } = usePermissions()
 
+const userName = computed(() => auth.user?.name ?? '')
 const selectedChild = computed(() => parent.selectedChild)
 
 async function logout() {
@@ -110,8 +117,23 @@ async function switchChild() {
 .top a.router-link-active {
   color: #fff;
 }
+.brand-block {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
 .brand {
   font-weight: 700;
+}
+.brand-sep {
+  color: #52525b;
+  font-weight: 400;
+  font-size: 0.95rem;
+}
+.user-name {
+  font-size: 0.8rem;
+  font-weight: 500;
+  color: #a1a1aa;
 }
 main {
   max-width: 960px;

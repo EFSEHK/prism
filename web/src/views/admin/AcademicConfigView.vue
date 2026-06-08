@@ -4,13 +4,7 @@
     <p class="muted">Set up session years, school structure, subjects, and student enrollment.</p>
 
     <div class="tabs">
-      <button
-        v-for="t in visibleTabs"
-        :key="t.id"
-        type="button"
-        :class="{ active: tab === t.id }"
-        @click="tab = t.id"
-      >
+      <button v-for="t in visibleTabs" :key="t.id" type="button" :class="{ active: tab === t.id }" @click="tab = t.id">
         {{ t.label }}
       </button>
     </div>
@@ -81,31 +75,36 @@
       <h2>School structure</h2>
       <p class="muted small">Year → Area → Class → Section → Study group</p>
 
+      <p v-if="!years.length" class="structure-hint">
+        No session years found. Add one on the
+        <button type="button" class="linkish" @click="tab = 'years'">Session years</button>
+        tab first.
+      </p>
+
       <div class="cascade">
-        <label>Session year
-          <select v-model="structure.yearId" @change="onYearChange">
-            <option value="">Select year…</option>
-            <option v-for="y in years" :key="y.id" :value="String(y.id)">{{ y.name }}</option>
-          </select>
-        </label>
-        <label>Area
-          <select v-model="structure.areaId" :disabled="!structure.yearId" @change="onAreaChange">
-            <option value="">Select area…</option>
-            <option v-for="a in areas" :key="a.id" :value="String(a.id)">{{ a.name }}</option>
-          </select>
-        </label>
-        <label>Class
-          <select v-model="structure.classId" :disabled="!structure.areaId" @change="onClassChange">
-            <option value="">Select class…</option>
-            <option v-for="c in classes" :key="c.id" :value="String(c.id)">{{ c.name }}</option>
-          </select>
-        </label>
-        <label>Section
-          <select v-model="structure.sectionId" :disabled="!structure.classId" @change="onSectionChange">
-            <option value="">Select section…</option>
-            <option v-for="s in sections" :key="s.id" :value="String(s.id)">{{ s.name }}</option>
-          </select>
-        </label>
+        <div class="field cascade-field">
+          <span class="field-label">Session year</span>
+          <SearchableSelect
+            v-model="structure.yearId"
+            :options="yearOptions"
+            placeholder="Select year…"
+            search-placeholder="Search years…"
+            empty-options-text="No session years yet"
+            @change="onYearChange"
+          />
+        </div>
+        <div class="field cascade-field">
+          <span class="field-label">Area</span>
+          <SearchableSelect v-model="structure.areaId" :options="areaOptions" placeholder="Select area…" search-placeholder="Search areas…" :disabled="!structure.yearId" @change="onAreaChange" />
+        </div>
+        <div class="field cascade-field">
+          <span class="field-label">Class</span>
+          <SearchableSelect v-model="structure.classId" :options="classOptions" placeholder="Select class…" search-placeholder="Search classes…" :disabled="!structure.areaId" @change="onClassChange" />
+        </div>
+        <div class="field cascade-field">
+          <span class="field-label">Section</span>
+          <SearchableSelect v-model="structure.sectionId" :options="sectionOptions" placeholder="Select section…" search-placeholder="Search sections…" :disabled="!structure.classId" @change="onSectionChange" />
+        </div>
       </div>
 
       <div v-if="structure.yearId" class="panel">
@@ -131,13 +130,9 @@
         <h3>Classes</h3>
         <form class="add-form compact" @submit.prevent="createClass">
           <div class="form-grid">
-            <div class="field">
-              <span class="field-label">Name</span>
+            <div class="field grow">
+              <span class="field-label">New class</span>
               <input v-model="classForm.name" required placeholder="Grade 5" />
-            </div>
-            <div class="field">
-              <span class="field-label">Grade level</span>
-              <input v-model="classForm.grade_level" placeholder="5" />
             </div>
             <div class="field field-action">
               <button type="submit" class="primary" :disabled="saving">Add class</button>
@@ -209,7 +204,12 @@
       </form>
       <div v-if="subjects.length" class="table-wrap">
         <table class="data-table">
-          <thead><tr><th>Name</th><th class="col-code">Code</th></tr></thead>
+          <thead>
+            <tr>
+              <th>Name</th>
+              <th class="col-code">Code</th>
+            </tr>
+          </thead>
           <tbody>
             <tr v-for="s in subjects" :key="s.id">
               <td>{{ s.name }}</td>
@@ -230,13 +230,7 @@
       <p class="muted small">Pick a study group, then check the subjects taught in that group.</p>
       <div class="field picker-field">
         <span class="field-label">Study group</span>
-        <SearchableSelect
-          v-model="assignGroupId"
-          :options="allGroupOptions"
-          placeholder="Select study group…"
-          search-placeholder="Search groups…"
-          @change="loadGroupSubjects"
-        />
+        <SearchableSelect v-model="assignGroupId" :options="allGroupOptions" placeholder="Select study group…" search-placeholder="Search groups…" @change="loadGroupSubjects" />
       </div>
       <div v-if="assignGroupId" class="perm-grid">
         <label v-for="s in subjects" :key="s.id" class="perm-item">
@@ -244,13 +238,7 @@
           {{ s.name }} <span v-if="s.code" class="muted">({{ s.code }})</span>
         </label>
       </div>
-      <button
-        v-if="assignGroupId"
-        type="button"
-        class="primary"
-        :disabled="saving"
-        @click="saveGroupSubjects"
-      >
+      <button v-if="assignGroupId" type="button" class="primary" :disabled="saving" @click="saveGroupSubjects">
         {{ saving ? 'Saving…' : 'Save subject assignment' }}
       </button>
     </div>
@@ -260,13 +248,7 @@
       <h2>Student enrollment</h2>
       <div class="field picker-field">
         <span class="field-label">Study group</span>
-        <SearchableSelect
-          v-model="enrollGroupId"
-          :options="allGroupOptions"
-          placeholder="Select study group…"
-          search-placeholder="Search groups…"
-          @change="loadStudents"
-        />
+        <SearchableSelect v-model="enrollGroupId" :options="allGroupOptions" placeholder="Select study group…" search-placeholder="Search groups…" @change="loadStudents" />
       </div>
 
       <form v-if="enrollGroupId" class="add-form compact" @submit.prevent="enrollStudent">
@@ -292,7 +274,10 @@
       <div v-if="enrollGroupId && students.length" class="table-wrap">
         <table class="data-table">
           <thead>
-            <tr><th>Name</th><th class="col-code">Admission no.</th></tr>
+            <tr>
+              <th>Name</th>
+              <th class="col-code">Admission no.</th>
+            </tr>
           </thead>
           <tbody>
             <tr v-for="st in students" :key="st.id">
@@ -324,17 +309,22 @@ const msg = ref('')
 const visibleTabs = computed(() => {
   const tabs = []
   if (canManageAcademic.value) {
-    tabs.push(
-      { id: 'years', label: 'Session years' },
-      { id: 'structure', label: 'Structure' },
-      { id: 'subjects', label: 'Subjects' },
-      { id: 'assign', label: 'Assign subjects' },
-    )
+    tabs.push({ id: 'years', label: 'Session years' }, { id: 'structure', label: 'Structure' }, { id: 'subjects', label: 'Subjects' }, { id: 'assign', label: 'Assign subjects' })
   }
   if (canManageRoster.value) {
     tabs.push({ id: 'enroll', label: 'Enroll students' })
   }
   return tabs
+})
+
+watch(tab, async (t) => {
+  if ((t === 'structure' || t === 'years') && canManageAcademic.value && !years.value.length) {
+    try {
+      await loadYears()
+    } catch (e) {
+      flashErr(e, 'Failed to load session years')
+    }
+  }
 })
 
 watch(visibleTabs, (tabs) => {
@@ -356,12 +346,12 @@ const structure = reactive({
   yearId: '',
   areaId: '',
   classId: '',
-  sectionId: '',
+  sectionId: ''
 })
 
 const yearForm = reactive({ name: '', starts_on: '', ends_on: '', is_current: false })
 const areaForm = reactive({ name: '' })
-const classForm = reactive({ name: '', grade_level: '' })
+const classForm = reactive({ name: '' })
 const sectionForm = reactive({ name: '' })
 const groupForm = reactive({ name: '' })
 const subjectForm = reactive({ name: '', code: '' })
@@ -374,9 +364,14 @@ const enrollGroupId = ref('')
 const allGroupOptions = computed(() =>
   allStudyGroups.value.map((g) => ({
     value: g.id,
-    label: groupLabel(g),
-  })),
+    label: groupLabel(g)
+  }))
 )
+
+const yearOptions = computed(() => years.value.map((y) => ({ value: String(y.id), label: y.name })))
+const areaOptions = computed(() => areas.value.map((a) => ({ value: String(a.id), label: a.name })))
+const classOptions = computed(() => classes.value.map((c) => ({ value: String(c.id), label: c.name })))
+const sectionOptions = computed(() => sections.value.map((s) => ({ value: String(s.id), label: s.name })))
 
 function groupLabel(g) {
   const sec = g.section?.name
@@ -405,7 +400,7 @@ async function loadAreas() {
     return
   }
   const { data } = await api.get('/efsc/academic/areas', {
-    params: { academic_year_id: structure.yearId },
+    params: { academic_year_id: structure.yearId }
   })
   areas.value = data?.data ?? data ?? []
 }
@@ -425,7 +420,7 @@ async function loadSections() {
     return
   }
   const { data } = await api.get('/efsc/academic/sections', {
-    params: { school_class_id: structure.classId },
+    params: { school_class_id: structure.classId }
   })
   sections.value = data?.data ?? data ?? []
 }
@@ -436,7 +431,7 @@ async function loadStudyGroups() {
     return
   }
   const { data } = await api.get('/efsc/academic/study-groups', {
-    params: { section_id: structure.sectionId },
+    params: { section_id: structure.sectionId }
   })
   studyGroups.value = data?.data ?? data ?? []
 }
@@ -501,7 +496,7 @@ async function createArea() {
   try {
     await api.post('/efsc/academic/areas', {
       academic_year_id: Number(structure.yearId),
-      name: areaForm.name,
+      name: areaForm.name
     })
     areaForm.name = ''
     await loadAreas()
@@ -519,10 +514,8 @@ async function createClass() {
     await api.post('/efsc/academic/classes', {
       area_id: Number(structure.areaId),
       name: classForm.name,
-      grade_level: classForm.grade_level || null,
     })
     classForm.name = ''
-    classForm.grade_level = ''
     await loadClasses()
     flashOk('Class created.')
   } catch (e) {
@@ -537,7 +530,7 @@ async function createSection() {
   try {
     await api.post('/efsc/academic/sections', {
       school_class_id: Number(structure.classId),
-      name: sectionForm.name,
+      name: sectionForm.name
     })
     sectionForm.name = ''
     await loadSections()
@@ -554,7 +547,7 @@ async function createStudyGroup() {
   try {
     await api.post('/efsc/academic/study-groups', {
       section_id: Number(structure.sectionId),
-      name: groupForm.name,
+      name: groupForm.name
     })
     groupForm.name = ''
     await loadStudyGroups()
@@ -572,7 +565,7 @@ async function createSubject() {
   try {
     await api.post('/efsc/academic/subjects', {
       name: subjectForm.name,
-      code: subjectForm.code || null,
+      code: subjectForm.code || null
     })
     subjectForm.name = ''
     subjectForm.code = ''
@@ -591,7 +584,7 @@ async function loadGroupSubjects() {
   assignedSubjectIds.value = (group?.subjects || []).map((s) => s.id)
   if (group?.subjects?.length) return
   const { data } = await api.get('/efsc/academic/study-groups', {
-    params: { section_id: group?.section_id },
+    params: { section_id: group?.section_id }
   })
   const list = data?.data ?? data ?? []
   const fresh = list.find((g) => g.id == assignGroupId.value)
@@ -602,7 +595,7 @@ async function saveGroupSubjects() {
   saving.value = true
   try {
     await api.put(`/efsc/academic/study-groups/${assignGroupId.value}/subjects`, {
-      subject_ids: assignedSubjectIds.value,
+      subject_ids: assignedSubjectIds.value
     })
     await loadAllStudyGroups()
     flashOk('Subjects assigned.')
@@ -616,7 +609,7 @@ async function saveGroupSubjects() {
 async function loadStudents() {
   if (!enrollGroupId.value) return
   const { data } = await api.get('/efsc/students', {
-    params: { study_group_id: enrollGroupId.value },
+    params: { study_group_id: enrollGroupId.value }
   })
   students.value = data?.data ?? data ?? []
 }
@@ -628,7 +621,7 @@ async function enrollStudent() {
       study_group_id: Number(enrollGroupId.value),
       first_name: studentForm.first_name,
       last_name: studentForm.last_name,
-      admission_no: studentForm.admission_no || null,
+      admission_no: studentForm.admission_no || null
     })
     studentForm.first_name = ''
     studentForm.last_name = ''
@@ -643,24 +636,43 @@ async function enrollStudent() {
 }
 
 onMounted(async () => {
-  try {
-    const tasks = []
-    if (canManageAcademic.value) {
-      tasks.push(loadYears(), loadSubjects(), loadAllStudyGroups())
-    }
-    if (canManageRoster.value) {
-      tasks.push(loadAllStudyGroups())
-    }
-    await Promise.all(tasks)
-  } catch (e) {
-    flashErr(e, 'Failed to load configuration data')
+  if (canManageAcademic.value) {
+    await loadYears().catch((e) => flashErr(e, 'Failed to load session years'))
+    await loadSubjects().catch((e) => flashErr(e, 'Failed to load subjects'))
+    await loadAllStudyGroups().catch((e) => flashErr(e, 'Failed to load study groups'))
+  } else if (canManageRoster.value) {
+    await loadAllStudyGroups().catch((e) => flashErr(e, 'Failed to load study groups'))
   }
 })
 </script>
 
 <style scoped>
-.muted { color: #71717a; }
-.small { font-size: 0.85rem; margin-top: -0.25rem; margin-bottom: 1rem; }
+.muted {
+  color: #71717a;
+}
+.small {
+  font-size: 0.85rem;
+  margin-top: -0.25rem;
+  margin-bottom: 1rem;
+}
+.structure-hint {
+  margin: 0 0 1rem;
+  padding: 0.65rem 0.85rem;
+  background: #fffbeb;
+  border: 1px solid #fde68a;
+  border-radius: 6px;
+  font-size: 0.9rem;
+  color: #92400e;
+}
+.linkish {
+  background: none;
+  border: none;
+  padding: 0;
+  color: #1d4ed8;
+  font-weight: 600;
+  cursor: pointer;
+  text-decoration: underline;
+}
 .ok {
   color: #166534;
   background: #f0fdf4;
@@ -670,7 +682,9 @@ onMounted(async () => {
   font-size: 0.9rem;
   margin-bottom: 1rem;
 }
-.error { margin-bottom: 1rem; }
+.error {
+  margin-bottom: 1rem;
+}
 .empty {
   margin: 0.5rem 0 0;
   padding: 1rem;
@@ -685,7 +699,12 @@ onMounted(async () => {
   padding: 0.65rem 0.75rem;
   text-align: left;
 }
-.tabs { display: flex; flex-wrap: wrap; gap: 0.5rem; margin: 1rem 0; }
+.tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin: 1rem 0;
+}
 .tabs button {
   padding: 0.5rem 1rem;
   border: 1px solid #d4d4d8;
@@ -694,7 +713,11 @@ onMounted(async () => {
   border-radius: 6px;
   font-size: 0.9rem;
 }
-.tabs button.active { background: #2563eb; color: #fff; border-color: #2563eb; }
+.tabs button.active {
+  background: #2563eb;
+  color: #fff;
+  border-color: #2563eb;
+}
 
 .add-form {
   background: #fafafa;
@@ -703,7 +726,9 @@ onMounted(async () => {
   padding: 1rem;
   margin-bottom: 1.25rem;
 }
-.add-form.compact { margin-bottom: 0.75rem; }
+.add-form.compact {
+  margin-bottom: 0.75rem;
+}
 .form-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
@@ -724,7 +749,12 @@ onMounted(async () => {
     grid-template-columns: 1fr;
   }
 }
-.field { display: flex; flex-direction: column; gap: 0.4rem; min-width: 0; }
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+  min-width: 0;
+}
 .field-checkbox {
   min-width: 0;
 }
@@ -734,8 +764,12 @@ onMounted(async () => {
   line-height: 1.2;
   min-height: 1rem;
 }
-.field.grow { grid-column: span 1; }
-.field-action { justify-content: flex-end; }
+.field.grow {
+  grid-column: span 1;
+}
+.field-action {
+  justify-content: flex-end;
+}
 .field-label {
   font-size: 0.8rem;
   font-weight: 600;
@@ -744,8 +778,7 @@ onMounted(async () => {
   min-height: 1rem;
 }
 .field input,
-.field select,
-.cascade select {
+.field select {
   display: block;
   width: 100%;
   max-width: none;
@@ -764,8 +797,7 @@ onMounted(async () => {
   margin: 0;
 }
 .field input:focus,
-.field select:focus,
-.cascade select:focus {
+.field select:focus {
   outline: none;
   border-color: #2563eb;
   box-shadow: 0 0 0 2px rgb(37 99 235 / 0.12);
@@ -780,7 +812,7 @@ onMounted(async () => {
   cursor: pointer;
   margin: 0;
 }
-.checkbox-field input[type="checkbox"] {
+.checkbox-field input[type='checkbox'] {
   width: 1rem;
   height: 1rem;
   margin: 0;
@@ -811,19 +843,13 @@ onMounted(async () => {
   border: 1px solid #e4e4e7;
   border-radius: 8px;
 }
-.cascade label {
-  display: flex;
-  flex-direction: column;
-  gap: 0.35rem;
-  font-size: 0.8rem;
-  font-weight: 600;
-  color: #52525b;
+.cascade-field :deep(.searchable-select) {
   margin: 0;
+  max-width: none;
 }
-.cascade select:disabled {
-  opacity: 0.55;
-  cursor: not-allowed;
-  background: #f4f4f5;
+.cascade-field :deep(.trigger) {
+  height: 2.375rem;
+  box-sizing: border-box;
 }
 
 .panel {
@@ -831,7 +857,12 @@ onMounted(async () => {
   padding-top: 1.25rem;
   margin-top: 1rem;
 }
-.panel h3 { margin: 0 0 0.75rem; font-size: 0.95rem; font-weight: 600; color: #27272a; }
+.panel h3 {
+  margin: 0 0 0.75rem;
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: #27272a;
+}
 
 .tag-list {
   display: flex;
@@ -865,8 +896,12 @@ onMounted(async () => {
   padding: 0.65rem 0.85rem;
   border-bottom: 1px solid #e4e4e7;
 }
-.data-table tbody tr:last-child td { border-bottom: none; }
-.data-table tbody tr:hover { background: #fafafa; }
+.data-table tbody tr:last-child td {
+  border-bottom: none;
+}
+.data-table tbody tr:hover {
+  background: #fafafa;
+}
 .data-table th {
   font-weight: 600;
   font-size: 0.8rem;
@@ -875,8 +910,14 @@ onMounted(async () => {
   color: #71717a;
   background: #fafafa;
 }
-.cell-name { font-weight: 600; color: #18181b; }
-.cell-period { color: #3f3f46; white-space: nowrap; }
+.cell-name {
+  font-weight: 600;
+  color: #18181b;
+}
+.cell-period {
+  color: #3f3f46;
+  white-space: nowrap;
+}
 .col-status,
 .col-code {
   width: 1%;
@@ -929,7 +970,7 @@ onMounted(async () => {
   align-items: flex-start;
   cursor: pointer;
 }
-.perm-item input[type="checkbox"] {
+.perm-item input[type='checkbox'] {
   width: auto;
   margin: 0.15rem 0 0;
   flex-shrink: 0;

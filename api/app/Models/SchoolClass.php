@@ -13,7 +13,7 @@ class SchoolClass extends Model
 
     protected $table = 'school_classes';
 
-    protected $fillable = ['area_id', 'name', 'grade_level'];
+    protected $fillable = ['area_id', 'name'];
 
     public function area(): BelongsTo
     {
