@@ -1,7 +1,7 @@
 <template>
   <div>
     <h1>Academic configuration</h1>
-    <p class="muted">Set up session years, school structure, subjects, and student enrollment.</p>
+    <p class="muted">Set up school structure, subjects, and student enrollment.</p>
 
     <div class="tabs">
       <button v-for="t in visibleTabs" :key="t.id" type="button" :class="{ active: tab === t.id }" @click="tab = t.id">
@@ -12,175 +12,164 @@
     <div v-if="err" class="error">{{ err }}</div>
     <div v-if="msg" class="ok">{{ msg }}</div>
 
-    <!-- Session years -->
-    <div v-if="tab === 'years'" class="card">
-      <h2>Session years</h2>
-      <p class="muted small">Define academic sessions and mark which one is active.</p>
-
-      <form class="add-form" @submit.prevent="createYear">
-        <div class="form-grid years-grid">
-          <div class="field">
-            <span class="field-label">Name</span>
-            <input v-model="yearForm.name" required placeholder="2025–2026" />
-          </div>
-          <div class="field">
-            <span class="field-label">Starts</span>
-            <input v-model="yearForm.starts_on" type="date" required />
-          </div>
-          <div class="field">
-            <span class="field-label">Ends</span>
-            <input v-model="yearForm.ends_on" type="date" required />
-          </div>
-          <div class="field field-checkbox">
-            <span class="field-label field-label-spacer" aria-hidden="true">&nbsp;</span>
-            <label class="checkbox-field">
-              <input v-model="yearForm.is_current" type="checkbox" />
-              <span>Current session</span>
-            </label>
-          </div>
-        </div>
-        <div class="form-footer">
-          <button type="submit" class="primary" :disabled="saving">
-            {{ saving ? 'Adding…' : 'Add year' }}
-          </button>
-        </div>
-      </form>
-
-      <div v-if="years.length" class="table-wrap">
-        <table class="data-table">
-          <thead>
-            <tr>
-              <th>Name</th>
-              <th>Period</th>
-              <th class="col-status">Status</th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr v-for="y in years" :key="y.id">
-              <td class="cell-name">{{ y.name }}</td>
-              <td class="cell-period">{{ formatPeriod(y.starts_on, y.ends_on) }}</td>
-              <td class="col-status">
-                <span v-if="y.is_current" class="badge current">Current</span>
-                <span v-else class="muted">—</span>
-              </td>
-            </tr>
-          </tbody>
-        </table>
-      </div>
-      <p v-else class="empty">No session years yet. Add one above to get started.</p>
-    </div>
-
     <!-- Structure -->
     <div v-if="tab === 'structure'" class="card">
       <h2>School structure</h2>
       <p class="muted small">Year → Area → Class → Section → Study group</p>
 
       <p v-if="!years.length" class="structure-hint">
-        No session years found. Add one on the
-        <button type="button" class="linkish" @click="tab = 'years'">Session years</button>
-        tab first.
+        No session years found. Click <strong>+</strong> next to Session year to add one.
       </p>
 
       <div class="cascade">
-        <div class="field cascade-field">
-          <span class="field-label">Session year</span>
-          <SearchableSelect
-            v-model="structure.yearId"
-            :options="yearOptions"
-            placeholder="Select year…"
-            search-placeholder="Search years…"
-            empty-options-text="No session years yet"
-            @change="onYearChange"
-          />
+        <div class="cascade-row cascade-row-2">
+          <div class="field cascade-field">
+            <span class="field-label">Session year</span>
+            <div class="select-with-add">
+              <SearchableSelect
+                v-model="structure.yearId"
+                :options="yearOptions"
+                placeholder="Select year…"
+                search-placeholder="Search years…"
+                empty-options-text="No session years yet"
+                @change="onYearChange"
+              />
+              <button type="button" class="add-circle" title="Add session year" @click="openStructureModal('year')">+</button>
+            </div>
+          </div>
+          <div class="field cascade-field">
+            <span class="field-label">Area</span>
+            <div class="select-with-add">
+              <SearchableSelect
+                v-model="structure.areaId"
+                :options="areaOptions"
+                placeholder="Select area…"
+                search-placeholder="Search areas…"
+                :disabled="!structure.yearId"
+                @change="onAreaChange"
+              />
+              <button type="button" class="add-circle" title="Add area" :disabled="!structure.yearId" @click="openStructureModal('area')">+</button>
+            </div>
+          </div>
         </div>
-        <div class="field cascade-field">
-          <span class="field-label">Area</span>
-          <SearchableSelect v-model="structure.areaId" :options="areaOptions" placeholder="Select area…" search-placeholder="Search areas…" :disabled="!structure.yearId" @change="onAreaChange" />
-        </div>
-        <div class="field cascade-field">
-          <span class="field-label">Class</span>
-          <SearchableSelect v-model="structure.classId" :options="classOptions" placeholder="Select class…" search-placeholder="Search classes…" :disabled="!structure.areaId" @change="onClassChange" />
-        </div>
-        <div class="field cascade-field">
-          <span class="field-label">Section</span>
-          <SearchableSelect v-model="structure.sectionId" :options="sectionOptions" placeholder="Select section…" search-placeholder="Search sections…" :disabled="!structure.classId" @change="onSectionChange" />
+        <div class="cascade-row cascade-row-3">
+          <div class="field cascade-field">
+            <span class="field-label">Class</span>
+            <div class="select-with-add">
+              <SearchableSelect
+                v-model="structure.classId"
+                :options="classOptions"
+                placeholder="Select class…"
+                search-placeholder="Search classes…"
+                :disabled="!structure.areaId"
+                @change="onClassChange"
+              />
+              <button type="button" class="add-circle" title="Add class" :disabled="!structure.areaId" @click="openStructureModal('class')">+</button>
+            </div>
+          </div>
+          <div class="field cascade-field">
+            <span class="field-label">Section</span>
+            <div class="select-with-add">
+              <SearchableSelect
+                v-model="structure.sectionId"
+                :options="sectionOptions"
+                placeholder="Select section…"
+                search-placeholder="Search sections…"
+                :disabled="!structure.classId"
+                @change="onSectionChange"
+              />
+              <button type="button" class="add-circle" title="Add section" :disabled="!structure.classId" @click="openStructureModal('section')">+</button>
+            </div>
+          </div>
+          <div class="field cascade-field">
+            <span class="field-label">Study group</span>
+            <div class="select-with-add">
+              <SearchableSelect
+                v-model="structure.groupId"
+                :options="groupOptions"
+                placeholder="Select group…"
+                search-placeholder="Search groups…"
+                :disabled="!structure.sectionId"
+              />
+              <button type="button" class="add-circle" title="Add study group" :disabled="!structure.sectionId" @click="openStructureModal('group')">+</button>
+            </div>
+          </div>
         </div>
       </div>
 
-      <div v-if="structure.yearId" class="panel">
-        <h3>Areas</h3>
-        <form class="add-form compact" @submit.prevent="createArea">
-          <div class="form-grid">
-            <div class="field grow">
-              <span class="field-label">New area</span>
-              <input v-model="areaForm.name" required placeholder="Primary" />
-            </div>
-            <div class="field field-action">
-              <button type="submit" class="primary" :disabled="saving">Add area</button>
-            </div>
-          </div>
-        </form>
-        <div v-if="areas.length" class="tag-list">
-          <span v-for="a in areas" :key="a.id" class="tag">{{ a.name }}</span>
-        </div>
-        <p v-else class="empty inline">No areas for this year yet.</p>
-      </div>
+      <p v-if="structurePath" class="structure-path">{{ structurePath }}</p>
 
-      <div v-if="structure.areaId" class="panel">
-        <h3>Classes</h3>
-        <form class="add-form compact" @submit.prevent="createClass">
-          <div class="form-grid">
-            <div class="field grow">
-              <span class="field-label">New class</span>
-              <input v-model="classForm.name" required placeholder="Grade 5" />
-            </div>
-            <div class="field field-action">
-              <button type="submit" class="primary" :disabled="saving">Add class</button>
-            </div>
-          </div>
-        </form>
-        <div v-if="classes.length" class="tag-list">
-          <span v-for="c in classes" :key="c.id" class="tag">{{ c.name }}</span>
-        </div>
-        <p v-else class="empty inline">No classes in this area yet.</p>
-      </div>
+      <div v-if="structureModal" class="modal-backdrop" @click.self="closeStructureModal">
+        <div class="modal" role="dialog" aria-modal="true">
+          <h3>{{ structureModalTitle }}</h3>
 
-      <div v-if="structure.classId" class="panel">
-        <h3>Sections</h3>
-        <form class="add-form compact" @submit.prevent="createSection">
-          <div class="form-grid">
-            <div class="field grow">
-              <span class="field-label">New section</span>
-              <input v-model="sectionForm.name" required placeholder="A" />
+          <form v-if="structureModal === 'year'" class="modal-form" @submit.prevent="submitStructureModal">
+            <div class="field">
+              <span class="field-label">Name</span>
+              <input v-model="yearForm.name" required placeholder="2025–2026" />
             </div>
-            <div class="field field-action">
-              <button type="submit" class="primary" :disabled="saving">Add section</button>
+            <div class="field">
+              <span class="field-label">Starts</span>
+              <input v-model="yearForm.starts_on" type="date" required />
             </div>
-          </div>
-        </form>
-        <div v-if="sections.length" class="tag-list">
-          <span v-for="s in sections" :key="s.id" class="tag">{{ s.name }}</span>
-        </div>
-        <p v-else class="empty inline">No sections in this class yet.</p>
-      </div>
+            <div class="field">
+              <span class="field-label">Ends</span>
+              <input v-model="yearForm.ends_on" type="date" required />
+            </div>
+            <label class="checkbox-field">
+              <input v-model="yearForm.is_current" type="checkbox" />
+              <span>Current session</span>
+            </label>
+            <div class="modal-actions">
+              <button type="button" class="secondary" @click="closeStructureModal">Cancel</button>
+              <button type="submit" class="primary" :disabled="saving">{{ saving ? 'Adding…' : 'Add' }}</button>
+            </div>
+          </form>
 
-      <div v-if="structure.sectionId" class="panel">
-        <h3>Study groups</h3>
-        <form class="add-form compact" @submit.prevent="createStudyGroup">
-          <div class="form-grid">
-            <div class="field grow">
-              <span class="field-label">New group</span>
-              <input v-model="groupForm.name" required placeholder="5-A Morning" />
+          <form v-else-if="structureModal === 'area'" class="modal-form" @submit.prevent="submitStructureModal">
+            <div class="field">
+              <span class="field-label">Area name</span>
+              <input v-model="areaForm.name" required placeholder="Primary" autofocus />
             </div>
-            <div class="field field-action">
-              <button type="submit" class="primary" :disabled="saving">Add group</button>
+            <div class="modal-actions">
+              <button type="button" class="secondary" @click="closeStructureModal">Cancel</button>
+              <button type="submit" class="primary" :disabled="saving">{{ saving ? 'Adding…' : 'Add' }}</button>
             </div>
-          </div>
-        </form>
-        <div v-if="studyGroups.length" class="tag-list">
-          <span v-for="g in studyGroups" :key="g.id" class="tag">{{ g.name }}</span>
+          </form>
+
+          <form v-else-if="structureModal === 'class'" class="modal-form" @submit.prevent="submitStructureModal">
+            <div class="field">
+              <span class="field-label">Class name</span>
+              <input v-model="classForm.name" required placeholder="Grade 5" autofocus />
+            </div>
+            <div class="modal-actions">
+              <button type="button" class="secondary" @click="closeStructureModal">Cancel</button>
+              <button type="submit" class="primary" :disabled="saving">{{ saving ? 'Adding…' : 'Add' }}</button>
+            </div>
+          </form>
+
+          <form v-else-if="structureModal === 'section'" class="modal-form" @submit.prevent="submitStructureModal">
+            <div class="field">
+              <span class="field-label">Section name</span>
+              <input v-model="sectionForm.name" required placeholder="A" autofocus />
+            </div>
+            <div class="modal-actions">
+              <button type="button" class="secondary" @click="closeStructureModal">Cancel</button>
+              <button type="submit" class="primary" :disabled="saving">{{ saving ? 'Adding…' : 'Add' }}</button>
+            </div>
+          </form>
+
+          <form v-else-if="structureModal === 'group'" class="modal-form" @submit.prevent="submitStructureModal">
+            <div class="field">
+              <span class="field-label">Study group name</span>
+              <input v-model="groupForm.name" required placeholder="5-A Morning" autofocus />
+            </div>
+            <div class="modal-actions">
+              <button type="button" class="secondary" @click="closeStructureModal">Cancel</button>
+              <button type="submit" class="primary" :disabled="saving">{{ saving ? 'Adding…' : 'Add' }}</button>
+            </div>
+          </form>
         </div>
-        <p v-else class="empty inline">No study groups in this section yet.</p>
       </div>
     </div>
 
@@ -296,12 +285,11 @@
 import { computed, onMounted, reactive, ref, watch } from 'vue'
 import api from '../../api/client'
 import { usePermissions } from '../../composables/usePermissions'
-import { formatPeriod } from '../../composables/format'
 import SearchableSelect from '../../components/SearchableSelect.vue'
 
 const { canManageAcademic, canManageRoster } = usePermissions()
 
-const tab = ref(canManageAcademic.value ? 'years' : 'enroll')
+const tab = ref(canManageAcademic.value ? 'structure' : 'enroll')
 const saving = ref(false)
 const err = ref('')
 const msg = ref('')
@@ -309,7 +297,7 @@ const msg = ref('')
 const visibleTabs = computed(() => {
   const tabs = []
   if (canManageAcademic.value) {
-    tabs.push({ id: 'years', label: 'Session years' }, { id: 'structure', label: 'Structure' }, { id: 'subjects', label: 'Subjects' }, { id: 'assign', label: 'Assign subjects' })
+    tabs.push({ id: 'structure', label: 'Structure' }, { id: 'subjects', label: 'Subjects' }, { id: 'assign', label: 'Assign subjects' })
   }
   if (canManageRoster.value) {
     tabs.push({ id: 'enroll', label: 'Enroll students' })
@@ -318,7 +306,7 @@ const visibleTabs = computed(() => {
 })
 
 watch(tab, async (t) => {
-  if ((t === 'structure' || t === 'years') && canManageAcademic.value && !years.value.length) {
+  if (t === 'structure' && canManageAcademic.value && !years.value.length) {
     try {
       await loadYears()
     } catch (e) {
@@ -346,7 +334,21 @@ const structure = reactive({
   yearId: '',
   areaId: '',
   classId: '',
-  sectionId: ''
+  sectionId: '',
+  groupId: '',
+})
+
+const structureModal = ref(null)
+
+const structureModalTitle = computed(() => {
+  const titles = {
+    year: 'Add session year',
+    area: 'Add area',
+    class: 'Add class',
+    section: 'Add section',
+    group: 'Add study group',
+  }
+  return titles[structureModal.value] ?? ''
 })
 
 const yearForm = reactive({ name: '', starts_on: '', ends_on: '', is_current: false })
@@ -372,6 +374,33 @@ const yearOptions = computed(() => years.value.map((y) => ({ value: String(y.id)
 const areaOptions = computed(() => areas.value.map((a) => ({ value: String(a.id), label: a.name })))
 const classOptions = computed(() => classes.value.map((c) => ({ value: String(c.id), label: c.name })))
 const sectionOptions = computed(() => sections.value.map((s) => ({ value: String(s.id), label: s.name })))
+const groupOptions = computed(() => studyGroups.value.map((g) => ({ value: String(g.id), label: g.name })))
+
+const structurePath = computed(() => {
+  const parts = []
+  const nameIn = (list, id) => list.find((item) => String(item.id) === String(id))?.name
+  if (structure.yearId) {
+    const name = nameIn(years.value, structure.yearId)
+    if (name) parts.push(name)
+  }
+  if (structure.areaId) {
+    const name = nameIn(areas.value, structure.areaId)
+    if (name) parts.push(name)
+  }
+  if (structure.classId) {
+    const name = nameIn(classes.value, structure.classId)
+    if (name) parts.push(name)
+  }
+  if (structure.sectionId) {
+    const name = nameIn(sections.value, structure.sectionId)
+    if (name) parts.push(name)
+  }
+  if (structure.groupId) {
+    const name = nameIn(studyGroups.value, structure.groupId)
+    if (name) parts.push(name)
+  }
+  return parts.join(' -> ')
+})
 
 function groupLabel(g) {
   const sec = g.section?.name
@@ -450,6 +479,7 @@ function onYearChange() {
   structure.areaId = ''
   structure.classId = ''
   structure.sectionId = ''
+  structure.groupId = ''
   loadAreas()
   classes.value = []
   sections.value = []
@@ -459,6 +489,7 @@ function onYearChange() {
 function onAreaChange() {
   structure.classId = ''
   structure.sectionId = ''
+  structure.groupId = ''
   loadClasses()
   sections.value = []
   studyGroups.value = []
@@ -466,23 +497,50 @@ function onAreaChange() {
 
 function onClassChange() {
   structure.sectionId = ''
+  structure.groupId = ''
   loadSections()
   studyGroups.value = []
 }
 
 function onSectionChange() {
+  structure.groupId = ''
   loadStudyGroups()
+}
+
+function openStructureModal(type) {
+  structureModal.value = type
+}
+
+function closeStructureModal() {
+  structureModal.value = null
+}
+
+async function submitStructureModal() {
+  const handlers = {
+    year: createYear,
+    area: createArea,
+    class: createClass,
+    section: createSection,
+    group: createStudyGroup,
+  }
+  const fn = handlers[structureModal.value]
+  if (fn) await fn()
 }
 
 async function createYear() {
   saving.value = true
   try {
-    await api.post('/efsc/academic/years', { ...yearForm })
+    const { data } = await api.post('/efsc/academic/years', { ...yearForm })
     yearForm.name = ''
     yearForm.starts_on = ''
     yearForm.ends_on = ''
     yearForm.is_current = false
     await loadYears()
+    if (data?.id) {
+      structure.yearId = String(data.id)
+      await loadAreas()
+    }
+    closeStructureModal()
     flashOk('Session year created.')
   } catch (e) {
     flashErr(e, 'Failed to create year')
@@ -494,12 +552,17 @@ async function createYear() {
 async function createArea() {
   saving.value = true
   try {
-    await api.post('/efsc/academic/areas', {
+    const { data } = await api.post('/efsc/academic/areas', {
       academic_year_id: Number(structure.yearId),
-      name: areaForm.name
+      name: areaForm.name,
     })
     areaForm.name = ''
     await loadAreas()
+    if (data?.id) {
+      structure.areaId = String(data.id)
+      await loadClasses()
+    }
+    closeStructureModal()
     flashOk('Area created.')
   } catch (e) {
     flashErr(e, 'Failed to create area')
@@ -511,12 +574,17 @@ async function createArea() {
 async function createClass() {
   saving.value = true
   try {
-    await api.post('/efsc/academic/classes', {
+    const { data } = await api.post('/efsc/academic/classes', {
       area_id: Number(structure.areaId),
       name: classForm.name,
     })
     classForm.name = ''
     await loadClasses()
+    if (data?.id) {
+      structure.classId = String(data.id)
+      await loadSections()
+    }
+    closeStructureModal()
     flashOk('Class created.')
   } catch (e) {
     flashErr(e, 'Failed to create class')
@@ -528,12 +596,15 @@ async function createClass() {
 async function createSection() {
   saving.value = true
   try {
-    await api.post('/efsc/academic/sections', {
+    const { data } = await api.post('/efsc/academic/sections', {
       school_class_id: Number(structure.classId),
-      name: sectionForm.name
+      name: sectionForm.name,
     })
     sectionForm.name = ''
     await loadSections()
+    if (data?.id) structure.sectionId = String(data.id)
+    await loadStudyGroups()
+    closeStructureModal()
     flashOk('Section created.')
   } catch (e) {
     flashErr(e, 'Failed to create section')
@@ -545,13 +616,15 @@ async function createSection() {
 async function createStudyGroup() {
   saving.value = true
   try {
-    await api.post('/efsc/academic/study-groups', {
+    const { data } = await api.post('/efsc/academic/study-groups', {
       section_id: Number(structure.sectionId),
-      name: groupForm.name
+      name: groupForm.name,
     })
     groupForm.name = ''
     await loadStudyGroups()
     await loadAllStudyGroups()
+    if (data?.id) structure.groupId = String(data.id)
+    closeStructureModal()
     flashOk('Study group created.')
   } catch (e) {
     flashErr(e, 'Failed to create study group')
@@ -735,34 +808,11 @@ onMounted(async () => {
   gap: 1rem 1.25rem;
   align-items: end;
 }
-.years-grid {
-  grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: 1rem 1.5rem;
-}
-@media (max-width: 720px) {
-  .years-grid {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-  }
-}
-@media (max-width: 480px) {
-  .years-grid {
-    grid-template-columns: 1fr;
-  }
-}
 .field {
   display: flex;
   flex-direction: column;
   gap: 0.4rem;
   min-width: 0;
-}
-.field-checkbox {
-  min-width: 0;
-}
-.field-label-spacer {
-  visibility: hidden;
-  user-select: none;
-  line-height: 1.2;
-  min-height: 1rem;
 }
 .field.grow {
   grid-column: span 1;
@@ -791,11 +841,6 @@ onMounted(async () => {
   font-size: 0.9rem;
   background: #fff;
 }
-.years-grid .field-checkbox .checkbox-field {
-  height: 2.375rem;
-  box-sizing: border-box;
-  margin: 0;
-}
 .field input:focus,
 .field select:focus {
   outline: none;
@@ -818,30 +863,40 @@ onMounted(async () => {
   margin: 0;
   flex-shrink: 0;
 }
-.form-footer {
-  display: flex;
-  justify-content: flex-end;
-  margin-top: 1rem;
-  padding-top: 1rem;
-  border-top: 1px solid #e4e4e7;
-}
-.form-footer .primary {
-  margin: 0;
-}
 .field-action .primary {
   margin: 0;
   white-space: nowrap;
 }
 
 .cascade {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
-  gap: 0.75rem 1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
   margin-bottom: 1.25rem;
   padding: 1rem;
   background: #fafafa;
   border: 1px solid #e4e4e7;
   border-radius: 8px;
+}
+.cascade-row {
+  display: grid;
+  gap: 0.75rem 1rem;
+}
+.cascade-row-2 {
+  grid-template-columns: 1fr 1fr;
+}
+.cascade-row-3 {
+  grid-template-columns: 1fr 1fr 1fr;
+}
+.structure-path {
+  margin: 0;
+  padding: 0.65rem 0.85rem;
+  background: #f4f4f5;
+  border: 1px solid #e4e4e7;
+  border-radius: 6px;
+  font-size: 0.95rem;
+  font-weight: 500;
+  color: #27272a;
 }
 .cascade-field :deep(.searchable-select) {
   margin: 0;
@@ -851,35 +906,81 @@ onMounted(async () => {
   height: 2.375rem;
   box-sizing: border-box;
 }
-
-.panel {
-  border-top: 1px solid #e4e4e7;
-  padding-top: 1.25rem;
-  margin-top: 1rem;
-}
-.panel h3 {
-  margin: 0 0 0.75rem;
-  font-size: 0.95rem;
-  font-weight: 600;
-  color: #27272a;
-}
-
-.tag-list {
+.select-with-add {
   display: flex;
-  flex-wrap: wrap;
-  gap: 0.4rem;
-  margin-top: 0.5rem;
+  align-items: center;
+  gap: 0.5rem;
 }
-.tag {
-  display: inline-block;
-  padding: 0.25rem 0.65rem;
-  background: #eff6ff;
-  color: #1d4ed8;
+.select-with-add :deep(.searchable-select) {
+  flex: 1;
+  min-width: 0;
+}
+.add-circle {
+  flex-shrink: 0;
+  width: 2.375rem;
+  height: 2.375rem;
   border-radius: 999px;
-  font-size: 0.85rem;
-  font-weight: 500;
+  border: 1px solid #d4d4d8;
+  background: #fff;
+  color: #2563eb;
+  font-size: 1.25rem;
+  font-weight: 600;
+  line-height: 1;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+}
+.add-circle:hover:not(:disabled) {
+  background: #eff6ff;
+  border-color: #2563eb;
+}
+.add-circle:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+  color: #a1a1aa;
 }
 
+.modal-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 50;
+  background: rgb(0 0 0 / 0.35);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1rem;
+}
+.modal {
+  width: 100%;
+  max-width: 380px;
+  background: #fff;
+  border-radius: 10px;
+  padding: 1.25rem;
+  box-shadow: 0 12px 32px rgb(0 0 0 / 0.18);
+}
+.modal h3 {
+  margin: 0 0 1rem;
+  font-size: 1.05rem;
+}
+.modal-form {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+.modal-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.5rem;
+  margin-top: 0.5rem;
+  padding-top: 0.75rem;
+  border-top: 1px solid #e4e4e7;
+}
+.modal-actions .primary,
+.modal-actions .secondary {
+  margin: 0;
+}
 .table-wrap {
   overflow-x: auto;
   border: 1px solid #e4e4e7;
