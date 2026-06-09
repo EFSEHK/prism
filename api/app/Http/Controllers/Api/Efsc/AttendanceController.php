@@ -20,7 +20,7 @@ class AttendanceController extends Controller
         );
 
         $q = AttendanceBatch::query()
-            ->with(['studyGroup:id,name,section_id', 'submittedBy:id,name'])
+            ->with(['studyGroup:id,name,school_class_id', 'submittedBy:id,name'])
             ->withCount('records');
 
         if ($request->filled('study_group_id')) {

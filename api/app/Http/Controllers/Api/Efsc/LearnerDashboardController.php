@@ -35,7 +35,7 @@ class LearnerDashboardController extends Controller
 
         $allChildren = Student::query()
             ->whereIn('id', $studentIds)
-            ->with(['studyGroup:id,name,section_id', 'studyGroup.section:id,name,school_class_id'])
+            ->with(['studyGroup:id,name,school_class_id', 'studyGroup.schoolClass:id,name'])
             ->get(['id', 'first_name', 'last_name', 'study_group_id', 'admission_no']);
 
         $focusStudentId = $request->query('student_id');

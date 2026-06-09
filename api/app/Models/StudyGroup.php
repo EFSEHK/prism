@@ -12,11 +12,11 @@ class StudyGroup extends Model
 {
     use SoftDeletes;
 
-    protected $fillable = ['section_id', 'name'];
+    protected $fillable = ['school_class_id', 'name'];
 
-    public function section(): BelongsTo
+    public function schoolClass(): BelongsTo
     {
-        return $this->belongsTo(Section::class);
+        return $this->belongsTo(SchoolClass::class);
     }
 
     public function students(): HasMany

@@ -15,7 +15,7 @@
     <!-- Structure -->
     <div v-if="tab === 'structure'" class="card">
       <h2>School structure</h2>
-      <p class="muted small">Year → Area → Class → Section → Study group</p>
+      <p class="muted small">Year → Area → Class → Section / Study group</p>
 
       <p v-if="!years.length" class="structure-hint">
         No session years found. Click <strong>+</strong> next to Session year to add one.
@@ -89,9 +89,9 @@
                 :options="groupOptions"
                 placeholder="Select group…"
                 search-placeholder="Search groups…"
-                :disabled="!structure.sectionId"
+                :disabled="!structure.classId"
               />
-              <button type="button" class="add-circle" title="Add study group" :disabled="!structure.sectionId" @click="openStructureModal('group')">+</button>
+              <button type="button" class="add-circle" title="Add study group" :disabled="!structure.classId" @click="openStructureModal('group')">+</button>
             </div>
           </div>
         </div>
@@ -234,49 +234,174 @@
 
     <!-- Student enrollment -->
     <div v-if="tab === 'enroll'" class="card">
-      <h2>Student enrollment</h2>
-      <div class="field picker-field">
-        <span class="field-label">Study group</span>
-        <SearchableSelect v-model="enrollGroupId" :options="allGroupOptions" placeholder="Select study group…" search-placeholder="Search groups…" @change="loadStudents" />
+      <div class="enroll-header">
+        <h2>Student enrollment</h2>
+        <button type="button" class="primary" @click="openEnrollModal">Add new</button>
+      </div>
+      <div class="enroll-filters">
+        <div class="field picker-field">
+          <span class="field-label">Class</span>
+          <SearchableSelect
+            v-model="enrollFilterClassId"
+            :options="enrollClassOptions"
+            placeholder="Select class…"
+            search-placeholder="Search classes…"
+            @change="onEnrollFilterClassChange"
+          />
+        </div>
+        <div class="field picker-field">
+          <span class="field-label">Section</span>
+          <SearchableSelect
+            v-model="enrollFilterSectionId"
+            :options="enrollFilterSectionOptions"
+            placeholder="All sections"
+            search-placeholder="Search sections…"
+            :disabled="!enrollFilterClassId"
+          />
+        </div>
+        <div class="field picker-field">
+          <span class="field-label">Study group</span>
+          <SearchableSelect
+            v-model="enrollFilterGroupId"
+            :options="enrollFilterGroupOptions"
+            placeholder="Select study group…"
+            search-placeholder="Search groups…"
+            :disabled="!enrollFilterClassId"
+            :allow-empty="false"
+            @change="onEnrollFilterGroupChange"
+          />
+        </div>
+      </div>
+      <div class="enroll-search-row">
+        <div class="field enroll-search">
+          <input v-model="enrollSearchQuery" type="search" placeholder="Search students…" />
+        </div>
       </div>
 
-      <form v-if="enrollGroupId" class="add-form compact" @submit.prevent="enrollStudent">
-        <div class="form-grid">
-          <div class="field">
-            <span class="field-label">First name</span>
-            <input v-model="studentForm.first_name" required />
-          </div>
-          <div class="field">
-            <span class="field-label">Last name</span>
-            <input v-model="studentForm.last_name" required />
-          </div>
-          <div class="field">
-            <span class="field-label">Admission no.</span>
-            <input v-model="studentForm.admission_no" />
-          </div>
-          <div class="field field-action">
-            <button type="submit" class="primary" :disabled="saving">Enroll student</button>
-          </div>
-        </div>
-      </form>
-
-      <div v-if="enrollGroupId && students.length" class="table-wrap">
+      <div v-if="enrollFilterGroupId && filteredStudents.length" class="table-wrap">
         <table class="data-table">
           <thead>
             <tr>
               <th>Name</th>
+              <th>Class</th>
+              <th>Section</th>
+              <th>Study group</th>
               <th class="col-code">Admission no.</th>
+              <th class="col-code">Roll no.</th>
             </tr>
           </thead>
           <tbody>
-            <tr v-for="st in students" :key="st.id">
+            <tr v-for="st in filteredStudents" :key="st.id">
               <td>{{ st.first_name }} {{ st.last_name }}</td>
+              <td>{{ studentClassName(st) }}</td>
+              <td>{{ studentSectionName(st) }}</td>
+              <td>{{ studentGroupName(st) }}</td>
               <td class="col-code">{{ st.admission_no || '—' }}</td>
+              <td class="col-code">{{ st.roll_no || '—' }}</td>
             </tr>
           </tbody>
         </table>
       </div>
-      <p v-else-if="enrollGroupId" class="empty">No students in this group yet.</p>
+      <p v-else-if="enrollFilterGroupId && students.length" class="empty">No students match your search or filters.</p>
+      <p v-else-if="enrollFilterGroupId" class="empty">No students in this group yet.</p>
+      <p v-else class="empty">Select class and study group to view enrolled students, or click Add new to enroll.</p>
+
+      <div v-if="enrollModalOpen" class="modal-backdrop" @click.self="closeEnrollModal">
+        <div class="modal modal-enroll" role="dialog" aria-modal="true">
+          <h3>Enroll student</h3>
+          <form class="modal-form" @submit.prevent="enrollStudent">
+            <div class="form-section">
+              <h4>Student</h4>
+              <div class="modal-form-grid">
+                <div class="field span-2">
+                  <span class="field-label">Student name</span>
+                  <input v-model="studentForm.name" required placeholder="Full name" autofocus />
+                </div>
+                <div class="field">
+                  <span class="field-label">CNIC</span>
+                  <input v-model="studentForm.cnic" placeholder="xxxxx-xxxxxxx-x" />
+                </div>
+                <div class="field">
+                  <span class="field-label">Admission no.</span>
+                  <input v-model="studentForm.admission_no" />
+                </div>
+                <div class="field">
+                  <span class="field-label">Class</span>
+                  <SearchableSelect
+                    v-model="studentForm.classId"
+                    :options="enrollClassOptions"
+                    placeholder="Select class…"
+                    search-placeholder="Search classes…"
+                    @change="onEnrollClassChange"
+                  />
+                </div>
+                <div class="field">
+                  <span class="field-label">Section</span>
+                  <SearchableSelect
+                    v-model="studentForm.sectionId"
+                    :options="enrollSectionOptions"
+                    placeholder="Select section…"
+                    search-placeholder="Search sections…"
+                    :disabled="!studentForm.classId"
+                  />
+                </div>
+                <div class="field">
+                  <span class="field-label">Roll no.</span>
+                  <input v-model="studentForm.roll_no" />
+                </div>
+                <div class="field">
+                  <span class="field-label">Study group</span>
+                  <SearchableSelect
+                    v-model="studentForm.studyGroupId"
+                    :options="enrollGroupFormOptions"
+                    placeholder="Select study group…"
+                    search-placeholder="Search groups…"
+                    :disabled="!studentForm.classId"
+                    :allow-empty="false"
+                  />
+                </div>
+              </div>
+            </div>
+
+            <div class="form-section">
+              <h4>Father</h4>
+              <div class="modal-form-grid">
+                <div class="field">
+                  <span class="field-label">Father name</span>
+                  <input v-model="studentForm.father_name" />
+                </div>
+                <div class="field">
+                  <span class="field-label">Father CNIC</span>
+                  <input v-model="studentForm.father_cnic" placeholder="xxxxx-xxxxxxx-x" />
+                </div>
+              </div>
+            </div>
+
+            <div class="form-section">
+              <h4>Guardian</h4>
+              <label class="checkbox-field">
+                <input v-model="studentForm.father_is_guardian" type="checkbox" />
+                <span>Father is guardian</span>
+              </label>
+              <div class="modal-form-grid">
+                <div class="field">
+                  <span class="field-label">Guardian name</span>
+                  <input v-model="studentForm.guardian_name" :disabled="studentForm.father_is_guardian" />
+                </div>
+                <div class="field">
+                  <span class="field-label">Guardian CNIC</span>
+                  <input v-model="studentForm.guardian_cnic" :disabled="studentForm.father_is_guardian" placeholder="xxxxx-xxxxxxx-x" />
+                </div>
+              </div>
+            </div>
+
+            <div class="modal-actions">
+              <button type="button" class="secondary" @click="closeEnrollModal">Cancel</button>
+              <button type="submit" class="primary" :disabled="saving || !studentForm.studyGroupId">{{ saving ? 'Enrolling…' : 'Enroll student' }}</button>
+            </div>
+          </form>
+        </div>
+      </div>
     </div>
   </div>
 </template>
@@ -357,11 +482,43 @@ const classForm = reactive({ name: '' })
 const sectionForm = reactive({ name: '' })
 const groupForm = reactive({ name: '' })
 const subjectForm = reactive({ name: '', code: '' })
-const studentForm = reactive({ first_name: '', last_name: '', admission_no: '' })
+const studentForm = reactive({
+  name: '',
+  admission_no: '',
+  classId: '',
+  sectionId: '',
+  studyGroupId: '',
+  roll_no: '',
+  cnic: '',
+  father_name: '',
+  father_cnic: '',
+  guardian_name: '',
+  guardian_cnic: '',
+  father_is_guardian: false,
+})
+
+watch(
+  () => [studentForm.father_name, studentForm.father_cnic, studentForm.father_is_guardian],
+  () => {
+    if (studentForm.father_is_guardian) {
+      studentForm.guardian_name = studentForm.father_name
+      studentForm.guardian_cnic = studentForm.father_cnic
+    }
+  }
+)
 
 const assignGroupId = ref('')
 const assignedSubjectIds = ref([])
-const enrollGroupId = ref('')
+const enrollFilterClassId = ref('')
+const enrollFilterSectionId = ref('')
+const enrollFilterGroupId = ref('')
+const enrollSearchQuery = ref('')
+const enrollModalOpen = ref(false)
+const enrollClasses = ref([])
+const enrollSections = ref([])
+const enrollFilterSections = ref([])
+const enrollStudyGroups = ref([])
+const enrollSectionLookup = ref([])
 
 const allGroupOptions = computed(() =>
   allStudyGroups.value.map((g) => ({
@@ -375,6 +532,49 @@ const areaOptions = computed(() => areas.value.map((a) => ({ value: String(a.id)
 const classOptions = computed(() => classes.value.map((c) => ({ value: String(c.id), label: c.name })))
 const sectionOptions = computed(() => sections.value.map((s) => ({ value: String(s.id), label: s.name })))
 const groupOptions = computed(() => studyGroups.value.map((g) => ({ value: String(g.id), label: g.name })))
+
+const enrollClassOptions = computed(() =>
+  enrollClasses.value.map((c) => ({ value: String(c.id), label: c.name }))
+)
+const enrollSectionOptions = computed(() =>
+  enrollSections.value.map((s) => ({ value: String(s.id), label: s.name }))
+)
+const enrollGroupFormOptions = computed(() =>
+  enrollStudyGroups.value.map((g) => ({ value: String(g.id), label: g.name }))
+)
+const enrollFilterSectionOptions = computed(() =>
+  enrollFilterSections.value.map((s) => ({ value: String(s.id), label: s.name }))
+)
+const enrollFilterGroupOptions = computed(() => {
+  if (!enrollFilterClassId.value) return []
+  return allStudyGroups.value
+    .filter((g) => String(g.school_class_id) === String(enrollFilterClassId.value))
+    .map((g) => ({ value: String(g.id), label: g.name }))
+})
+const filteredStudents = computed(() => {
+  let list = students.value
+  if (enrollFilterSectionId.value) {
+    list = list.filter((st) => String(st.section_id) === String(enrollFilterSectionId.value))
+  }
+  const q = enrollSearchQuery.value.trim().toLowerCase()
+  if (!q) return list
+  return list.filter((st) => {
+    const haystack = [
+      st.first_name,
+      st.last_name,
+      st.admission_no,
+      st.roll_no,
+      st.cnic,
+      studentClassName(st),
+      studentSectionName(st),
+      studentGroupName(st),
+    ]
+      .filter(Boolean)
+      .join(' ')
+      .toLowerCase()
+    return haystack.includes(q)
+  })
+})
 
 const structurePath = computed(() => {
   const parts = []
@@ -403,9 +603,32 @@ const structurePath = computed(() => {
 })
 
 function groupLabel(g) {
-  const sec = g.section?.name
-  const parts = [sec, g.name].filter(Boolean)
+  const cls = g.school_class?.name ?? g.schoolClass?.name
+  const parts = [cls, g.name].filter(Boolean)
   return parts.join(' · ') || g.name
+}
+
+function studentStudyGroup(st) {
+  return (
+    st.study_group ??
+    st.studyGroup ??
+    allStudyGroups.value.find((g) => String(g.id) === String(st.study_group_id))
+  )
+}
+
+function studentClassName(st) {
+  const group = studentStudyGroup(st)
+  return group?.school_class?.name ?? group?.schoolClass?.name ?? '—'
+}
+
+function studentSectionName(st) {
+  if (st.section?.name) return st.section.name
+  const section = enrollSectionLookup.value.find((s) => String(s.id) === String(st.section_id))
+  return section?.name ?? '—'
+}
+
+function studentGroupName(st) {
+  return studentStudyGroup(st)?.name ?? '—'
 }
 
 function flashOk(text) {
@@ -455,12 +678,12 @@ async function loadSections() {
 }
 
 async function loadStudyGroups() {
-  if (!structure.sectionId) {
+  if (!structure.classId) {
     studyGroups.value = []
     return
   }
   const { data } = await api.get('/efsc/academic/study-groups', {
-    params: { section_id: structure.sectionId }
+    params: { school_class_id: structure.classId }
   })
   studyGroups.value = data?.data ?? data ?? []
 }
@@ -499,12 +722,11 @@ function onClassChange() {
   structure.sectionId = ''
   structure.groupId = ''
   loadSections()
-  studyGroups.value = []
+  loadStudyGroups()
 }
 
 function onSectionChange() {
   structure.groupId = ''
-  loadStudyGroups()
 }
 
 function openStructureModal(type) {
@@ -583,6 +805,7 @@ async function createClass() {
     if (data?.id) {
       structure.classId = String(data.id)
       await loadSections()
+      await loadStudyGroups()
     }
     closeStructureModal()
     flashOk('Class created.')
@@ -603,7 +826,6 @@ async function createSection() {
     sectionForm.name = ''
     await loadSections()
     if (data?.id) structure.sectionId = String(data.id)
-    await loadStudyGroups()
     closeStructureModal()
     flashOk('Section created.')
   } catch (e) {
@@ -617,7 +839,7 @@ async function createStudyGroup() {
   saving.value = true
   try {
     const { data } = await api.post('/efsc/academic/study-groups', {
-      section_id: Number(structure.sectionId),
+      school_class_id: Number(structure.classId),
       name: groupForm.name,
     })
     groupForm.name = ''
@@ -657,7 +879,7 @@ async function loadGroupSubjects() {
   assignedSubjectIds.value = (group?.subjects || []).map((s) => s.id)
   if (group?.subjects?.length) return
   const { data } = await api.get('/efsc/academic/study-groups', {
-    params: { section_id: group?.section_id }
+    params: { school_class_id: group?.school_class_id }
   })
   const list = data?.data ?? data ?? []
   const fresh = list.find((g) => g.id == assignGroupId.value)
@@ -679,26 +901,144 @@ async function saveGroupSubjects() {
   }
 }
 
+async function loadEnrollFilterSections() {
+  if (!enrollFilterClassId.value) {
+    enrollFilterSections.value = []
+    enrollSectionLookup.value = []
+    return
+  }
+  const { data } = await api.get('/efsc/academic/sections', {
+    params: { school_class_id: enrollFilterClassId.value }
+  })
+  enrollFilterSections.value = data?.data ?? data ?? []
+  enrollSectionLookup.value = enrollFilterSections.value
+}
+
+async function onEnrollFilterClassChange() {
+  enrollFilterSectionId.value = ''
+  enrollFilterGroupId.value = ''
+  enrollSearchQuery.value = ''
+  students.value = []
+  await loadEnrollFilterSections()
+}
+
+async function onEnrollFilterGroupChange() {
+  enrollSearchQuery.value = ''
+  await loadStudents()
+}
+
 async function loadStudents() {
-  if (!enrollGroupId.value) return
+  if (!enrollFilterGroupId.value) return
+  if (!enrollFilterSections.value.length && enrollFilterClassId.value) {
+    await loadEnrollFilterSections()
+  }
   const { data } = await api.get('/efsc/students', {
-    params: { study_group_id: enrollGroupId.value }
+    params: { study_group_id: enrollFilterGroupId.value }
   })
   students.value = data?.data ?? data ?? []
+}
+
+async function loadEnrollClasses() {
+  const { data } = await api.get('/efsc/academic/classes')
+  enrollClasses.value = data?.data ?? data ?? []
+}
+
+async function loadEnrollSections() {
+  if (!studentForm.classId) {
+    enrollSections.value = []
+    return
+  }
+  const { data } = await api.get('/efsc/academic/sections', {
+    params: { school_class_id: studentForm.classId }
+  })
+  enrollSections.value = data?.data ?? data ?? []
+}
+
+async function loadEnrollStudyGroups() {
+  if (!studentForm.classId) {
+    enrollStudyGroups.value = []
+    return
+  }
+  const { data } = await api.get('/efsc/academic/study-groups', {
+    params: { school_class_id: studentForm.classId }
+  })
+  enrollStudyGroups.value = data?.data ?? data ?? []
+}
+
+function resetStudentForm() {
+  studentForm.name = ''
+  studentForm.admission_no = ''
+  studentForm.classId = ''
+  studentForm.sectionId = ''
+  studentForm.studyGroupId = ''
+  studentForm.roll_no = ''
+  studentForm.cnic = ''
+  studentForm.father_name = ''
+  studentForm.father_cnic = ''
+  studentForm.guardian_name = ''
+  studentForm.guardian_cnic = ''
+  studentForm.father_is_guardian = false
+  enrollSections.value = []
+  enrollStudyGroups.value = []
+}
+
+function prefillStudentFormFromGroup(groupId) {
+  const group = allStudyGroups.value.find((g) => String(g.id) === String(groupId))
+  if (!group?.school_class_id) return
+  studentForm.classId = String(group.school_class_id)
+  studentForm.studyGroupId = String(group.id)
+}
+
+async function onEnrollClassChange() {
+  studentForm.sectionId = ''
+  studentForm.studyGroupId = ''
+  await Promise.all([loadEnrollSections(), loadEnrollStudyGroups()])
+}
+
+async function openEnrollModal() {
+  resetStudentForm()
+  if (!enrollClasses.value.length) {
+    await loadEnrollClasses().catch((e) => flashErr(e, 'Failed to load classes'))
+  }
+  if (enrollFilterClassId.value) {
+    studentForm.classId = enrollFilterClassId.value
+    studentForm.sectionId = enrollFilterSectionId.value
+    studentForm.studyGroupId = enrollFilterGroupId.value
+    await Promise.all([loadEnrollSections(), loadEnrollStudyGroups()])
+  } else if (enrollFilterGroupId.value) {
+    prefillStudentFormFromGroup(enrollFilterGroupId.value)
+    await Promise.all([loadEnrollSections(), loadEnrollStudyGroups()])
+  }
+  enrollModalOpen.value = true
+}
+
+function closeEnrollModal() {
+  enrollModalOpen.value = false
 }
 
 async function enrollStudent() {
   saving.value = true
   try {
     await api.post('/efsc/students', {
-      study_group_id: Number(enrollGroupId.value),
-      first_name: studentForm.first_name,
-      last_name: studentForm.last_name,
-      admission_no: studentForm.admission_no || null
+      study_group_id: Number(studentForm.studyGroupId),
+      name: studentForm.name,
+      admission_no: studentForm.admission_no || null,
+      section_id: studentForm.sectionId ? Number(studentForm.sectionId) : null,
+      roll_no: studentForm.roll_no || null,
+      cnic: studentForm.cnic || null,
+      father_name: studentForm.father_name || null,
+      father_cnic: studentForm.father_cnic || null,
+      guardian_name: studentForm.guardian_name || null,
+      guardian_cnic: studentForm.guardian_cnic || null,
+      father_is_guardian: studentForm.father_is_guardian,
     })
-    studentForm.first_name = ''
-    studentForm.last_name = ''
-    studentForm.admission_no = ''
+    closeEnrollModal()
+    if (studentForm.classId) {
+      enrollFilterClassId.value = studentForm.classId
+      await loadEnrollFilterSections()
+    }
+    enrollFilterSectionId.value = studentForm.sectionId || ''
+    enrollFilterGroupId.value = String(studentForm.studyGroupId)
     await loadStudents()
     flashOk('Student enrolled.')
   } catch (e) {
@@ -715,6 +1055,9 @@ onMounted(async () => {
     await loadAllStudyGroups().catch((e) => flashErr(e, 'Failed to load study groups'))
   } else if (canManageRoster.value) {
     await loadAllStudyGroups().catch((e) => flashErr(e, 'Failed to load study groups'))
+  }
+  if (canManageRoster.value) {
+    await loadEnrollClasses().catch((e) => flashErr(e, 'Failed to load classes'))
   }
 })
 </script>
@@ -959,6 +1302,103 @@ onMounted(async () => {
   border-radius: 10px;
   padding: 1.25rem;
   box-shadow: 0 12px 32px rgb(0 0 0 / 0.18);
+}
+.modal-enroll {
+  max-width: 560px;
+  max-height: min(90vh, 720px);
+  overflow-y: auto;
+}
+.form-section {
+  display: flex;
+  flex-direction: column;
+  gap: 0.65rem;
+}
+.form-section h4 {
+  margin: 0;
+  font-size: 0.8rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: #71717a;
+}
+.form-section + .form-section {
+  padding-top: 0.75rem;
+  border-top: 1px solid #e4e4e7;
+}
+.modal-form-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.75rem;
+}
+.modal-form-grid .span-2 {
+  grid-column: span 2;
+}
+.modal-form-grid .field :deep(.searchable-select) {
+  margin: 0;
+  max-width: none;
+}
+.modal-form-grid .field :deep(.trigger) {
+  height: 2.375rem;
+  box-sizing: border-box;
+}
+.enroll-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-bottom: 1rem;
+}
+.enroll-header h2 {
+  margin: 0;
+}
+.enroll-header .primary {
+  margin: 0;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+.enroll-filters {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: 1rem;
+  margin-bottom: 0.75rem;
+}
+.enroll-filters .picker-field {
+  flex: 1;
+  min-width: 160px;
+  max-width: none;
+  margin-bottom: 0;
+}
+.enroll-filters .picker-field :deep(.searchable-select) {
+  margin: 0;
+  max-width: none;
+}
+.enroll-search-row {
+  display: flex;
+  justify-content: flex-end;
+  margin-bottom: 1rem;
+}
+.enroll-search {
+  width: 100%;
+  max-width: 280px;
+  margin: 0;
+}
+.enroll-search input {
+  display: block;
+  width: 100%;
+  margin: 0;
+  padding: 0 0.65rem;
+  height: 2.375rem;
+  box-sizing: border-box;
+  border: 1px solid #d4d4d8;
+  border-radius: 6px;
+  font-size: 0.9rem;
+  background: #fff;
+}
+.enroll-search input:focus {
+  outline: none;
+  border-color: #2563eb;
+  box-shadow: 0 0 0 2px rgb(37 99 235 / 0.12);
 }
 .modal h3 {
   margin: 0 0 1rem;

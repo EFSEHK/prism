@@ -15,13 +15,30 @@ class Student extends Model
         'first_name',
         'last_name',
         'admission_no',
+        'roll_no',
+        'cnic',
+        'father_name',
+        'father_cnic',
+        'guardian_name',
+        'guardian_cnic',
+        'father_is_guardian',
         'study_group_id',
+        'section_id',
         'user_id',
+    ];
+
+    protected $casts = [
+        'father_is_guardian' => 'boolean',
     ];
 
     public function studyGroup(): BelongsTo
     {
         return $this->belongsTo(StudyGroup::class);
+    }
+
+    public function section(): BelongsTo
+    {
+        return $this->belongsTo(Section::class);
     }
 
     public function user(): BelongsTo

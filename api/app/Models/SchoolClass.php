@@ -24,4 +24,9 @@ class SchoolClass extends Model
     {
         return $this->hasMany(Section::class);
     }
+
+    public function studyGroups(): HasMany
+    {
+        return $this->hasMany(StudyGroup::class);
+    }
 }
