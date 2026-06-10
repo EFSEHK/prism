@@ -140,7 +140,7 @@
           <form v-else-if="structureModal === 'class'" class="modal-form" @submit.prevent="submitStructureModal">
             <div class="field">
               <span class="field-label">Class name</span>
-              <input v-model="classForm.name" required placeholder="Grade 5" autofocus />
+              <input v-model="classForm.name" required placeholder="10th" autofocus />
             </div>
             <div class="modal-actions">
               <button type="button" class="secondary" @click="closeStructureModal">Cancel</button>
@@ -151,7 +151,7 @@
           <form v-else-if="structureModal === 'section'" class="modal-form" @submit.prevent="submitStructureModal">
             <div class="field">
               <span class="field-label">Section name</span>
-              <input v-model="sectionForm.name" required placeholder="A" autofocus />
+              <input v-model="sectionForm.name" required placeholder="White" autofocus />
             </div>
             <div class="modal-actions">
               <button type="button" class="secondary" @click="closeStructureModal">Cancel</button>
@@ -162,7 +162,7 @@
           <form v-else-if="structureModal === 'group'" class="modal-form" @submit.prevent="submitStructureModal">
             <div class="field">
               <span class="field-label">Study group name</span>
-              <input v-model="groupForm.name" required placeholder="5-A Morning" autofocus />
+              <input v-model="groupForm.name" required placeholder="Pre-Engineering" autofocus />
             </div>
             <div class="modal-actions">
               <button type="button" class="secondary" @click="closeStructureModal">Cancel</button>
