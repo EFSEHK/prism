@@ -73,7 +73,7 @@ export default function App() {
   }, [viewAsRole])
 
   const actualRoleNames = (user?.roles || []).map((r) => r.name)
-  const canViewAs = actualRoleNames.some((n) => ['superadmin', 'developer'].includes(n))
+  const canViewAs = actualRoleNames.includes('superadmin')
 
   async function loadViewAsOptions() {
     const { data } = await apiClient.get('/view-as/roles')
@@ -138,7 +138,7 @@ export default function App() {
       setViewAsOptions([])
       const roles = (data.user?.roles || []).map((r) => r.name)
       const perms = (data.user?.permissions || []).map((p) => p.name)
-      const privileged = roles.some((n) => ['superadmin', 'developer'].includes(n))
+      const privileged = roles.includes('superadmin')
       if (privileged) {
         try {
           await loadViewAsOptions()

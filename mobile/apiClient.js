@@ -60,7 +60,7 @@ export function setAuthToken(token) {
   }
 }
 
-/** Preview another role (superadmin/developer only). */
+/** Preview another role (superadmin only). */
 export function setViewAsRole(roleName) {
   if (roleName) {
     apiClient.defaults.headers.common['X-View-As-Role'] = roleName

@@ -3,6 +3,7 @@ import { useAuthStore } from '../stores/auth'
 import { useParentStore } from '../stores/parent'
 import { useRoles } from '../composables/useRoles'
 import { usePermissions } from '../composables/usePermissions'
+import { useViewAsStore } from '../stores/viewAs'
 import { roleView } from '../composables/useRoleView'
 import LoginView from '../views/LoginView.vue'
 import DashboardView from '../views/DashboardView.vue'
@@ -18,6 +19,7 @@ import NotificationsView from '../views/NotificationsView.vue'
 import ComingSoonView from '../views/ComingSoonView.vue'
 import PermissionsAdminView from '../views/admin/PermissionsAdminView.vue'
 import AcademicConfigView from '../views/admin/AcademicConfigView.vue'
+import UsersAdminView from '../views/admin/UsersAdminView.vue'
 import ParentHomeworkView from '../views/parent/ParentHomeworkView.vue'
 import ParentMarksView from '../views/parent/ParentMarksView.vue'
 import ParentAttendanceView from '../views/parent/ParentAttendanceView.vue'
@@ -34,6 +36,7 @@ const router = createRouter({
     { path: '/login', component: LoginView, meta: { guest: true } },
     { path: '/', component: roleView(ParentHomeView, DashboardView), meta: { auth: true } },
     { path: '/dashboard', component: ChildDashboardView, meta: { auth: true, requiresChild: true } },
+    { path: '/admin/users', component: UsersAdminView, meta: { auth: true, usersAccess: true } },
     { path: '/admin/permissions', component: PermissionsAdminView, meta: { auth: true, superadminOnly: true } },
     { path: '/admin/academic', component: AcademicConfigView, meta: { auth: true, configAccess: true } },
     { path: '/approvals', component: ApprovalsView, meta: { auth: true, staffOnly: true } },
@@ -80,9 +83,12 @@ router.beforeEach((to) => {
   if (to.meta.auth && !auth.token) return '/login'
   if (to.meta.guest && auth.token) return '/'
 
-  const { isLearner, isParent, isActuallySuperadmin } = useRoles()
+  const viewAs = useViewAsStore()
+  const { isLearner, isParent, isSuperadmin, canManageUsers } = useRoles()
 
-  if (to.meta.superadminOnly && !isActuallySuperadmin.value) return '/'
+  if (viewAs.isImpersonating && to.path.startsWith('/admin')) return '/'
+  if (to.meta.usersAccess && !canManageUsers.value) return '/'
+  if (to.meta.superadminOnly && !isSuperadmin.value) return '/'
   if (to.meta.configAccess) {
     const { canConfigure } = usePermissions()
     if (!canConfigure.value) return '/'

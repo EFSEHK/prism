@@ -10,11 +10,15 @@ export function usePermissions() {
   const viewAs = useViewAsStore()
 
   const permissionNames = computed(() => {
+    if (viewAs.isImpersonating) return viewAs.impersonateUser?.permissions || []
     if (viewAs.active) return viewAs.permissions
     return (auth.user?.permissions || []).map((p) => p.name)
   })
 
   const roleNames = computed(() => {
+    if (viewAs.isImpersonating) {
+      return (viewAs.impersonateUser?.roles || []).map((r) => r.name)
+    }
     if (viewAs.active) return [viewAs.role]
     return (auth.user?.roles || []).map((r) => r.name)
   })

@@ -4,8 +4,10 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\AuthController;
 use App\Http\Middleware\ApplyViewAsRole;
+use App\Http\Middleware\ApplyViewAsUser;
 use App\Http\Middleware\CheckInactivity;
 use App\Http\Middleware\LogAllRequests;
+use App\Http\Controllers\Api\UserController;
 use App\Http\Controllers\Api\ViewAsController;
 use App\Http\Controllers\Api\RoleController;
 use App\Http\Controllers\Api\PermissionController;
@@ -30,7 +32,7 @@ use App\Http\Controllers\Api\Efsc\UserNotificationController;
 Route::post('/register', [AuthController::class, 'register']);
 Route::post('/login', [AuthController::class, 'login']);
 
-Route::middleware([LogAllRequests::class, 'auth:sanctum', CheckInactivity::class, ApplyViewAsRole::class])->group(function () {
+Route::middleware([LogAllRequests::class, 'auth:sanctum', CheckInactivity::class, ApplyViewAsUser::class, ApplyViewAsRole::class])->group(function () {
     Route::get('/view-as/roles', [ViewAsController::class, 'roles']);
     Route::get('/user', function (Request $request) {
         $user = $request->user()->load(['roles:id,name']);
@@ -39,13 +41,12 @@ Route::middleware([LogAllRequests::class, 'auth:sanctum', CheckInactivity::class
         return response()->json($user);
     });
 
-    Route::get('/users', function (Request $request) {
-        abort_unless($request->user()->hasRole('superadmin'), 403);
-
-        return response()->json(
-            \App\Models\User::query()->orderBy('name')->get(['id', 'name', 'email'])
-        );
-    });
+    Route::get('/users', [UserController::class, 'index']);
+    Route::post('/users', [UserController::class, 'store']);
+    Route::get('/users/{user}', [UserController::class, 'show']);
+    Route::put('/users/{user}', [UserController::class, 'update']);
+    Route::patch('/users/{user}', [UserController::class, 'update']);
+    Route::put('/users/{user}/roles', [UserController::class, 'syncRoles']);
     Route::post('/logout', [AuthController::class, 'logout']);
 
     Route::get('roles/{id}/permissions', [RoleController::class, 'getPermissions']);

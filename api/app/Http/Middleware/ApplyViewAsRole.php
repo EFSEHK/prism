@@ -9,7 +9,7 @@ use Symfony\Component\HttpFoundation\Response;
 
 class ApplyViewAsRole
 {
-    private const PRIVILEGED = ['superadmin', 'developer'];
+    private const PRIVILEGED = ['superadmin'];
 
     private const BLOCKED_TARGETS = ['superadmin', 'developer'];
 
@@ -17,6 +17,10 @@ class ApplyViewAsRole
     {
         $user = $request->user();
         if (! $user) {
+            return $next($request);
+        }
+
+        if ($request->header('X-View-As-User')) {
             return $next($request);
         }
 

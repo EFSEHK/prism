@@ -9,7 +9,7 @@ use Spatie\Permission\Models\Role;
 
 class ViewAsController extends Controller
 {
-    private const PRIVILEGED = ['superadmin', 'developer'];
+    private const PRIVILEGED = ['superadmin'];
 
     private const BLOCKED_TARGETS = ['superadmin', 'developer'];
 

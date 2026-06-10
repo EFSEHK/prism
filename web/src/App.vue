@@ -4,8 +4,12 @@
       <div class="top-bar">
         <span class="brand">EFSC-YA</span>
         <div class="user-actions">
-          <span v-if="userName" class="user-name">{{ userName }}</span>
-          <template v-if="canViewAs">
+          <span v-if="displayName" class="user-name">{{ displayName }}</span>
+          <template v-if="isImpersonating">
+            <span class="user-sep" aria-hidden="true" />
+            <button type="button" class="link accent" @click="exitImpersonation">Back to Super Admin</button>
+          </template>
+          <template v-else-if="canViewAs">
             <span class="user-sep" aria-hidden="true" />
             <label class="view-as-control">
               <span class="view-as-label">{{ viewAsRole ? 'Viewing as' : 'View as' }}</span>
@@ -44,8 +48,9 @@
         </template>
         <template v-else>
           <RouterLink to="/">Dashboard</RouterLink>
-          <RouterLink v-if="canConfigure" to="/admin/academic">Configuration</RouterLink>
-          <RouterLink v-if="isSuperadmin" to="/admin/permissions">Permissions</RouterLink>
+          <RouterLink v-if="canManageUsers && !isImpersonating" to="/admin/users">Users</RouterLink>
+          <RouterLink v-if="canConfigure && !isImpersonating" to="/admin/academic">Configuration</RouterLink>
+          <RouterLink v-if="isSuperadmin && !isImpersonating" to="/admin/permissions">Permissions</RouterLink>
           <RouterLink v-if="canApprove" to="/approvals">Approvals</RouterLink>
           <RouterLink v-if="canStaff" to="/attendance">Attendance</RouterLink>
           <RouterLink v-if="canStaff" to="/marks">Marks</RouterLink>
@@ -79,15 +84,19 @@ const viewAs = useViewAsStore()
 const router = useRouter()
 
 const {
-  isLearner, isParent, isStudent, isSuperadmin, canViewAs,
+  isLearner, isParent, isStudent, isSuperadmin, canViewAs, canManageUsers,
   canApprove, canStaff, canTimetable, canFees, canBroadcasts, canLeave,
 } = useRoles()
 const { canConfigure } = usePermissions()
 
-const userName = computed(() => auth.user?.name ?? '')
+const displayName = computed(() => {
+  if (viewAs.isImpersonating) return viewAs.impersonateUser?.name ?? ''
+  return auth.user?.name ?? ''
+})
 const selectedChild = computed(() => parent.selectedChild)
 const viewAsRole = computed(() => viewAs.role)
 const viewAsOptions = computed(() => viewAs.options)
+const isImpersonating = computed(() => viewAs.isImpersonating)
 
 onMounted(async () => {
   if (auth.token && canViewAs.value) {
@@ -110,9 +119,23 @@ watch(canViewAs, async (allowed) => {
 })
 
 async function onViewAsChange(event) {
-  viewAs.setRole(event.target.value)
+  const roleName = event.target.value
+  viewAs.setRole(roleName)
   await parent.clearChild()
+  if (roleName === 'parent' || roleName === 'student') {
+    try {
+      await parent.loadDashboard()
+    } catch {
+      /* learner may have no linked data */
+    }
+  }
   router.push('/')
+}
+
+async function exitImpersonation() {
+  viewAs.stopImpersonation()
+  await parent.clearChild()
+  router.push('/admin/users')
 }
 
 async function logout() {
@@ -210,6 +233,10 @@ async function switchChild() {
   font-size: 0.8rem;
   padding: 0.2rem 0.4rem;
   cursor: pointer;
+}
+.link.accent {
+  color: #fbbf24;
+  white-space: nowrap;
 }
 main {
   max-width: 960px;

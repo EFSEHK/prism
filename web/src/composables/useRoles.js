@@ -8,15 +8,32 @@ export function useRoles() {
 
   const actualRoles = computed(() => (auth.user?.roles || []).map((r) => r.name))
 
-  const roles = computed(() =>
-    viewAs.active ? [viewAs.role] : actualRoles.value,
-  )
-
-  const canViewAs = computed(() =>
-    actualRoles.value.some((n) => ['superadmin', 'developer'].includes(n)),
-  )
+  const roles = computed(() => {
+    if (viewAs.isImpersonating) {
+      return (viewAs.impersonateUser?.roles || []).map((r) => r.name)
+    }
+    if (viewAs.active) return [viewAs.role]
+    return actualRoles.value
+  })
 
   const isActuallySuperadmin = computed(() => actualRoles.value.includes('superadmin'))
+
+  const canViewAs = computed(() =>
+    !viewAs.isImpersonating
+    && isActuallySuperadmin.value,
+  )
+
+  const canImpersonateUsers = computed(() =>
+    isActuallySuperadmin.value && !viewAs.isImpersonating && !viewAs.active,
+  )
+
+  const canManageUsers = computed(() =>
+    roles.value.some((n) => ['superadmin', 'admin', 'computer_operator'].includes(n)),
+  )
+
+  const canEditUsers = computed(() =>
+    roles.value.some((n) => ['superadmin', 'admin'].includes(n)),
+  )
 
   const isSuperadmin = computed(() => roles.value.includes('superadmin'))
   const isParent = computed(() => roles.value.includes('parent'))
@@ -59,7 +76,10 @@ export function useRoles() {
     roles,
     actualRoles,
     canViewAs,
+    canImpersonateUsers,
     isActuallySuperadmin,
+    canManageUsers,
+    canEditUsers,
     isSuperadmin,
     isParent,
     isStudent,
