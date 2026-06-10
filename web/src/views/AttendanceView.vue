@@ -53,12 +53,13 @@
 
       <div v-if="markStudents.length" class="student-list">
         <div class="table-wrap">
-          <table class="data-table">
+          <table class="data-table mark-table">
             <thead>
               <tr>
                 <th class="col-serial">#</th>
                 <th class="col-roll">Roll no</th>
-                <th>Student</th>
+                <th class="col-student">Student</th>
+                <th class="col-father">Father name</th>
                 <th class="col-mark-status">Status</th>
               </tr>
             </thead>
@@ -66,7 +67,8 @@
               <tr v-for="(s, index) in markStudents" :key="s.id">
                 <td class="col-serial">{{ index + 1 }}</td>
                 <td class="col-roll">{{ s.roll_no || '—' }}</td>
-                <td class="cell-name">{{ s.first_name }} {{ s.last_name }}</td>
+                <td class="col-student cell-name">{{ s.first_name }} {{ s.last_name }}</td>
+                <td class="col-father">{{ s.father_name || '—' }}</td>
                 <td class="col-mark-status">
                   <div class="status-radios" role="radiogroup" :aria-label="`Attendance for ${s.first_name}`">
                     <label
@@ -801,22 +803,43 @@ async function loadSummary() {
 .student-list {
   margin-top: 1rem;
 }
-.col-serial {
-  width: 1%;
-  white-space: nowrap;
+.mark-table th,
+.mark-table td {
+  vertical-align: middle;
+}
+.mark-table th {
   color: #71717a;
+}
+.mark-table td {
+  color: #27272a;
+}
+.mark-table .col-serial {
+  width: 2.5rem;
   text-align: center;
 }
-.col-roll {
-  width: 1%;
-  white-space: nowrap;
-  color: #52525b;
+.mark-table td.col-serial {
+  color: #71717a;
+}
+.mark-table .col-roll {
+  width: 5rem;
+  text-align: left;
   font-variant-numeric: tabular-nums;
 }
-.col-mark-status {
+.mark-table .col-student {
+  min-width: 9rem;
+  text-align: left;
+}
+.mark-table .col-father {
+  min-width: 9rem;
+  text-align: left;
+}
+.mark-table .col-mark-status {
+  text-align: left;
   white-space: nowrap;
-  width: auto;
-  min-width: 15rem;
+  min-width: 16rem;
+}
+.mark-table .cell-name {
+  color: #18181b;
 }
 .status-radios {
   display: flex;
@@ -824,7 +847,7 @@ async function loadSummary() {
   flex-wrap: nowrap;
   align-items: center;
   gap: 0.35rem;
-  justify-content: flex-end;
+  justify-content: flex-start;
 }
 .status-radio {
   position: relative;
