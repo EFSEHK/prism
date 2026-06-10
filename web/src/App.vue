@@ -1,14 +1,31 @@
 <template>
   <div class="app">
     <header v-if="auth.token" class="top">
-      <div class="brand-block">
+      <div class="top-bar">
         <span class="brand">EFSC-YA</span>
-        <template v-if="userName">
-          <span class="brand-sep" aria-hidden="true">|</span>
-          <span class="user-name">{{ userName }}</span>
-        </template>
+        <div class="user-actions">
+          <span v-if="userName" class="user-name">{{ userName }}</span>
+          <template v-if="canViewAs">
+            <span class="user-sep" aria-hidden="true" />
+            <label class="view-as-control">
+              <span class="view-as-label">{{ viewAsRole ? 'Viewing as' : 'View as' }}</span>
+              <select
+                class="view-as-select"
+                :value="viewAsRole"
+                aria-label="View as role"
+                @change="onViewAsChange"
+              >
+                <option v-if="!viewAsRole" disabled value="">Select role…</option>
+                <option v-if="viewAsRole" value="">Your account</option>
+                <option v-for="r in viewAsOptions" :key="r.name" :value="r.name">{{ r.label }}</option>
+              </select>
+            </label>
+          </template>
+          <span class="user-sep" aria-hidden="true" />
+          <button type="button" class="link" @click="logout">Logout</button>
+        </div>
       </div>
-      <nav>
+      <nav class="top-nav">
         <template v-if="isLearner">
           <RouterLink to="/">Home</RouterLink>
           <template v-if="selectedChild || isStudent">
@@ -39,7 +56,6 @@
           <RouterLink v-if="canBroadcasts" to="/notifications">Notifications</RouterLink>
           <RouterLink v-if="canLeave" to="/leave">Leave</RouterLink>
         </template>
-        <button type="button" class="link" @click="logout">Logout</button>
       </nav>
     </header>
     <main>
@@ -49,25 +65,55 @@
 </template>
 
 <script setup>
-import { computed } from 'vue'
+import { computed, onMounted, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { useAuthStore } from './stores/auth'
 import { useParentStore } from './stores/parent'
+import { useViewAsStore } from './stores/viewAs'
 import { useRoles } from './composables/useRoles'
 import { usePermissions } from './composables/usePermissions'
 
 const auth = useAuthStore()
 const parent = useParentStore()
+const viewAs = useViewAsStore()
 const router = useRouter()
 
 const {
-  isLearner, isParent, isStudent, isSuperadmin,
+  isLearner, isParent, isStudent, isSuperadmin, canViewAs,
   canApprove, canStaff, canTimetable, canFees, canBroadcasts, canLeave,
 } = useRoles()
 const { canConfigure } = usePermissions()
 
 const userName = computed(() => auth.user?.name ?? '')
 const selectedChild = computed(() => parent.selectedChild)
+const viewAsRole = computed(() => viewAs.role)
+const viewAsOptions = computed(() => viewAs.options)
+
+onMounted(async () => {
+  if (auth.token && canViewAs.value) {
+    try {
+      await viewAs.loadOptions()
+    } catch {
+      /* ignore */
+    }
+  }
+})
+
+watch(canViewAs, async (allowed) => {
+  if (allowed && auth.token) {
+    try {
+      await viewAs.loadOptions()
+    } catch {
+      /* ignore */
+    }
+  }
+})
+
+async function onViewAsChange(event) {
+  viewAs.setRole(event.target.value)
+  await parent.clearChild()
+  router.push('/')
+}
 
 async function logout() {
   await auth.logout()
@@ -90,24 +136,27 @@ async function switchChild() {
   min-height: 100vh;
 }
 .top {
+  background: #18181b;
+  color: #fafafa;
+}
+.top-bar {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 0.75rem 1.25rem;
-  background: #18181b;
-  color: #fafafa;
-  flex-wrap: wrap;
-  gap: 0.5rem;
+  padding: 0.6rem 1.25rem;
 }
-.top nav {
+.top-nav {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
+  justify-content: center;
+  gap: 0.75rem;
+  padding: 0.5rem 1.25rem;
+  border-top: 1px solid #27272a;
 }
 .top a,
 .link {
   color: #a1a1aa;
-  margin-left: 0.75rem;
   text-decoration: none;
   background: none;
   border: none;
@@ -117,23 +166,50 @@ async function switchChild() {
 .top a.router-link-active {
   color: #fff;
 }
-.brand-block {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-}
 .brand {
   font-weight: 700;
 }
-.brand-sep {
-  color: #52525b;
-  font-weight: 400;
-  font-size: 0.95rem;
+.user-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+.user-actions .link {
+  margin-left: 0;
 }
 .user-name {
+  font-size: 0.85rem;
+  font-weight: 500;
+  color: #d4d4d8;
+}
+.user-sep {
+  width: 1px;
+  height: 1.1rem;
+  background: #52525b;
+}
+.view-as-control {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+.view-as-label {
   font-size: 0.8rem;
   font-weight: 500;
   color: #a1a1aa;
+  white-space: nowrap;
+}
+.view-as-select {
+  display: inline-block;
+  width: auto;
+  max-width: none;
+  margin: 0;
+  background: #27272a;
+  color: #d4d4d8;
+  border: 1px solid #3f3f46;
+  border-radius: 4px;
+  font-size: 0.8rem;
+  padding: 0.2rem 0.4rem;
+  cursor: pointer;
 }
 main {
   max-width: 960px;

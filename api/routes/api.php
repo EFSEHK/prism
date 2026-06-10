@@ -3,8 +3,10 @@
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\AuthController;
+use App\Http\Middleware\ApplyViewAsRole;
 use App\Http\Middleware\CheckInactivity;
 use App\Http\Middleware\LogAllRequests;
+use App\Http\Controllers\Api\ViewAsController;
 use App\Http\Controllers\Api\RoleController;
 use App\Http\Controllers\Api\PermissionController;
 use App\Http\Controllers\Api\NavigationController;
@@ -28,7 +30,8 @@ use App\Http\Controllers\Api\Efsc\UserNotificationController;
 Route::post('/register', [AuthController::class, 'register']);
 Route::post('/login', [AuthController::class, 'login']);
 
-Route::middleware([LogAllRequests::class, 'auth:sanctum', CheckInactivity::class])->group(function () {
+Route::middleware([LogAllRequests::class, 'auth:sanctum', CheckInactivity::class, ApplyViewAsRole::class])->group(function () {
+    Route::get('/view-as/roles', [ViewAsController::class, 'roles']);
     Route::get('/user', function (Request $request) {
         $user = $request->user()->load(['roles:id,name']);
         $user->setRelation('permissions', $user->getAllPermissions());

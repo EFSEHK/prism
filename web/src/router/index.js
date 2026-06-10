@@ -80,9 +80,9 @@ router.beforeEach((to) => {
   if (to.meta.auth && !auth.token) return '/login'
   if (to.meta.guest && auth.token) return '/'
 
-  const { isLearner, isParent, isSuperadmin } = useRoles()
+  const { isLearner, isParent, isActuallySuperadmin } = useRoles()
 
-  if (to.meta.superadminOnly && !isSuperadmin.value) return '/'
+  if (to.meta.superadminOnly && !isActuallySuperadmin.value) return '/'
   if (to.meta.configAccess) {
     const { canConfigure } = usePermissions()
     if (!canConfigure.value) return '/'

@@ -1,10 +1,22 @@
 import { computed } from 'vue'
 import { useAuthStore } from '../stores/auth'
+import { useViewAsStore } from '../stores/viewAs'
 
 export function useRoles() {
   const auth = useAuthStore()
+  const viewAs = useViewAsStore()
 
-  const roles = computed(() => (auth.user?.roles || []).map((r) => r.name))
+  const actualRoles = computed(() => (auth.user?.roles || []).map((r) => r.name))
+
+  const roles = computed(() =>
+    viewAs.active ? [viewAs.role] : actualRoles.value,
+  )
+
+  const canViewAs = computed(() =>
+    actualRoles.value.some((n) => ['superadmin', 'developer'].includes(n)),
+  )
+
+  const isActuallySuperadmin = computed(() => actualRoles.value.includes('superadmin'))
 
   const isSuperadmin = computed(() => roles.value.includes('superadmin'))
   const isParent = computed(() => roles.value.includes('parent'))
@@ -45,6 +57,9 @@ export function useRoles() {
 
   return {
     roles,
+    actualRoles,
+    canViewAs,
+    isActuallySuperadmin,
     isSuperadmin,
     isParent,
     isStudent,

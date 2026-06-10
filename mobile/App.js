@@ -15,8 +15,10 @@ import {
   API_BRIDGE_HOST,
   USES_EMULATOR_API,
   setAuthToken,
+  setViewAsRole,
 } from './apiClient'
 import SideMenu, { HamburgerIcon, navItemsForContext } from './components/SideMenu'
+import ViewAsPicker from './components/ViewAsPicker'
 import {
   ParentHomeScreen,
   ChildDashboardScreen,
@@ -59,10 +61,53 @@ export default function App() {
   const [menuOpen, setMenuOpen] = useState(false)
   const [loading, setLoading] = useState(false)
   const [err, setErr] = useState('')
+  const [viewAsRole, setViewAsRoleState] = useState('')
+  const [viewAsOptions, setViewAsOptions] = useState([])
 
   useEffect(() => {
     setAuthToken(token)
   }, [token])
+
+  useEffect(() => {
+    setViewAsRole(viewAsRole)
+  }, [viewAsRole])
+
+  const actualRoleNames = (user?.roles || []).map((r) => r.name)
+  const canViewAs = actualRoleNames.some((n) => ['superadmin', 'developer'].includes(n))
+
+  async function loadViewAsOptions() {
+    const { data } = await apiClient.get('/view-as/roles')
+    setViewAsOptions(data)
+    return data
+  }
+
+  async function applyViewAs(roleName) {
+    setViewAsRoleState(roleName)
+    setViewAsRole(roleName)
+    setDashboard(null)
+    setSelectedChild(null)
+    setTab('home')
+    setErr('')
+
+    const effectiveRoles = roleName ? [roleName] : actualRoleNames
+    const option = viewAsOptions.find((r) => r.name === roleName)
+    const perms = roleName
+      ? (option?.permissions || [])
+      : (user?.permissions || []).map((p) => p.name)
+
+    if (effectiveRoles.includes('parent') || effectiveRoles.includes('student')) {
+      setLoading(true)
+      try {
+        await loadDashboard()
+      } catch (e) {
+        setErr(formatError(e))
+      } finally {
+        setLoading(false)
+      }
+    } else if (perms.includes('mark_attendance') || effectiveRoles.includes('computer_operator')) {
+      setTab('attendance')
+    }
+  }
 
   const loadDashboard = useCallback(async (studentId = null) => {
     const params = { include: DASHBOARD_INCLUDE }
@@ -88,8 +133,19 @@ export default function App() {
       setAuthToken(data.access_token)
       setToken(data.access_token)
       setUser(data.user ?? null)
+      setViewAsRoleState('')
+      setViewAsRole('')
+      setViewAsOptions([])
       const roles = (data.user?.roles || []).map((r) => r.name)
       const perms = (data.user?.permissions || []).map((p) => p.name)
+      const privileged = roles.some((n) => ['superadmin', 'developer'].includes(n))
+      if (privileged) {
+        try {
+          await loadViewAsOptions()
+        } catch {
+          /* ignore */
+        }
+      }
       if (roles.includes('parent') || roles.includes('student')) {
         await loadDashboard()
       } else if (perms.includes('mark_attendance') || roles.includes('computer_operator')) {
@@ -114,10 +170,13 @@ export default function App() {
       /* ignore */
     }
     setAuthToken('')
+    setViewAsRole('')
     setToken('')
     setUser(null)
     setDashboard(null)
     setSelectedChild(null)
+    setViewAsRoleState('')
+    setViewAsOptions([])
     setTab('home')
     setMenuOpen(false)
     setErr('')
@@ -151,8 +210,11 @@ export default function App() {
     setTab(id)
   }
 
-  const roleNames = (user?.roles || []).map((r) => r.name)
-  const permissions = (user?.permissions || []).map((p) => p.name)
+  const roleNames = viewAsRole ? [viewAsRole] : actualRoleNames
+  const viewAsOption = viewAsOptions.find((r) => r.name === viewAsRole)
+  const permissions = viewAsRole
+    ? (viewAsOption?.permissions || [])
+    : (user?.permissions || []).map((p) => p.name)
   const isLearnerRole = roleNames.includes('parent') || roleNames.includes('student')
   const isStaffAttendance =
     permissions.includes('mark_attendance') || roleNames.includes('computer_operator')
@@ -282,6 +344,16 @@ export default function App() {
             </View>
             <View style={styles.headerRight}>
               <Text numberOfLines={1} style={styles.headerRightName}>{headerRightName}</Text>
+              {canViewAs ? (
+                <>
+                  <View style={styles.headerSeparator} />
+                  <ViewAsPicker
+                    options={viewAsOptions}
+                    value={viewAsRole}
+                    onChange={(name) => applyViewAs(name)}
+                  />
+                </>
+              ) : null}
               <View style={styles.headerSeparator} />
               <Pressable onPress={logout} style={styles.headerLogoutBtn} hitSlop={8} accessibilityLabel="Logout">
                 <LogoutIcon />

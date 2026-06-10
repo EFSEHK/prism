@@ -59,3 +59,12 @@ export function setAuthToken(token) {
     delete apiClient.defaults.headers.common.Authorization
   }
 }
+
+/** Preview another role (superadmin/developer only). */
+export function setViewAsRole(roleName) {
+  if (roleName) {
+    apiClient.defaults.headers.common['X-View-As-Role'] = roleName
+  } else {
+    delete apiClient.defaults.headers.common['X-View-As-Role']
+  }
+}
