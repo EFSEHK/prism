@@ -17,11 +17,24 @@ class StudentController extends Controller
 
         $data = $request->validate([
             'study_group_id' => 'required|exists:study_groups,id',
+            'school_class_id' => 'nullable|exists:school_classes,id',
+            'section_id' => 'nullable|exists:sections,id',
         ]);
 
         $students = Student::query()
-            ->with(['studyGroup.schoolClass', 'section'])
+            ->with(['studyGroup:id,name', 'section.schoolClass:id,name', 'section.schoolClass.area:id,name'])
             ->where('study_group_id', $data['study_group_id'])
+            ->when(
+                ! empty($data['section_id']),
+                fn ($q) => $q->where('section_id', $data['section_id'])
+            )
+            ->when(
+                empty($data['section_id']) && ! empty($data['school_class_id']),
+                fn ($q) => $q->whereHas(
+                    'section',
+                    fn ($sq) => $sq->where('school_class_id', $data['school_class_id'])
+                )
+            )
             ->orderBy('first_name')
             ->get();
 
@@ -61,7 +74,7 @@ class StudentController extends Controller
             $data['guardian_cnic'] = $data['father_cnic'] ?? null;
         }
 
-        $student = Student::create($data)->load(['studyGroup.schoolClass', 'section']);
+        $student = Student::create($data)->load(['studyGroup:id,name', 'section.schoolClass:id,name']);
 
         return response()->json($student, 201);
     }

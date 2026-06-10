@@ -15,7 +15,7 @@
     <!-- Structure -->
     <div v-if="tab === 'structure'" class="card">
       <h2>School structure</h2>
-      <p class="muted small">Year → Area → Class → Section / Study group</p>
+      <p class="muted small">Year → Area → Class → Section</p>
 
       <p v-if="!years.length" class="structure-hint">
         No session years found. Click <strong>+</strong> next to Session year to add one.
@@ -52,7 +52,7 @@
             </div>
           </div>
         </div>
-        <div class="cascade-row cascade-row-3">
+        <div class="cascade-row cascade-row-2">
           <div class="field cascade-field">
             <span class="field-label">Class</span>
             <div class="select-with-add">
@@ -76,22 +76,8 @@
                 placeholder="Select section…"
                 search-placeholder="Search sections…"
                 :disabled="!structure.classId"
-                @change="onSectionChange"
               />
               <button type="button" class="add-circle" title="Add section" :disabled="!structure.classId" @click="openStructureModal('section')">+</button>
-            </div>
-          </div>
-          <div class="field cascade-field">
-            <span class="field-label">Study group</span>
-            <div class="select-with-add">
-              <SearchableSelect
-                v-model="structure.groupId"
-                :options="groupOptions"
-                placeholder="Select group…"
-                search-placeholder="Search groups…"
-                :disabled="!structure.classId"
-              />
-              <button type="button" class="add-circle" title="Add study group" :disabled="!structure.classId" @click="openStructureModal('group')">+</button>
             </div>
           </div>
         </div>
@@ -158,17 +144,6 @@
               <button type="submit" class="primary" :disabled="saving">{{ saving ? 'Adding…' : 'Add' }}</button>
             </div>
           </form>
-
-          <form v-else-if="structureModal === 'group'" class="modal-form" @submit.prevent="submitStructureModal">
-            <div class="field">
-              <span class="field-label">Study group name</span>
-              <input v-model="groupForm.name" required placeholder="Pre-Engineering" autofocus />
-            </div>
-            <div class="modal-actions">
-              <button type="button" class="secondary" @click="closeStructureModal">Cancel</button>
-              <button type="submit" class="primary" :disabled="saving">{{ saving ? 'Adding…' : 'Add' }}</button>
-            </div>
-          </form>
         </div>
       </div>
     </div>
@@ -215,11 +190,20 @@
 
     <!-- Assign subjects to study group -->
     <div v-if="tab === 'assign'" class="card">
-      <h2>Assign subjects to study group</h2>
-      <p class="muted small">Pick a study group, then check the subjects taught in that group.</p>
+      <h2>Study groups & subject assignment</h2>
+      <p class="muted small">Create study groups and assign subjects to each group.</p>
       <div class="field picker-field">
         <span class="field-label">Study group</span>
-        <SearchableSelect v-model="assignGroupId" :options="allGroupOptions" placeholder="Select study group…" search-placeholder="Search groups…" @change="loadGroupSubjects" />
+        <div class="select-with-add">
+          <SearchableSelect
+            v-model="assignGroupId"
+            :options="allGroupOptions"
+            placeholder="Select study group…"
+            search-placeholder="Search groups…"
+            @change="loadGroupSubjects"
+          />
+          <button type="button" class="add-circle" title="Add study group" @click="openGroupModal">+</button>
+        </div>
       </div>
       <div v-if="assignGroupId" class="perm-grid">
         <label v-for="s in subjects" :key="s.id" class="perm-item">
@@ -230,6 +214,22 @@
       <button v-if="assignGroupId" type="button" class="primary" :disabled="saving" @click="saveGroupSubjects">
         {{ saving ? 'Saving…' : 'Save subject assignment' }}
       </button>
+
+      <div v-if="groupModalOpen" class="modal-backdrop" @click.self="closeGroupModal">
+        <div class="modal" role="dialog" aria-modal="true">
+          <h3>Add study group</h3>
+          <form class="modal-form" @submit.prevent="createStudyGroup">
+            <div class="field">
+              <span class="field-label">Study group name</span>
+              <input v-model="groupForm.name" required placeholder="Pre-Engineering" autofocus />
+            </div>
+            <div class="modal-actions">
+              <button type="button" class="secondary" @click="closeGroupModal">Cancel</button>
+              <button type="submit" class="primary" :disabled="saving">{{ saving ? 'Adding…' : 'Add' }}</button>
+            </div>
+          </form>
+        </div>
+      </div>
     </div>
 
     <!-- Student enrollment -->
@@ -257,6 +257,7 @@
             placeholder="All sections"
             search-placeholder="Search sections…"
             :disabled="!enrollFilterClassId"
+            @change="onEnrollFilterSectionChange"
           />
         </div>
         <div class="field picker-field">
@@ -266,7 +267,6 @@
             :options="enrollFilterGroupOptions"
             placeholder="Select study group…"
             search-placeholder="Search groups…"
-            :disabled="!enrollFilterClassId"
             :allow-empty="false"
             @change="onEnrollFilterGroupChange"
           />
@@ -304,7 +304,7 @@
       </div>
       <p v-else-if="enrollFilterGroupId && students.length" class="empty">No students match your search or filters.</p>
       <p v-else-if="enrollFilterGroupId" class="empty">No students in this group yet.</p>
-      <p v-else class="empty">Select class and study group to view enrolled students, or click Add new to enroll.</p>
+      <p v-else class="empty">Select a study group to view enrolled students, or click Add new to enroll.</p>
 
       <div v-if="enrollModalOpen" class="modal-backdrop" @click.self="closeEnrollModal">
         <div class="modal modal-enroll" role="dialog" aria-modal="true">
@@ -356,7 +356,6 @@
                     :options="enrollGroupFormOptions"
                     placeholder="Select study group…"
                     search-placeholder="Search groups…"
-                    :disabled="!studentForm.classId"
                     :allow-empty="false"
                   />
                 </div>
@@ -450,7 +449,6 @@ const years = ref([])
 const areas = ref([])
 const classes = ref([])
 const sections = ref([])
-const studyGroups = ref([])
 const allStudyGroups = ref([])
 const subjects = ref([])
 const students = ref([])
@@ -460,10 +458,10 @@ const structure = reactive({
   areaId: '',
   classId: '',
   sectionId: '',
-  groupId: '',
 })
 
 const structureModal = ref(null)
+const groupModalOpen = ref(false)
 
 const structureModalTitle = computed(() => {
   const titles = {
@@ -471,7 +469,6 @@ const structureModalTitle = computed(() => {
     area: 'Add area',
     class: 'Add class',
     section: 'Add section',
-    group: 'Add study group',
   }
   return titles[structureModal.value] ?? ''
 })
@@ -517,7 +514,6 @@ const enrollModalOpen = ref(false)
 const enrollClasses = ref([])
 const enrollSections = ref([])
 const enrollFilterSections = ref([])
-const enrollStudyGroups = ref([])
 const enrollSectionLookup = ref([])
 
 const allGroupOptions = computed(() =>
@@ -531,34 +527,26 @@ const yearOptions = computed(() => years.value.map((y) => ({ value: String(y.id)
 const areaOptions = computed(() => areas.value.map((a) => ({ value: String(a.id), label: a.name })))
 const classOptions = computed(() => classes.value.map((c) => ({ value: String(c.id), label: c.name })))
 const sectionOptions = computed(() => sections.value.map((s) => ({ value: String(s.id), label: s.name })))
-const groupOptions = computed(() => studyGroups.value.map((g) => ({ value: String(g.id), label: g.name })))
 
 const enrollClassOptions = computed(() =>
-  enrollClasses.value.map((c) => ({ value: String(c.id), label: c.name }))
+  enrollClasses.value.map((c) => ({ value: String(c.id), label: classLabel(c) }))
 )
 const enrollSectionOptions = computed(() =>
   enrollSections.value.map((s) => ({ value: String(s.id), label: s.name }))
 )
 const enrollGroupFormOptions = computed(() =>
-  enrollStudyGroups.value.map((g) => ({ value: String(g.id), label: g.name }))
+  allStudyGroups.value.map((g) => ({ value: String(g.id), label: g.name }))
 )
 const enrollFilterSectionOptions = computed(() =>
   enrollFilterSections.value.map((s) => ({ value: String(s.id), label: s.name }))
 )
-const enrollFilterGroupOptions = computed(() => {
-  if (!enrollFilterClassId.value) return []
-  return allStudyGroups.value
-    .filter((g) => String(g.school_class_id) === String(enrollFilterClassId.value))
-    .map((g) => ({ value: String(g.id), label: g.name }))
-})
+const enrollFilterGroupOptions = computed(() =>
+  allStudyGroups.value.map((g) => ({ value: String(g.id), label: g.name }))
+)
 const filteredStudents = computed(() => {
-  let list = students.value
-  if (enrollFilterSectionId.value) {
-    list = list.filter((st) => String(st.section_id) === String(enrollFilterSectionId.value))
-  }
   const q = enrollSearchQuery.value.trim().toLowerCase()
-  if (!q) return list
-  return list.filter((st) => {
+  if (!q) return students.value
+  return students.value.filter((st) => {
     const haystack = [
       st.first_name,
       st.last_name,
@@ -595,17 +583,16 @@ const structurePath = computed(() => {
     const name = nameIn(sections.value, structure.sectionId)
     if (name) parts.push(name)
   }
-  if (structure.groupId) {
-    const name = nameIn(studyGroups.value, structure.groupId)
-    if (name) parts.push(name)
-  }
   return parts.join(' -> ')
 })
 
+function classLabel(c) {
+  const area = c.area?.name
+  return area ? `${c.name} (${area})` : c.name
+}
+
 function groupLabel(g) {
-  const cls = g.school_class?.name ?? g.schoolClass?.name
-  const parts = [cls, g.name].filter(Boolean)
-  return parts.join(' · ') || g.name
+  return g.name
 }
 
 function studentStudyGroup(st) {
@@ -617,8 +604,11 @@ function studentStudyGroup(st) {
 }
 
 function studentClassName(st) {
-  const group = studentStudyGroup(st)
-  return group?.school_class?.name ?? group?.schoolClass?.name ?? '—'
+  const schoolClass = st.section?.school_class ?? st.section?.schoolClass
+  if (schoolClass) return classLabel(schoolClass)
+  const section = enrollSectionLookup.value.find((s) => String(s.id) === String(st.section_id))
+  const cls = section?.school_class ?? section?.schoolClass
+  return cls ? classLabel(cls) : '—'
 }
 
 function studentSectionName(st) {
@@ -677,17 +667,6 @@ async function loadSections() {
   sections.value = data?.data ?? data ?? []
 }
 
-async function loadStudyGroups() {
-  if (!structure.classId) {
-    studyGroups.value = []
-    return
-  }
-  const { data } = await api.get('/efsc/academic/study-groups', {
-    params: { school_class_id: structure.classId }
-  })
-  studyGroups.value = data?.data ?? data ?? []
-}
-
 async function loadAllStudyGroups() {
   const { data } = await api.get('/efsc/academic/study-groups')
   allStudyGroups.value = data?.data ?? data ?? []
@@ -702,31 +681,21 @@ function onYearChange() {
   structure.areaId = ''
   structure.classId = ''
   structure.sectionId = ''
-  structure.groupId = ''
   loadAreas()
   classes.value = []
   sections.value = []
-  studyGroups.value = []
 }
 
 function onAreaChange() {
   structure.classId = ''
   structure.sectionId = ''
-  structure.groupId = ''
   loadClasses()
   sections.value = []
-  studyGroups.value = []
 }
 
 function onClassChange() {
   structure.sectionId = ''
-  structure.groupId = ''
   loadSections()
-  loadStudyGroups()
-}
-
-function onSectionChange() {
-  structure.groupId = ''
 }
 
 function openStructureModal(type) {
@@ -743,10 +712,17 @@ async function submitStructureModal() {
     area: createArea,
     class: createClass,
     section: createSection,
-    group: createStudyGroup,
   }
   const fn = handlers[structureModal.value]
   if (fn) await fn()
+}
+
+function openGroupModal() {
+  groupModalOpen.value = true
+}
+
+function closeGroupModal() {
+  groupModalOpen.value = false
 }
 
 async function createYear() {
@@ -805,7 +781,6 @@ async function createClass() {
     if (data?.id) {
       structure.classId = String(data.id)
       await loadSections()
-      await loadStudyGroups()
     }
     closeStructureModal()
     flashOk('Class created.')
@@ -839,14 +814,12 @@ async function createStudyGroup() {
   saving.value = true
   try {
     const { data } = await api.post('/efsc/academic/study-groups', {
-      school_class_id: Number(structure.classId),
       name: groupForm.name,
     })
     groupForm.name = ''
-    await loadStudyGroups()
     await loadAllStudyGroups()
-    if (data?.id) structure.groupId = String(data.id)
-    closeStructureModal()
+    if (data?.id) assignGroupId.value = data.id
+    closeGroupModal()
     flashOk('Study group created.')
   } catch (e) {
     flashErr(e, 'Failed to create study group')
@@ -878,11 +851,8 @@ async function loadGroupSubjects() {
   const group = allStudyGroups.value.find((g) => g.id == assignGroupId.value)
   assignedSubjectIds.value = (group?.subjects || []).map((s) => s.id)
   if (group?.subjects?.length) return
-  const { data } = await api.get('/efsc/academic/study-groups', {
-    params: { school_class_id: group?.school_class_id }
-  })
-  const list = data?.data ?? data ?? []
-  const fresh = list.find((g) => g.id == assignGroupId.value)
+  await loadAllStudyGroups()
+  const fresh = allStudyGroups.value.find((g) => g.id == assignGroupId.value)
   assignedSubjectIds.value = (fresh?.subjects || []).map((s) => s.id)
 }
 
@@ -922,6 +892,13 @@ async function onEnrollFilterClassChange() {
   await loadEnrollFilterSections()
 }
 
+async function onEnrollFilterSectionChange() {
+  enrollSearchQuery.value = ''
+  if (enrollFilterGroupId.value) {
+    await loadStudents()
+  }
+}
+
 async function onEnrollFilterGroupChange() {
   enrollSearchQuery.value = ''
   await loadStudents()
@@ -932,9 +909,13 @@ async function loadStudents() {
   if (!enrollFilterSections.value.length && enrollFilterClassId.value) {
     await loadEnrollFilterSections()
   }
-  const { data } = await api.get('/efsc/students', {
-    params: { study_group_id: enrollFilterGroupId.value }
-  })
+  const params = { study_group_id: enrollFilterGroupId.value }
+  if (enrollFilterSectionId.value) {
+    params.section_id = enrollFilterSectionId.value
+  } else if (enrollFilterClassId.value) {
+    params.school_class_id = enrollFilterClassId.value
+  }
+  const { data } = await api.get('/efsc/students', { params })
   students.value = data?.data ?? data ?? []
 }
 
@@ -954,17 +935,6 @@ async function loadEnrollSections() {
   enrollSections.value = data?.data ?? data ?? []
 }
 
-async function loadEnrollStudyGroups() {
-  if (!studentForm.classId) {
-    enrollStudyGroups.value = []
-    return
-  }
-  const { data } = await api.get('/efsc/academic/study-groups', {
-    params: { school_class_id: studentForm.classId }
-  })
-  enrollStudyGroups.value = data?.data ?? data ?? []
-}
-
 function resetStudentForm() {
   studentForm.name = ''
   studentForm.admission_no = ''
@@ -979,20 +949,15 @@ function resetStudentForm() {
   studentForm.guardian_cnic = ''
   studentForm.father_is_guardian = false
   enrollSections.value = []
-  enrollStudyGroups.value = []
 }
 
 function prefillStudentFormFromGroup(groupId) {
-  const group = allStudyGroups.value.find((g) => String(g.id) === String(groupId))
-  if (!group?.school_class_id) return
-  studentForm.classId = String(group.school_class_id)
-  studentForm.studyGroupId = String(group.id)
+  studentForm.studyGroupId = String(groupId)
 }
 
 async function onEnrollClassChange() {
   studentForm.sectionId = ''
-  studentForm.studyGroupId = ''
-  await Promise.all([loadEnrollSections(), loadEnrollStudyGroups()])
+  await loadEnrollSections()
 }
 
 async function openEnrollModal() {
@@ -1004,10 +969,9 @@ async function openEnrollModal() {
     studentForm.classId = enrollFilterClassId.value
     studentForm.sectionId = enrollFilterSectionId.value
     studentForm.studyGroupId = enrollFilterGroupId.value
-    await Promise.all([loadEnrollSections(), loadEnrollStudyGroups()])
+    await loadEnrollSections()
   } else if (enrollFilterGroupId.value) {
     prefillStudentFormFromGroup(enrollFilterGroupId.value)
-    await Promise.all([loadEnrollSections(), loadEnrollStudyGroups()])
   }
   enrollModalOpen.value = true
 }

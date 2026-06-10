@@ -16,9 +16,9 @@ School platform for attendance, marks, homework, notifications, leave workflows,
 
 ## Academic hierarchy
 
-`academic_years` (session) → `areas` → `school_classes` → `sections` → `study_groups` → `students`
+`academic_years` (session) → `areas` → `school_classes` → `sections` → `students`
 
-Subjects link to study groups via `study_group_subject` (many-to-many).
+Study groups are independent of classes. Students belong to a study group and optionally a section. Subjects link to study groups via `study_group_subject` (many-to-many).
 
 ---
 

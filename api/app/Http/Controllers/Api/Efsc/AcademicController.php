@@ -60,10 +60,7 @@ class AcademicController extends Controller
     {
         abort_unless($this->canReadAcademic($request), 403);
 
-        $q = StudyGroup::query()->with(['schoolClass:id,name', 'subjects:id,name,code']);
-        if ($request->filled('school_class_id')) {
-            $q->where('school_class_id', $request->query('school_class_id'));
-        }
+        $q = StudyGroup::query()->with(['subjects:id,name,code']);
 
         return response()->json($q->orderBy('name')->get());
     }
@@ -125,7 +122,6 @@ class AcademicController extends Controller
     {
         abort_unless($request->user()->can('manage_academic_structure'), 403);
         $data = $request->validate([
-            'school_class_id' => 'required|exists:school_classes,id',
             'name' => 'required|string|max:255',
         ]);
 

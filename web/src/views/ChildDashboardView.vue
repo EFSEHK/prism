@@ -5,7 +5,7 @@
       <div>
         <h1 class="child-name">{{ childName(child) }}</h1>
         <p class="muted">
-          {{ child.school_class?.name || '' }}
+          {{ child.section?.school_class?.name || child.section?.schoolClass?.name || '' }}
           <template v-if="child.section?.name"> · Section {{ child.section.name }}</template>
         </p>
         <p v-if="child.admission_no" class="muted small">Admission {{ child.admission_no }}</p>
