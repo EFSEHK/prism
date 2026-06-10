@@ -1,5 +1,7 @@
 import { View, Text, Pressable, ScrollView, StyleSheet, Modal } from 'react-native'
 
+export const NAV_ITEMS_STAFF = [{ id: 'attendance', label: 'Attendance' }]
+
 export const NAV_ITEMS_HOME = [{ id: 'home', label: 'Home' }]
 
 export const NAV_ITEMS_CHILD = [
@@ -19,7 +21,8 @@ export const NAV_ITEMS_CHILD = [
 /** @deprecated Use NAV_ITEMS_HOME or NAV_ITEMS_CHILD */
 export const NAV_ITEMS = NAV_ITEMS_CHILD
 
-export function navItemsForContext(hasSelectedChild) {
+export function navItemsForContext(hasSelectedChild, isStaffAttendance = false) {
+  if (isStaffAttendance) return NAV_ITEMS_STAFF
   return hasSelectedChild ? NAV_ITEMS_CHILD : NAV_ITEMS_HOME
 }
 

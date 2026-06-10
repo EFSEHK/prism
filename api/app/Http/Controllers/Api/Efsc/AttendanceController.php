@@ -5,6 +5,8 @@ namespace App\Http\Controllers\Api\Efsc;
 use App\Http\Controllers\Controller;
 use App\Models\AttendanceBatch;
 use App\Models\AttendanceRecord;
+use App\Models\Section;
+use App\Models\Student;
 use App\Services\Notifications\NotificationDispatchService;
 use App\Support\NotificationFeatureKeys;
 use Illuminate\Http\Request;
@@ -20,12 +22,16 @@ class AttendanceController extends Controller
         );
 
         $q = AttendanceBatch::query()
-            ->with(['studyGroup:id,name', 'submittedBy:id,name'])
+            ->with([
+                'section:id,name,school_class_id',
+                'section.schoolClass:id,name,area_id',
+                'section.schoolClass.area:id,name',
+                'submittedBy:id,name',
+            ])
             ->withCount('records');
 
-        if ($request->filled('study_group_id')) {
-            $q->where('study_group_id', $request->query('study_group_id'));
-        }
+        $this->applySectionScope($q, $request);
+
         if ($request->filled('status')) {
             $q->where('status', $request->query('status'));
         }
@@ -33,7 +39,7 @@ class AttendanceController extends Controller
             $q->whereDate('date', $request->query('date'));
         }
 
-        return response()->json($q->orderByDesc('date')->paginate(min((int) $request->query('per_page', 20), 50)));
+        return response()->json($q->orderByDesc('date')->paginate(min((int) $request->query('per_page', 50), 100)));
     }
 
     public function store(Request $request)
@@ -41,22 +47,24 @@ class AttendanceController extends Controller
         abort_unless($request->user()->can('mark_attendance'), 403);
 
         $data = $request->validate([
-            'study_group_id' => 'required|exists:study_groups,id',
+            'section_id' => 'required|exists:sections,id',
             'date' => 'required|date',
             'records' => 'required|array|min:1',
             'records.*.student_id' => 'required|exists:students,id',
-            'records.*.status' => 'required|in:present,absent,late,excused',
+            'records.*.status' => 'required|in:present,absent,leave',
         ]);
+
+        $this->assertStudentsInSection((int) $data['section_id'], collect($data['records'])->pluck('student_id')->all());
 
         $batch = DB::transaction(function () use ($data, $request) {
             $batch = AttendanceBatch::updateOrCreate(
                 [
-                    'study_group_id' => $data['study_group_id'],
+                    'section_id' => $data['section_id'],
                     'date' => $data['date'],
                 ],
                 [
                     'submitted_by_user_id' => $request->user()->id,
-                    'status' => 'submitted',
+                    'status' => 'draft',
                     'verified_by_user_id' => null,
                     'verified_at' => null,
                 ]
@@ -72,16 +80,38 @@ class AttendanceController extends Controller
                 ]);
             }
 
-            return $batch->load(['records.student:id,first_name,last_name']);
+            return $batch->load([
+                'records.student:id,first_name,last_name,roll_no',
+                'section:id,name,school_class_id',
+                'section.schoolClass:id,name',
+            ]);
         });
 
         return response()->json($batch, 201);
     }
 
+    public function submit(Request $request, AttendanceBatch $attendanceBatch)
+    {
+        abort_unless($request->user()->can('mark_attendance'), 403);
+        abort_unless($attendanceBatch->status === 'draft', 422, 'Only draft batches can be submitted for verification.');
+
+        $attendanceBatch->update(['status' => 'submitted']);
+
+        return response()->json($attendanceBatch->fresh([
+            'records.student:id,first_name,last_name,roll_no',
+            'section:id,name,school_class_id',
+            'section.schoolClass:id,name',
+        ]));
+    }
+
     public function verify(Request $request, AttendanceBatch $attendanceBatch, NotificationDispatchService $dispatchService)
     {
         abort_unless($request->user()->can('verify_attendance'), 403);
-        abort_unless($attendanceBatch->status === 'submitted', 422, 'Batch is not awaiting verification.');
+        abort_unless(
+            in_array($attendanceBatch->status, ['draft', 'submitted'], true),
+            422,
+            'Batch is not awaiting verification.'
+        );
 
         $batch = DB::transaction(function () use ($attendanceBatch, $request, $dispatchService) {
             $attendanceBatch->update([
@@ -96,6 +126,7 @@ class AttendanceController extends Controller
                 ->all();
 
             if ($absentIds !== []) {
+                $section = $attendanceBatch->section()->with('schoolClass')->first();
                 $dispatchService->create(
                     NotificationFeatureKeys::ATTENDANCE_ABSENT,
                     'AttendanceBatch',
@@ -110,12 +141,18 @@ class AttendanceController extends Controller
                             'attendance_batch_id' => $attendanceBatch->id,
                         ],
                     ],
-                    studyGroupId: (int) $attendanceBatch->study_group_id,
+                    areaId: $section?->schoolClass?->area_id,
+                    schoolClassId: $section?->school_class_id,
+                    sectionId: (int) $attendanceBatch->section_id,
                     createdByUserId: $request->user()->id,
                 );
             }
 
-            return $attendanceBatch->fresh(['records.student:id,first_name,last_name']);
+            return $attendanceBatch->fresh([
+                'records.student:id,first_name,last_name,roll_no',
+                'section:id,name,school_class_id',
+                'section.schoolClass:id,name',
+            ]);
         });
 
         return response()->json($batch);
@@ -132,9 +169,201 @@ class AttendanceController extends Controller
             abort_unless($attendanceBatch->isVerified(), 403);
         }
 
-        $attendanceBatch->load(['records.student:id,first_name,last_name', 'studyGroup:id,name']);
+        $attendanceBatch->load([
+            'records.student:id,first_name,last_name,roll_no',
+            'section:id,name,school_class_id',
+            'section.schoolClass:id,name,area_id',
+            'section.schoolClass.area:id,name',
+            'submittedBy:id,name',
+            'verifiedBy:id,name',
+        ]);
 
         return response()->json($attendanceBatch);
+    }
+
+    public function summary(Request $request)
+    {
+        abort_unless(
+            $request->user()->can('view_attendance_reports') || $request->user()->can('mark_attendance') || $request->user()->can('verify_attendance'),
+            403
+        );
+
+        $filters = $request->validate([
+            'area_id' => 'nullable|exists:areas,id',
+            'school_class_id' => 'nullable|exists:school_classes,id',
+            'section_id' => 'nullable|exists:sections,id',
+            'from' => 'nullable|date',
+            'to' => 'nullable|date|after_or_equal:from',
+        ]);
+
+        if (! empty($filters['section_id'])) {
+            return response()->json($this->summaryByStudents($filters));
+        }
+
+        if (empty($filters['area_id']) && empty($filters['school_class_id'])) {
+            abort(422, 'Select an area or class for a cumulative summary, or select a section for per-student totals.');
+        }
+
+        return response()->json($this->summaryCumulative($filters));
+    }
+
+    private function summaryByStudents(array $filters): array
+    {
+        $students = Student::query()
+            ->with(['section:id,name,school_class_id', 'section.schoolClass:id,name,area_id', 'section.schoolClass.area:id,name'])
+            ->where('section_id', $filters['section_id'])
+            ->orderBy('first_name')
+            ->get(['id', 'first_name', 'last_name', 'roll_no', 'section_id']);
+
+        $studentIds = $students->pluck('id')->all();
+
+        $counts = $this->summaryRecordsQuery($filters)
+            ->whereIn('attendance_records.student_id', $studentIds)
+            ->where('attendance_batches.section_id', $filters['section_id'])
+            ->selectRaw('attendance_records.student_id, attendance_records.status, COUNT(*) as total')
+            ->groupBy('attendance_records.student_id', 'attendance_records.status')
+            ->get();
+
+        $byStudent = [];
+        foreach ($counts as $row) {
+            $byStudent[$row->student_id][$row->status] = (int) $row->total;
+        }
+
+        $rows = $students->map(function (Student $student) use ($byStudent) {
+            $tally = $byStudent[$student->id] ?? [];
+
+            return [
+                'student_id' => $student->id,
+                'first_name' => $student->first_name,
+                'last_name' => $student->last_name,
+                'roll_no' => $student->roll_no,
+                'section' => $student->section,
+                'present' => $tally['present'] ?? 0,
+                'absent' => $tally['absent'] ?? 0,
+                'leave' => $tally['leave'] ?? 0,
+            ];
+        });
+
+        return [
+            'mode' => 'students',
+            'students' => $rows,
+            'from' => $filters['from'] ?? null,
+            'to' => $filters['to'] ?? null,
+        ];
+    }
+
+    private function summaryCumulative(array $filters): array
+    {
+        $base = $this->summaryRecordsQuery($filters);
+        $this->applySummaryScope($base, $filters);
+
+        $statusRows = (clone $base)
+            ->selectRaw('attendance_records.status, COUNT(*) as total')
+            ->groupBy('attendance_records.status')
+            ->pluck('total', 'status');
+
+        $meta = (clone $base)
+            ->selectRaw('COUNT(DISTINCT attendance_records.student_id) as students')
+            ->selectRaw('COUNT(DISTINCT attendance_batches.date) as school_days')
+            ->selectRaw('COUNT(DISTINCT attendance_batches.section_id) as sections')
+            ->first();
+
+        $breakdownRows = (clone $base)
+            ->join('sections', 'attendance_batches.section_id', '=', 'sections.id')
+            ->join('school_classes', 'sections.school_class_id', '=', 'school_classes.id')
+            ->selectRaw('sections.id as section_id, sections.name as section_name, school_classes.name as class_name, attendance_records.status, COUNT(*) as total')
+            ->groupBy('sections.id', 'sections.name', 'school_classes.name', 'attendance_records.status')
+            ->orderBy('school_classes.name')
+            ->orderBy('sections.name')
+            ->get();
+
+        $bySection = [];
+        foreach ($breakdownRows as $row) {
+            $key = $row->section_id;
+            if (! isset($bySection[$key])) {
+                $bySection[$key] = ['present' => 0, 'absent' => 0, 'leave' => 0];
+            }
+            $bySection[$key][$row->status] = (int) $row->total;
+        }
+
+        $sectionsInScope = Section::query()
+            ->with('schoolClass:id,name')
+            ->when(
+                ! empty($filters['school_class_id']),
+                fn ($q) => $q->where('school_class_id', $filters['school_class_id'])
+            )
+            ->when(
+                empty($filters['school_class_id']) && ! empty($filters['area_id']),
+                fn ($q) => $q->whereHas(
+                    'schoolClass',
+                    fn ($sq) => $sq->where('area_id', $filters['area_id'])
+                )
+            )
+            ->join('school_classes', 'sections.school_class_id', '=', 'school_classes.id')
+            ->orderBy('school_classes.name')
+            ->orderBy('sections.name')
+            ->select('sections.id', 'sections.name', 'sections.school_class_id')
+            ->get();
+
+        $rows = $sectionsInScope->map(function (Section $section) use ($bySection) {
+            $tally = $bySection[$section->id] ?? ['present' => 0, 'absent' => 0, 'leave' => 0];
+            $present = (int) ($tally['present'] ?? 0);
+            $absent = (int) ($tally['absent'] ?? 0);
+            $leave = (int) ($tally['leave'] ?? 0);
+
+            return [
+                'section_id' => $section->id,
+                'section_name' => $section->name,
+                'class_name' => $section->schoolClass?->name ?? '—',
+                'total' => $present + $absent + $leave,
+                'present' => $present,
+                'absent' => $absent,
+                'leave' => $leave,
+            ];
+        })->values()->all();
+
+        return [
+            'mode' => 'cumulative',
+            'totals' => [
+                'present' => (int) ($statusRows['present'] ?? 0),
+                'absent' => (int) ($statusRows['absent'] ?? 0),
+                'leave' => (int) ($statusRows['leave'] ?? 0),
+                'total' => (int) (($statusRows['present'] ?? 0) + ($statusRows['absent'] ?? 0) + ($statusRows['leave'] ?? 0)),
+                'students' => (int) ($meta->students ?? 0),
+                'school_days' => (int) ($meta->school_days ?? 0),
+                'sections' => (int) ($meta->sections ?? 0),
+            ],
+            'by_section' => $rows,
+            'from' => $filters['from'] ?? null,
+            'to' => $filters['to'] ?? null,
+        ];
+    }
+
+    private function summaryRecordsQuery(array $filters)
+    {
+        $q = AttendanceRecord::query()
+            ->join('attendance_batches', 'attendance_records.attendance_batch_id', '=', 'attendance_batches.id')
+            ->where('attendance_batches.status', 'verified');
+
+        if (! empty($filters['from'])) {
+            $q->whereDate('attendance_batches.date', '>=', $filters['from']);
+        }
+        if (! empty($filters['to'])) {
+            $q->whereDate('attendance_batches.date', '<=', $filters['to']);
+        }
+
+        return $q;
+    }
+
+    private function applySummaryScope($query, array $filters): void
+    {
+        if (! empty($filters['school_class_id'])) {
+            $classId = (int) $filters['school_class_id'];
+            $query->whereHas('batch.section', fn ($q) => $q->where('school_class_id', $classId));
+        } elseif (! empty($filters['area_id'])) {
+            $areaId = (int) $filters['area_id'];
+            $query->whereHas('batch.section.schoolClass', fn ($q) => $q->where('area_id', $areaId));
+        }
     }
 
     public function reportMonthly(Request $request)
@@ -187,6 +416,29 @@ class AttendanceController extends Controller
             ->get();
 
         return response()->json(['student_id' => (int) $data['student_id'], 'days' => $rows]);
+    }
+
+    private function applySectionScope($query, Request $request): void
+    {
+        if ($request->filled('section_id')) {
+            $query->where('section_id', $request->query('section_id'));
+        } elseif ($request->filled('school_class_id')) {
+            $classId = (int) $request->query('school_class_id');
+            $query->whereHas('section', fn ($q) => $q->where('school_class_id', $classId));
+        } elseif ($request->filled('area_id')) {
+            $areaId = (int) $request->query('area_id');
+            $query->whereHas('section.schoolClass', fn ($q) => $q->where('area_id', $areaId));
+        }
+    }
+
+    private function assertStudentsInSection(int $sectionId, array $studentIds): void
+    {
+        $validCount = Student::query()
+            ->where('section_id', $sectionId)
+            ->whereIn('id', $studentIds)
+            ->count();
+
+        abort_unless($validCount === count(array_unique($studentIds)), 422, 'One or more students are not in the selected section.');
     }
 
     private function assertCanViewStudentAttendance(Request $request, int $studentId): void

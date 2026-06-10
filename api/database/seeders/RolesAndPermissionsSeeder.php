@@ -108,6 +108,7 @@ class RolesAndPermissionsSeeder extends Seeder
 
         Role::findByName('computer_operator', 'web')->syncPermissions([
             'view_dashboard', 'manage_academic_structure', 'manage_student_roster',
+            'mark_attendance', 'view_attendance_reports',
             'manage_assessments', 'manage_timetable', 'manage_fee_vouchers', 'publish_user_broadcasts',
         ]);
 

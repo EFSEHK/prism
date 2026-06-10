@@ -16,14 +16,17 @@ class StudentController extends Controller
         );
 
         $data = $request->validate([
-            'study_group_id' => 'required|exists:study_groups,id',
+            'study_group_id' => 'required_without_all:section_id,school_class_id|nullable|exists:study_groups,id',
             'school_class_id' => 'nullable|exists:school_classes,id',
             'section_id' => 'nullable|exists:sections,id',
         ]);
 
         $students = Student::query()
             ->with(['studyGroup:id,name', 'section.schoolClass:id,name', 'section.schoolClass.area:id,name'])
-            ->where('study_group_id', $data['study_group_id'])
+            ->when(
+                ! empty($data['study_group_id']),
+                fn ($q) => $q->where('study_group_id', $data['study_group_id'])
+            )
             ->when(
                 ! empty($data['section_id']),
                 fn ($q) => $q->where('section_id', $data['section_id'])

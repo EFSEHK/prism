@@ -92,8 +92,10 @@ Route::middleware([LogAllRequests::class, 'auth:sanctum', CheckInactivity::class
 
         Route::get('attendance/batches', [AttendanceController::class, 'index']);
         Route::post('attendance/batches', [AttendanceController::class, 'store']);
+        Route::post('attendance/batches/{attendanceBatch}/submit', [AttendanceController::class, 'submit']);
         Route::post('attendance/batches/{attendanceBatch}/verify', [AttendanceController::class, 'verify']);
         Route::get('attendance/batches/{attendanceBatch}', [AttendanceController::class, 'show']);
+        Route::get('attendance/summary', [AttendanceController::class, 'summary']);
         Route::get('attendance/reports/monthly', [AttendanceController::class, 'reportMonthly']);
         Route::get('attendance/reports/weekly', [AttendanceController::class, 'reportWeekly']);
 

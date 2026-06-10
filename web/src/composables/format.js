@@ -120,6 +120,12 @@ export function currentMonthInput() {
   return `${parts.year}-${parts.month}`
 }
 
+/** First day of the current month as yyyy-mm-dd in Asia/Karachi. */
+export function monthStartInputDate() {
+  const month = currentMonthInput()
+  return month ? `${month}-01` : todayInputDate()
+}
+
 export function formatPeriod(start, end) {
   return `${formatDate(start)} – ${formatDate(end)}`
 }

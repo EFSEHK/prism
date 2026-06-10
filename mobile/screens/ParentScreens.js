@@ -237,6 +237,8 @@ export function MarksScreen() {
   )
 }
 
+export { default as StaffAttendanceScreen } from './StaffAttendanceScreen'
+
 export function AttendanceScreen({ children, selectedChildId }) {
   const [studentId, setStudentId] = useState(selectedChildId ?? children[0]?.id)
   useEffect(() => {

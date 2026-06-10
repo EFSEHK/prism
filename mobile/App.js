@@ -23,6 +23,7 @@ import {
   HomeworkScreen,
   MarksScreen,
   AttendanceScreen,
+  StaffAttendanceScreen,
   TimetableScreen,
   FeedScreen,
   FeesScreen,
@@ -88,8 +89,11 @@ export default function App() {
       setToken(data.access_token)
       setUser(data.user ?? null)
       const roles = (data.user?.roles || []).map((r) => r.name)
+      const perms = (data.user?.permissions || []).map((p) => p.name)
       if (roles.includes('parent') || roles.includes('student')) {
         await loadDashboard()
+      } else if (perms.includes('mark_attendance') || roles.includes('computer_operator')) {
+        setTab('attendance')
       }
     } catch (e) {
       setAuthToken('')
@@ -148,10 +152,13 @@ export default function App() {
   }
 
   const roleNames = (user?.roles || []).map((r) => r.name)
+  const permissions = (user?.permissions || []).map((p) => p.name)
   const isLearnerRole = roleNames.includes('parent') || roleNames.includes('student')
+  const isStaffAttendance =
+    permissions.includes('mark_attendance') || roleNames.includes('computer_operator')
   const showApp = token && !err && (isLearnerRole ? !!dashboard : true)
   const hasSelectedChild = Boolean(selectedChild)
-  const navItems = navItemsForContext(hasSelectedChild)
+  const navItems = navItemsForContext(hasSelectedChild, isStaffAttendance && !isLearnerRole)
   const activeLabel = navItems.find((item) => item.id === tab)?.label ?? 'Home'
   const children = dashboard?.children ?? []
   const headerSubtitle = activeLabel
@@ -160,6 +167,9 @@ export default function App() {
 
   function renderTab() {
     if (!isLearnerRole) {
+      if (isStaffAttendance) {
+        return <StaffAttendanceScreen />
+      }
       return (
         <View style={styles.staffMsg}>
           <Text style={styles.staffMsgTitle}>Staff account</Text>

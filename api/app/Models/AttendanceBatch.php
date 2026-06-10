@@ -10,6 +10,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 class AttendanceBatch extends Model
 {
     protected $fillable = [
+        'section_id',
         'study_group_id',
         'date',
         'status',
@@ -24,6 +25,11 @@ class AttendanceBatch extends Model
             'date' => AppDate::class,
             'verified_at' => 'datetime',
         ];
+    }
+
+    public function section(): BelongsTo
+    {
+        return $this->belongsTo(Section::class);
     }
 
     public function studyGroup(): BelongsTo
