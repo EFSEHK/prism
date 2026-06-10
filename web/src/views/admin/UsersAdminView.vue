@@ -66,21 +66,39 @@
     </div>
 
     <div v-if="modal" class="modal-backdrop" @click.self="closeModal">
-      <div class="card modal">
-        <h2>{{ editing ? 'Edit user' : 'Add user' }}</h2>
-        <form @submit.prevent="save">
-          <label>Name <input v-model="form.name" required /></label>
-          <label>Email <input v-model="form.email" type="email" required /></label>
-          <label>
-            Password
-            <input v-model="form.password" type="password" :required="!editing" :placeholder="editing ? 'Leave blank to keep' : ''" />
-          </label>
-          <p class="field-label">Roles</p>
-          <div class="role-grid">
-            <label v-for="r in assignableRoles" :key="r.id" class="role-item">
-              <input v-model="form.roleIds" type="checkbox" :value="r.id" :disabled="editing && !canEditUsers" />
-              {{ r.name }}
-            </label>
+      <div class="modal" role="dialog" aria-modal="true">
+        <h3>{{ editing ? 'Edit user' : 'Add user' }}</h3>
+        <form class="modal-form" @submit.prevent="save">
+          <div class="field">
+            <span class="field-label">Name</span>
+            <input v-model="form.name" required placeholder="Full name" autofocus />
+          </div>
+          <div class="field">
+            <span class="field-label">Email</span>
+            <input v-model="form.email" type="email" required placeholder="user@efsc-ya.test" />
+          </div>
+          <div class="field">
+            <span class="field-label">Password</span>
+            <input
+              v-model="form.password"
+              type="password"
+              :required="!editing"
+              :placeholder="editing ? 'Leave blank to keep current password' : 'Minimum 8 characters'"
+            />
+          </div>
+          <div class="form-section">
+            <span class="field-label">Roles</span>
+            <div class="role-grid">
+              <label v-for="r in assignableRoles" :key="r.id" class="checkbox-field">
+                <input
+                  v-model="form.roleIds"
+                  type="checkbox"
+                  :value="r.id"
+                  :disabled="editing && !canEditUsers"
+                />
+                <span>{{ r.name }}</span>
+              </label>
+            </div>
           </div>
           <div class="modal-actions">
             <button type="button" class="secondary" @click="closeModal">Cancel</button>
@@ -328,50 +346,86 @@ onMounted(load)
 .modal-backdrop {
   position: fixed;
   inset: 0;
+  z-index: 50;
   background: rgb(0 0 0 / 0.35);
   display: flex;
   align-items: center;
   justify-content: center;
   padding: 1rem;
-  z-index: 50;
 }
 .modal {
   width: 100%;
-  max-width: 480px;
-  max-height: 90vh;
-  overflow: auto;
+  max-width: 420px;
+  max-height: min(90vh, 640px);
+  overflow-y: auto;
+  background: #fff;
+  border-radius: 10px;
+  padding: 1.25rem;
+  box-shadow: 0 12px 32px rgb(0 0 0 / 0.18);
 }
-.modal h2 {
+.modal h3 {
   margin: 0 0 1rem;
-  font-size: 1.1rem;
+  font-size: 1.05rem;
 }
-.modal-actions {
+.modal-form {
   display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+.modal-form .field input {
+  display: block;
+  width: 100%;
+  max-width: none;
+  margin: 0;
+  padding: 0 0.65rem;
+  height: 2.375rem;
+  box-sizing: border-box;
+  border: 1px solid #d4d4d8;
+  border-radius: 6px;
+  font-size: 0.9rem;
+  background: #fff;
+}
+.modal-form .field input:focus {
+  outline: none;
+  border-color: #2563eb;
+  box-shadow: 0 0 0 2px rgb(37 99 235 / 0.12);
+}
+.form-section {
+  display: flex;
+  flex-direction: column;
   gap: 0.5rem;
-  margin-top: 1rem;
 }
 .role-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
   gap: 0.35rem;
-  margin-bottom: 1rem;
 }
-.role-item {
-  font-size: 0.85rem;
+.checkbox-field {
   display: flex;
-  gap: 0.35rem;
-  align-items: flex-start;
-  font-weight: 400;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.9rem;
+  font-weight: 500;
+  color: #3f3f46;
+  cursor: pointer;
+  margin: 0;
 }
-.role-item input[type="checkbox"] {
-  display: inline-block;
-  width: auto;
-  margin: 0.15rem 0 0;
+.checkbox-field input[type='checkbox'] {
+  width: 1rem;
+  height: 1rem;
+  margin: 0;
+  flex-shrink: 0;
 }
-.field-label {
-  display: block;
-  font-size: 0.85rem;
-  font-weight: 600;
-  margin-bottom: 0.35rem;
+.modal-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.5rem;
+  margin-top: 0.5rem;
+  padding-top: 0.75rem;
+  border-top: 1px solid #e4e4e7;
+}
+.modal-actions .primary,
+.modal-actions .secondary {
+  margin: 0;
 }
 </style>
