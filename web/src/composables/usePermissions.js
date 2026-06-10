@@ -2,6 +2,7 @@ import { computed } from 'vue'
 import { useAuthStore } from '../stores/auth'
 
 const ACADEMIC_ROLES = ['superadmin', 'admin', 'developer', 'computer_operator']
+const ROSTER_ROLES = ['computer_operator', 'section_head', 'class_incharge']
 
 export function usePermissions() {
   const auth = useAuthStore()
@@ -20,7 +21,9 @@ export function usePermissions() {
   const canManageAcademic = computed(
     () => can('manage_academic_structure') || hasRole(...ACADEMIC_ROLES),
   )
-  const canManageRoster = computed(() => can('manage_student_roster'))
+  const canManageRoster = computed(
+    () => can('manage_student_roster') || hasRole(...ROSTER_ROLES),
+  )
   const canConfigure = computed(() => canManageAcademic.value || canManageRoster.value)
 
   return {
