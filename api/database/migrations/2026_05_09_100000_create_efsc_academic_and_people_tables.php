@@ -21,6 +21,7 @@ return new class extends Migration
             $table->id();
             $table->foreignId('academic_year_id')->constrained('academic_years')->cascadeOnDelete();
             $table->string('name');
+            $table->foreignId('section_head_user_id')->nullable()->constrained('users')->nullOnDelete();
             $table->timestamps();
             $table->softDeletes();
         });

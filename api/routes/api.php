@@ -66,12 +66,21 @@ Route::middleware([LogAllRequests::class, 'auth:sanctum', CheckInactivity::class
 
         Route::get('academic/years', [AcademicController::class, 'yearsIndex']);
         Route::post('academic/years', [AcademicController::class, 'storeYear']);
+        Route::put('academic/years/{academicYear}', [AcademicController::class, 'updateYear']);
+        Route::delete('academic/years/{academicYear}', [AcademicController::class, 'destroyYear']);
         Route::get('academic/areas', [AcademicController::class, 'areasIndex']);
         Route::post('academic/areas', [AcademicController::class, 'storeArea']);
+        Route::put('academic/areas/{area}', [AcademicController::class, 'updateArea']);
+        Route::delete('academic/areas/{area}', [AcademicController::class, 'destroyArea']);
+        Route::get('academic/section-heads', [AcademicController::class, 'sectionHeadsIndex']);
         Route::get('academic/classes', [AcademicController::class, 'classesIndex']);
         Route::post('academic/classes', [AcademicController::class, 'storeClass']);
+        Route::put('academic/classes/{schoolClass}', [AcademicController::class, 'updateClass']);
+        Route::delete('academic/classes/{schoolClass}', [AcademicController::class, 'destroyClass']);
         Route::get('academic/sections', [AcademicController::class, 'sectionsIndex']);
         Route::post('academic/sections', [AcademicController::class, 'storeSection']);
+        Route::put('academic/sections/{section}', [AcademicController::class, 'updateSection']);
+        Route::delete('academic/sections/{section}', [AcademicController::class, 'destroySection']);
         Route::get('academic/study-groups', [AcademicController::class, 'studyGroupsIndex']);
         Route::post('academic/study-groups', [AcademicController::class, 'storeStudyGroup']);
         Route::put('academic/study-groups/{studyGroup}/subjects', [AcademicController::class, 'syncStudyGroupSubjects']);

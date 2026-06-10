@@ -15,75 +15,121 @@
     <!-- Structure -->
     <div v-if="tab === 'structure'" class="card">
       <h2>School structure</h2>
-      <p class="muted small">Year → Area → Class → Section</p>
+      <p class="muted small">Click a row to drill down. Year → Area → Class → Section.</p>
 
-      <p v-if="!years.length" class="structure-hint">
-        No session years found. Click <strong>+</strong> next to Session year to add one.
-      </p>
+      <nav v-if="breadcrumb.length" class="structure-breadcrumb" aria-label="Structure path">
+        <button type="button" class="crumb" @click="navigateStructure(-1)">Session years</button>
+        <template v-for="(crumb, i) in breadcrumb" :key="`${crumb.level}-${crumb.id}`">
+          <span class="crumb-sep" aria-hidden="true">›</span>
+          <button
+            type="button"
+            class="crumb"
+            :class="{ current: i === breadcrumb.length - 1 }"
+            @click="navigateStructure(i)"
+          >
+            {{ crumb.label }}
+          </button>
+        </template>
+      </nav>
 
-      <div class="cascade">
-        <div class="cascade-row cascade-row-2">
-          <div class="field cascade-field">
-            <span class="field-label">Session year</span>
-            <div class="select-with-add">
-              <SearchableSelect
-                v-model="structure.yearId"
-                :options="yearOptions"
-                placeholder="Select year…"
-                search-placeholder="Search years…"
-                empty-options-text="No session years yet"
-                @change="onYearChange"
-              />
-              <button type="button" class="add-circle" title="Add session year" @click="openStructureModal('year')">+</button>
-            </div>
-          </div>
-          <div class="field cascade-field">
-            <span class="field-label">Area</span>
-            <div class="select-with-add">
-              <SearchableSelect
-                v-model="structure.areaId"
-                :options="areaOptions"
-                placeholder="Select area…"
-                search-placeholder="Search areas…"
-                :disabled="!structure.yearId"
-                @change="onAreaChange"
-              />
-              <button type="button" class="add-circle" title="Add area" :disabled="!structure.yearId" @click="openStructureModal('area')">+</button>
-            </div>
-          </div>
-        </div>
-        <div class="cascade-row cascade-row-2">
-          <div class="field cascade-field">
-            <span class="field-label">Class</span>
-            <div class="select-with-add">
-              <SearchableSelect
-                v-model="structure.classId"
-                :options="classOptions"
-                placeholder="Select class…"
-                search-placeholder="Search classes…"
-                :disabled="!structure.areaId"
-                @change="onClassChange"
-              />
-              <button type="button" class="add-circle" title="Add class" :disabled="!structure.areaId" @click="openStructureModal('class')">+</button>
-            </div>
-          </div>
-          <div class="field cascade-field">
-            <span class="field-label">Section</span>
-            <div class="select-with-add">
-              <SearchableSelect
-                v-model="structure.sectionId"
-                :options="sectionOptions"
-                placeholder="Select section…"
-                search-placeholder="Search sections…"
-                :disabled="!structure.classId"
-              />
-              <button type="button" class="add-circle" title="Add section" :disabled="!structure.classId" @click="openStructureModal('section')">+</button>
-            </div>
-          </div>
-        </div>
+      <div class="structure-toolbar">
+        <h3 class="structure-level-title">{{ structureLevelTitle }}</h3>
+        <button type="button" class="primary" :disabled="!canAddAtLevel" @click="openStructureModal(structureLevel)">
+          Add {{ structureLevelSingular }}
+        </button>
       </div>
 
-      <p v-if="structurePath" class="structure-path">{{ structurePath }}</p>
+      <div v-if="structureLevel === 'year'" class="table-wrap">
+        <table v-if="years.length" class="data-table structure-table">
+          <thead>
+            <tr>
+              <th>Name</th>
+              <th>Starts</th>
+              <th>Ends</th>
+              <th>Current</th>
+              <th class="col-actions">Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr v-for="y in years" :key="y.id" class="row-clickable" @click="selectYear(y)">
+              <td>{{ y.name }}</td>
+              <td>{{ y.starts_on }}</td>
+              <td>{{ y.ends_on }}</td>
+              <td>{{ y.is_current ? 'Yes' : '—' }}</td>
+              <td class="col-actions" @click.stop>
+                <button type="button" class="row-action" @click="openEditYear(y)">Edit</button>
+                <button type="button" class="row-action danger" @click="deleteYear(y)">Delete</button>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+        <p v-else class="empty">No session years yet. Click Add session year to create one.</p>
+      </div>
+
+      <div v-else-if="structureLevel === 'area'" class="table-wrap">
+        <table v-if="areas.length" class="data-table structure-table">
+          <thead>
+            <tr>
+              <th>Name</th>
+              <th>Section head</th>
+              <th class="col-actions">Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr v-for="a in areas" :key="a.id" class="row-clickable" @click="selectArea(a)">
+              <td>{{ a.name }}</td>
+              <td>{{ a.section_head?.name ?? a.sectionHead?.name ?? '—' }}</td>
+              <td class="col-actions" @click.stop>
+                <button type="button" class="row-action" @click="openEditArea(a)">Edit</button>
+                <button type="button" class="row-action danger" @click="deleteArea(a)">Delete</button>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+        <p v-else class="empty">No areas in this session year yet.</p>
+      </div>
+
+      <div v-else-if="structureLevel === 'class'" class="table-wrap">
+        <table v-if="classes.length" class="data-table structure-table">
+          <thead>
+            <tr>
+              <th>Name</th>
+              <th class="col-actions">Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr v-for="c in classes" :key="c.id" class="row-clickable" @click="selectClass(c)">
+              <td>{{ c.name }}</td>
+              <td class="col-actions" @click.stop>
+                <button type="button" class="row-action" @click="openEditClass(c)">Edit</button>
+                <button type="button" class="row-action danger" @click="deleteClass(c)">Delete</button>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+        <p v-else class="empty">No classes in this area yet.</p>
+      </div>
+
+      <div v-else class="table-wrap">
+        <table v-if="sections.length" class="data-table structure-table">
+          <thead>
+            <tr>
+              <th>Name</th>
+              <th class="col-actions">Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr v-for="s in sections" :key="s.id">
+              <td>{{ s.name }}</td>
+              <td class="col-actions">
+                <button type="button" class="row-action" @click="openEditSection(s)">Edit</button>
+                <button type="button" class="row-action danger" @click="deleteSection(s)">Delete</button>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+        <p v-else class="empty">No sections in this class yet.</p>
+      </div>
 
       <div v-if="structureModal" class="modal-backdrop" @click.self="closeStructureModal">
         <div class="modal" role="dialog" aria-modal="true">
@@ -108,7 +154,7 @@
             </label>
             <div class="modal-actions">
               <button type="button" class="secondary" @click="closeStructureModal">Cancel</button>
-              <button type="submit" class="primary" :disabled="saving">{{ saving ? 'Adding…' : 'Add' }}</button>
+              <button type="submit" class="primary" :disabled="saving">{{ structureModalSubmitLabel }}</button>
             </div>
           </form>
 
@@ -117,9 +163,19 @@
               <span class="field-label">Area name</span>
               <input v-model="areaForm.name" required placeholder="Primary" autofocus />
             </div>
+            <div class="field">
+              <span class="field-label">Section head</span>
+              <SearchableSelect
+                v-model="areaForm.sectionHeadUserId"
+                :options="sectionHeadOptions"
+                placeholder="None"
+                search-placeholder="Search section heads…"
+                empty-options-text="No section heads found"
+              />
+            </div>
             <div class="modal-actions">
               <button type="button" class="secondary" @click="closeStructureModal">Cancel</button>
-              <button type="submit" class="primary" :disabled="saving">{{ saving ? 'Adding…' : 'Add' }}</button>
+              <button type="submit" class="primary" :disabled="saving">{{ structureModalSubmitLabel }}</button>
             </div>
           </form>
 
@@ -130,7 +186,7 @@
             </div>
             <div class="modal-actions">
               <button type="button" class="secondary" @click="closeStructureModal">Cancel</button>
-              <button type="submit" class="primary" :disabled="saving">{{ saving ? 'Adding…' : 'Add' }}</button>
+              <button type="submit" class="primary" :disabled="saving">{{ structureModalSubmitLabel }}</button>
             </div>
           </form>
 
@@ -141,7 +197,7 @@
             </div>
             <div class="modal-actions">
               <button type="button" class="secondary" @click="closeStructureModal">Cancel</button>
-              <button type="submit" class="primary" :disabled="saving">{{ saving ? 'Adding…' : 'Add' }}</button>
+              <button type="submit" class="primary" :disabled="saving">{{ structureModalSubmitLabel }}</button>
             </div>
           </form>
         </div>
@@ -461,20 +517,78 @@ const structure = reactive({
 })
 
 const structureModal = ref(null)
+const editingYearId = ref(null)
+const editingAreaId = ref(null)
+const editingClassId = ref(null)
+const editingSectionId = ref(null)
 const groupModalOpen = ref(false)
+const sectionHeads = ref([])
+
+const structureLevel = computed(() => {
+  if (!structure.yearId) return 'year'
+  if (!structure.areaId) return 'area'
+  if (!structure.classId) return 'class'
+  return 'section'
+})
+
+const structureLevelSingular = computed(() => {
+  const labels = { year: 'session year', area: 'area', class: 'class', section: 'section' }
+  return labels[structureLevel.value]
+})
+
+const structureLevelTitle = computed(() => {
+  const titles = {
+    year: 'Session years',
+    area: 'Areas',
+    class: 'Classes',
+    section: 'Sections',
+  }
+  return titles[structureLevel.value]
+})
+
+const canAddAtLevel = computed(() => {
+  if (structureLevel.value === 'year') return true
+  if (structureLevel.value === 'area') return !!structure.yearId
+  if (structureLevel.value === 'class') return !!structure.areaId
+  return !!structure.classId
+})
+
+const breadcrumb = computed(() => {
+  const crumbs = []
+  const year = years.value.find((y) => String(y.id) === String(structure.yearId))
+  if (year) crumbs.push({ level: 'year', id: year.id, label: year.name })
+  const area = areas.value.find((a) => String(a.id) === String(structure.areaId))
+  if (area) crumbs.push({ level: 'area', id: area.id, label: area.name })
+  const cls = classes.value.find((c) => String(c.id) === String(structure.classId))
+  if (cls) crumbs.push({ level: 'class', id: cls.id, label: cls.name })
+  return crumbs
+})
+
+const structureIsEditing = computed(() => {
+  const map = {
+    year: editingYearId.value,
+    area: editingAreaId.value,
+    class: editingClassId.value,
+    section: editingSectionId.value,
+  }
+  return !!map[structureModal.value]
+})
 
 const structureModalTitle = computed(() => {
-  const titles = {
-    year: 'Add session year',
-    area: 'Add area',
-    class: 'Add class',
-    section: 'Add section',
-  }
-  return titles[structureModal.value] ?? ''
+  const labels = { year: 'session year', area: 'area', class: 'class', section: 'section' }
+  const type = structureModal.value
+  if (!type) return ''
+  const action = structureIsEditing.value ? 'Edit' : 'Add'
+  return `${action} ${labels[type]}`
+})
+
+const structureModalSubmitLabel = computed(() => {
+  if (saving.value) return structureIsEditing.value ? 'Saving…' : 'Adding…'
+  return structureIsEditing.value ? 'Save' : 'Add'
 })
 
 const yearForm = reactive({ name: '', starts_on: '', ends_on: '', is_current: false })
-const areaForm = reactive({ name: '' })
+const areaForm = reactive({ name: '', sectionHeadUserId: '' })
 const classForm = reactive({ name: '' })
 const sectionForm = reactive({ name: '' })
 const groupForm = reactive({ name: '' })
@@ -523,11 +637,12 @@ const allGroupOptions = computed(() =>
   }))
 )
 
-const yearOptions = computed(() => years.value.map((y) => ({ value: String(y.id), label: y.name })))
-const areaOptions = computed(() => areas.value.map((a) => ({ value: String(a.id), label: a.name })))
-const classOptions = computed(() => classes.value.map((c) => ({ value: String(c.id), label: c.name })))
-const sectionOptions = computed(() => sections.value.map((s) => ({ value: String(s.id), label: s.name })))
-
+const sectionHeadOptions = computed(() =>
+  sectionHeads.value.map((u) => ({
+    value: String(u.id),
+    label: u.email ? `${u.name} (${u.email})` : u.name,
+  }))
+)
 const enrollClassOptions = computed(() =>
   enrollClasses.value.map((c) => ({ value: String(c.id), label: classLabel(c) }))
 )
@@ -562,28 +677,6 @@ const filteredStudents = computed(() => {
       .toLowerCase()
     return haystack.includes(q)
   })
-})
-
-const structurePath = computed(() => {
-  const parts = []
-  const nameIn = (list, id) => list.find((item) => String(item.id) === String(id))?.name
-  if (structure.yearId) {
-    const name = nameIn(years.value, structure.yearId)
-    if (name) parts.push(name)
-  }
-  if (structure.areaId) {
-    const name = nameIn(areas.value, structure.areaId)
-    if (name) parts.push(name)
-  }
-  if (structure.classId) {
-    const name = nameIn(classes.value, structure.classId)
-    if (name) parts.push(name)
-  }
-  if (structure.sectionId) {
-    const name = nameIn(sections.value, structure.sectionId)
-    if (name) parts.push(name)
-  }
-  return parts.join(' -> ')
 })
 
 function classLabel(c) {
@@ -677,44 +770,133 @@ async function loadSubjects() {
   subjects.value = data?.data ?? data ?? []
 }
 
-function onYearChange() {
+function selectYear(y) {
+  structure.yearId = String(y.id)
   structure.areaId = ''
   structure.classId = ''
   structure.sectionId = ''
-  loadAreas()
   classes.value = []
   sections.value = []
+  loadAreas()
 }
 
-function onAreaChange() {
+function selectArea(a) {
+  structure.areaId = String(a.id)
   structure.classId = ''
   structure.sectionId = ''
-  loadClasses()
   sections.value = []
+  loadClasses()
 }
 
-function onClassChange() {
+function selectClass(c) {
+  structure.classId = String(c.id)
   structure.sectionId = ''
   loadSections()
 }
 
+function navigateStructure(index) {
+  if (index < 0) {
+    structure.yearId = ''
+    structure.areaId = ''
+    structure.classId = ''
+    structure.sectionId = ''
+    areas.value = []
+    classes.value = []
+    sections.value = []
+    return
+  }
+  const crumb = breadcrumb.value[index]
+  if (crumb.level === 'year') {
+    structure.areaId = ''
+    structure.classId = ''
+    structure.sectionId = ''
+    classes.value = []
+    sections.value = []
+    loadAreas()
+  } else if (crumb.level === 'area') {
+    structure.classId = ''
+    structure.sectionId = ''
+    sections.value = []
+    loadClasses()
+  } else if (crumb.level === 'class') {
+    structure.sectionId = ''
+    loadSections()
+  }
+}
+
+function resetStructureForms() {
+  yearForm.name = ''
+  yearForm.starts_on = ''
+  yearForm.ends_on = ''
+  yearForm.is_current = false
+  areaForm.name = ''
+  areaForm.sectionHeadUserId = ''
+  classForm.name = ''
+  sectionForm.name = ''
+  editingYearId.value = null
+  editingAreaId.value = null
+  editingClassId.value = null
+  editingSectionId.value = null
+}
+
 function openStructureModal(type) {
+  resetStructureForms()
   structureModal.value = type
+  if (type === 'area') loadSectionHeads().catch(() => {})
+}
+
+function openEditYear(y) {
+  resetStructureForms()
+  editingYearId.value = y.id
+  yearForm.name = y.name
+  yearForm.starts_on = y.starts_on
+  yearForm.ends_on = y.ends_on
+  yearForm.is_current = !!y.is_current
+  structureModal.value = 'year'
+}
+
+function openEditArea(a) {
+  resetStructureForms()
+  editingAreaId.value = a.id
+  areaForm.name = a.name
+  areaForm.sectionHeadUserId = a.section_head_user_id ? String(a.section_head_user_id) : ''
+  structureModal.value = 'area'
+  loadSectionHeads().catch(() => {})
+}
+
+function openEditClass(c) {
+  resetStructureForms()
+  editingClassId.value = c.id
+  classForm.name = c.name
+  structureModal.value = 'class'
+}
+
+function openEditSection(s) {
+  resetStructureForms()
+  editingSectionId.value = s.id
+  sectionForm.name = s.name
+  structureModal.value = 'section'
 }
 
 function closeStructureModal() {
   structureModal.value = null
+  resetStructureForms()
 }
 
 async function submitStructureModal() {
   const handlers = {
-    year: createYear,
-    area: createArea,
-    class: createClass,
-    section: createSection,
+    year: editingYearId.value ? updateYear : createYear,
+    area: editingAreaId.value ? updateArea : createArea,
+    class: editingClassId.value ? updateClass : createClass,
+    section: editingSectionId.value ? updateSection : createSection,
   }
   const fn = handlers[structureModal.value]
   if (fn) await fn()
+}
+
+async function loadSectionHeads() {
+  const { data } = await api.get('/efsc/academic/section-heads')
+  sectionHeads.value = data?.data ?? data ?? []
 }
 
 function openGroupModal() {
@@ -728,16 +910,8 @@ function closeGroupModal() {
 async function createYear() {
   saving.value = true
   try {
-    const { data } = await api.post('/efsc/academic/years', { ...yearForm })
-    yearForm.name = ''
-    yearForm.starts_on = ''
-    yearForm.ends_on = ''
-    yearForm.is_current = false
+    await api.post('/efsc/academic/years', { ...yearForm })
     await loadYears()
-    if (data?.id) {
-      structure.yearId = String(data.id)
-      await loadAreas()
-    }
     closeStructureModal()
     flashOk('Session year created.')
   } catch (e) {
@@ -747,19 +921,49 @@ async function createYear() {
   }
 }
 
+async function updateYear() {
+  saving.value = true
+  try {
+    await api.put(`/efsc/academic/years/${editingYearId.value}`, { ...yearForm })
+    await loadYears()
+    closeStructureModal()
+    flashOk('Session year updated.')
+  } catch (e) {
+    flashErr(e, 'Failed to update session year')
+  } finally {
+    saving.value = false
+  }
+}
+
+async function deleteYear(y) {
+  if (!window.confirm(`Delete session year "${y.name}"? All areas, classes, and sections under it will be removed.`)) return
+  try {
+    await api.delete(`/efsc/academic/years/${y.id}`)
+    if (String(structure.yearId) === String(y.id)) {
+      navigateStructure(-1)
+    }
+    await loadYears()
+    flashOk('Session year deleted.')
+  } catch (e) {
+    flashErr(e, 'Failed to delete session year')
+  }
+}
+
+function areaPayload() {
+  return {
+    name: areaForm.name,
+    section_head_user_id: areaForm.sectionHeadUserId ? Number(areaForm.sectionHeadUserId) : null,
+  }
+}
+
 async function createArea() {
   saving.value = true
   try {
-    const { data } = await api.post('/efsc/academic/areas', {
+    await api.post('/efsc/academic/areas', {
       academic_year_id: Number(structure.yearId),
-      name: areaForm.name,
+      ...areaPayload(),
     })
-    areaForm.name = ''
     await loadAreas()
-    if (data?.id) {
-      structure.areaId = String(data.id)
-      await loadClasses()
-    }
     closeStructureModal()
     flashOk('Area created.')
   } catch (e) {
@@ -769,19 +973,46 @@ async function createArea() {
   }
 }
 
+async function updateArea() {
+  saving.value = true
+  try {
+    await api.put(`/efsc/academic/areas/${editingAreaId.value}`, areaPayload())
+    await loadAreas()
+    closeStructureModal()
+    flashOk('Area updated.')
+  } catch (e) {
+    flashErr(e, 'Failed to update area')
+  } finally {
+    saving.value = false
+  }
+}
+
+async function deleteArea(a) {
+  if (!window.confirm(`Delete area "${a.name}"? All classes and sections under it will be removed.`)) return
+  try {
+    await api.delete(`/efsc/academic/areas/${a.id}`)
+    if (String(structure.areaId) === String(a.id)) {
+      structure.areaId = ''
+      structure.classId = ''
+      structure.sectionId = ''
+      classes.value = []
+      sections.value = []
+    }
+    await loadAreas()
+    flashOk('Area deleted.')
+  } catch (e) {
+    flashErr(e, 'Failed to delete area')
+  }
+}
+
 async function createClass() {
   saving.value = true
   try {
-    const { data } = await api.post('/efsc/academic/classes', {
+    await api.post('/efsc/academic/classes', {
       area_id: Number(structure.areaId),
       name: classForm.name,
     })
-    classForm.name = ''
     await loadClasses()
-    if (data?.id) {
-      structure.classId = String(data.id)
-      await loadSections()
-    }
     closeStructureModal()
     flashOk('Class created.')
   } catch (e) {
@@ -791,22 +1022,78 @@ async function createClass() {
   }
 }
 
+async function updateClass() {
+  saving.value = true
+  try {
+    await api.put(`/efsc/academic/classes/${editingClassId.value}`, { name: classForm.name })
+    await loadClasses()
+    closeStructureModal()
+    flashOk('Class updated.')
+  } catch (e) {
+    flashErr(e, 'Failed to update class')
+  } finally {
+    saving.value = false
+  }
+}
+
+async function deleteClass(c) {
+  if (!window.confirm(`Delete class "${c.name}"? All sections under it will be removed.`)) return
+  try {
+    await api.delete(`/efsc/academic/classes/${c.id}`)
+    if (String(structure.classId) === String(c.id)) {
+      structure.classId = ''
+      structure.sectionId = ''
+      sections.value = []
+    }
+    await loadClasses()
+    flashOk('Class deleted.')
+  } catch (e) {
+    flashErr(e, 'Failed to delete class')
+  }
+}
+
 async function createSection() {
   saving.value = true
   try {
-    const { data } = await api.post('/efsc/academic/sections', {
+    await api.post('/efsc/academic/sections', {
       school_class_id: Number(structure.classId),
       name: sectionForm.name,
     })
-    sectionForm.name = ''
     await loadSections()
-    if (data?.id) structure.sectionId = String(data.id)
     closeStructureModal()
     flashOk('Section created.')
   } catch (e) {
     flashErr(e, 'Failed to create section')
   } finally {
     saving.value = false
+  }
+}
+
+async function updateSection() {
+  saving.value = true
+  try {
+    await api.put(`/efsc/academic/sections/${editingSectionId.value}`, { name: sectionForm.name })
+    await loadSections()
+    closeStructureModal()
+    flashOk('Section updated.')
+  } catch (e) {
+    flashErr(e, 'Failed to update section')
+  } finally {
+    saving.value = false
+  }
+}
+
+async function deleteSection(s) {
+  if (!window.confirm(`Delete section "${s.name}"?`)) return
+  try {
+    await api.delete(`/efsc/academic/sections/${s.id}`)
+    if (String(structure.sectionId) === String(s.id)) {
+      structure.sectionId = ''
+    }
+    await loadSections()
+    flashOk('Section deleted.')
+  } catch (e) {
+    flashErr(e, 'Failed to delete section')
   }
 }
 
@@ -1035,14 +1322,73 @@ onMounted(async () => {
   margin-top: -0.25rem;
   margin-bottom: 1rem;
 }
-.structure-hint {
+.structure-breadcrumb {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.35rem 0.5rem;
   margin: 0 0 1rem;
   padding: 0.65rem 0.85rem;
-  background: #fffbeb;
-  border: 1px solid #fde68a;
+  background: #f4f4f5;
+  border: 1px solid #e4e4e7;
   border-radius: 6px;
   font-size: 0.9rem;
-  color: #92400e;
+}
+.crumb {
+  background: none;
+  border: none;
+  padding: 0;
+  color: #2563eb;
+  font-weight: 600;
+  cursor: pointer;
+}
+.crumb:hover {
+  text-decoration: underline;
+}
+.crumb.current {
+  color: #27272a;
+  cursor: default;
+  text-decoration: none;
+}
+.crumb-sep {
+  color: #a1a1aa;
+}
+.structure-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-bottom: 0.75rem;
+}
+.structure-level-title {
+  margin: 0;
+  font-size: 1.05rem;
+}
+.structure-table .row-clickable {
+  cursor: pointer;
+}
+.col-actions {
+  width: 1%;
+  white-space: nowrap;
+  text-align: right;
+}
+.row-action {
+  background: none;
+  border: none;
+  padding: 0.15rem 0.4rem;
+  color: #2563eb;
+  font-size: 0.85rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+.row-action:hover {
+  text-decoration: underline;
+}
+.row-action.danger {
+  color: #dc2626;
+}
+.row-action + .row-action {
+  margin-left: 0.35rem;
 }
 .linkish {
   background: none;
@@ -1244,6 +1590,32 @@ onMounted(async () => {
   border-color: #2563eb;
 }
 .add-circle:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+  color: #a1a1aa;
+}
+.edit-circle {
+  flex-shrink: 0;
+  width: 2.375rem;
+  height: 2.375rem;
+  border-radius: 999px;
+  border: 1px solid #d4d4d8;
+  background: #fff;
+  color: #52525b;
+  font-size: 1rem;
+  line-height: 1;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+}
+.edit-circle:hover:not(:disabled) {
+  background: #f4f4f5;
+  border-color: #a1a1aa;
+  color: #18181b;
+}
+.edit-circle:disabled {
   opacity: 0.45;
   cursor: not-allowed;
   color: #a1a1aa;

@@ -9,7 +9,9 @@ use App\Models\SchoolClass;
 use App\Models\Section;
 use App\Models\StudyGroup;
 use App\Models\Subject;
+use App\Models\User;
 use Illuminate\Http\Request;
+use Illuminate\Validation\Rule;
 
 class AcademicController extends Controller
 {
@@ -24,12 +26,24 @@ class AcademicController extends Controller
     {
         abort_unless($this->canReadAcademic($request), 403);
 
-        $q = Area::query()->with('academicYear:id,name');
+        $q = Area::query()->with([
+            'academicYear:id,name',
+            'sectionHead:id,name,email',
+        ]);
         if ($request->filled('academic_year_id')) {
             $q->where('academic_year_id', $request->query('academic_year_id'));
         }
 
         return response()->json($q->orderBy('name')->get());
+    }
+
+    public function sectionHeadsIndex(Request $request)
+    {
+        abort_unless($request->user()->can('manage_academic_structure'), 403);
+
+        return response()->json(
+            User::role('section_head')->orderBy('name')->get(['id', 'name', 'email'])
+        );
     }
 
     public function classesIndex(Request $request)
@@ -85,15 +99,55 @@ class AcademicController extends Controller
         return response()->json(AcademicYear::create($data), 201);
     }
 
-    public function storeArea(Request $request)
+    public function updateYear(Request $request, AcademicYear $academicYear)
     {
         abort_unless($request->user()->can('manage_academic_structure'), 403);
         $data = $request->validate([
-            'academic_year_id' => 'required|exists:academic_years,id',
             'name' => 'required|string|max:255',
+            'starts_on' => 'required|date',
+            'ends_on' => 'required|date|after:starts_on',
+            'is_current' => 'boolean',
         ]);
+        $academicYear->update($data);
 
-        return response()->json(Area::create($data), 201);
+        return response()->json($academicYear);
+    }
+
+    public function destroyYear(Request $request, AcademicYear $academicYear)
+    {
+        abort_unless($request->user()->can('manage_academic_structure'), 403);
+        $academicYear->delete();
+
+        return response()->json(null, 204);
+    }
+
+    public function storeArea(Request $request)
+    {
+        abort_unless($request->user()->can('manage_academic_structure'), 403);
+        $data = $request->validate(array_merge([
+            'academic_year_id' => 'required|exists:academic_years,id',
+        ], $this->areaPayloadRules()));
+
+        $area = Area::create($data)->load(['academicYear:id,name', 'sectionHead:id,name,email']);
+
+        return response()->json($area, 201);
+    }
+
+    public function updateArea(Request $request, Area $area)
+    {
+        abort_unless($request->user()->can('manage_academic_structure'), 403);
+        $data = $request->validate($this->areaPayloadRules());
+        $area->update($data);
+
+        return response()->json($area->load(['academicYear:id,name', 'sectionHead:id,name,email']));
+    }
+
+    public function destroyArea(Request $request, Area $area)
+    {
+        abort_unless($request->user()->can('manage_academic_structure'), 403);
+        $area->delete();
+
+        return response()->json(null, 204);
     }
 
     public function storeClass(Request $request)
@@ -104,7 +158,26 @@ class AcademicController extends Controller
             'name' => 'required|string|max:255',
         ]);
 
-        return response()->json(SchoolClass::create($data), 201);
+        return response()->json(SchoolClass::create($data)->load('area:id,name'), 201);
+    }
+
+    public function updateClass(Request $request, SchoolClass $schoolClass)
+    {
+        abort_unless($request->user()->can('manage_academic_structure'), 403);
+        $data = $request->validate([
+            'name' => 'required|string|max:255',
+        ]);
+        $schoolClass->update($data);
+
+        return response()->json($schoolClass->load('area:id,name'));
+    }
+
+    public function destroyClass(Request $request, SchoolClass $schoolClass)
+    {
+        abort_unless($request->user()->can('manage_academic_structure'), 403);
+        $schoolClass->delete();
+
+        return response()->json(null, 204);
     }
 
     public function storeSection(Request $request)
@@ -115,7 +188,26 @@ class AcademicController extends Controller
             'name' => 'required|string|max:255',
         ]);
 
-        return response()->json(Section::create($data), 201);
+        return response()->json(Section::create($data)->load('schoolClass:id,name'), 201);
+    }
+
+    public function updateSection(Request $request, Section $section)
+    {
+        abort_unless($request->user()->can('manage_academic_structure'), 403);
+        $data = $request->validate([
+            'name' => 'required|string|max:255',
+        ]);
+        $section->update($data);
+
+        return response()->json($section->load('schoolClass:id,name'));
+    }
+
+    public function destroySection(Request $request, Section $section)
+    {
+        abort_unless($request->user()->can('manage_academic_structure'), 403);
+        $section->delete();
+
+        return response()->json(null, 204);
     }
 
     public function storeStudyGroup(Request $request)
@@ -150,6 +242,23 @@ class AcademicController extends Controller
         $studyGroup->subjects()->sync($data['subject_ids']);
 
         return response()->json($studyGroup->load('subjects:id,name,code'));
+    }
+
+    private function areaPayloadRules(): array
+    {
+        return [
+            'name' => 'required|string|max:255',
+            'section_head_user_id' => [
+                'nullable',
+                'integer',
+                Rule::exists('users', 'id'),
+                function (string $attribute, mixed $value, \Closure $fail): void {
+                    if ($value && ! User::find($value)?->hasRole('section_head')) {
+                        $fail('The selected user must have the section head role.');
+                    }
+                },
+            ],
+        ];
     }
 
     private function canReadAcademic(Request $request): bool

@@ -11,11 +11,16 @@ class Area extends Model
 {
     use SoftDeletes;
 
-    protected $fillable = ['academic_year_id', 'name'];
+    protected $fillable = ['academic_year_id', 'name', 'section_head_user_id'];
 
     public function academicYear(): BelongsTo
     {
         return $this->belongsTo(AcademicYear::class);
+    }
+
+    public function sectionHead(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'section_head_user_id');
     }
 
     public function schoolClasses(): HasMany
