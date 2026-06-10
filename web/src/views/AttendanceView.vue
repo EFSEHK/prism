@@ -56,22 +56,34 @@
           <table class="data-table">
             <thead>
               <tr>
+                <th class="col-serial">#</th>
+                <th class="col-roll">Roll no</th>
                 <th>Student</th>
-                <th class="col-status">Status</th>
+                <th class="col-mark-status">Status</th>
               </tr>
             </thead>
             <tbody>
-              <tr v-for="s in markStudents" :key="s.id">
-                <td class="cell-name">
-                  <span v-if="s.roll_no" class="roll">{{ s.roll_no }}</span>
-                  {{ s.first_name }} {{ s.last_name }}
-                </td>
-                <td class="col-status">
-                  <select v-model="statuses[s.id]" class="status-select">
-                    <option value="present">Present</option>
-                    <option value="absent">Absent</option>
-                    <option value="leave">Leave</option>
-                  </select>
+              <tr v-for="(s, index) in markStudents" :key="s.id">
+                <td class="col-serial">{{ index + 1 }}</td>
+                <td class="col-roll">{{ s.roll_no || '—' }}</td>
+                <td class="cell-name">{{ s.first_name }} {{ s.last_name }}</td>
+                <td class="col-mark-status">
+                  <div class="status-radios" role="radiogroup" :aria-label="`Attendance for ${s.first_name}`">
+                    <label
+                      v-for="opt in attendanceStatuses"
+                      :key="opt.value"
+                      class="status-radio"
+                      :class="[opt.value, { active: statuses[s.id] === opt.value }]"
+                    >
+                      <input
+                        v-model="statuses[s.id]"
+                        type="radio"
+                        :name="`attendance-${s.id}`"
+                        :value="opt.value"
+                      />
+                      <span>{{ opt.label }}</span>
+                    </label>
+                  </div>
                 </td>
               </tr>
             </tbody>
@@ -310,6 +322,11 @@ const tabs = [
   { id: 'mark', label: 'Mark Attendance' },
   { id: 'view', label: 'View Attendance' },
   { id: 'summary', label: 'Attendance Summary' },
+]
+const attendanceStatuses = [
+  { value: 'present', label: 'Present' },
+  { value: 'absent', label: 'Absent' },
+  { value: 'leave', label: 'Leave' },
 ]
 const activeTab = ref('mark')
 
@@ -784,11 +801,77 @@ async function loadSummary() {
 .student-list {
   margin-top: 1rem;
 }
-.status-select {
+.col-serial {
+  width: 1%;
+  white-space: nowrap;
+  color: #71717a;
+  text-align: center;
+}
+.col-roll {
+  width: 1%;
+  white-space: nowrap;
+  color: #52525b;
+  font-variant-numeric: tabular-nums;
+}
+.col-mark-status {
+  white-space: nowrap;
   width: auto;
-  min-width: 7rem;
-  height: 2rem;
+  min-width: 15rem;
+}
+.status-radios {
+  display: flex;
+  flex-direction: row;
+  flex-wrap: nowrap;
+  align-items: center;
+  gap: 0.35rem;
+  justify-content: flex-end;
+}
+.status-radio {
+  position: relative;
+  display: inline-flex;
+  flex-shrink: 0;
+  cursor: pointer;
   margin: 0;
+}
+.status-radio input {
+  position: absolute;
+  opacity: 0;
+  width: 0;
+  height: 0;
+  margin: 0;
+}
+.status-radio span {
+  display: inline-block;
+  padding: 0.3rem 0.6rem;
+  border-radius: 999px;
+  border: 1px solid #d4d4d8;
+  background: #fff;
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: #52525b;
+  white-space: nowrap;
+  transition: background 0.12s, border-color 0.12s, color 0.12s;
+}
+.status-radio:hover span {
+  border-color: #a1a1aa;
+}
+.status-radio.present.active span,
+.status-radio.present input:focus-visible + span {
+  background: #dcfce7;
+  border-color: #86efac;
+  color: #166534;
+}
+.status-radio.absent.active span,
+.status-radio.absent input:focus-visible + span {
+  background: #fee2e2;
+  border-color: #fca5a5;
+  color: #991b1b;
+}
+.status-radio.leave.active span,
+.status-radio.leave input:focus-visible + span {
+  background: #fef3c7;
+  border-color: #fcd34d;
+  color: #92400e;
 }
 .modal-actions {
   display: flex;
