@@ -3,7 +3,9 @@
     <h1>EFSC-YA</h1>
     <p class="muted">School platform — sign in</p>
     <form @submit.prevent="submit">
-      <label>Email <input v-model="email" type="email" required /></label>
+      <label>Admission no. / CNIC / Email
+        <input v-model="email" type="text" required autocomplete="username" />
+      </label>
       <label>Password <input v-model="password" type="password" required /></label>
       <p v-if="err" class="error">{{ err }}</p>
       <button type="submit" class="primary">Login</button>

@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Api\Efsc;
 
 use App\Http\Controllers\Controller;
 use App\Models\Student;
+use App\Services\StudentUserProvisioningService;
 use Illuminate\Http\Request;
 
 class StudentController extends Controller
@@ -73,7 +74,7 @@ class StudentController extends Controller
         return response()->json($students);
     }
 
-    public function store(Request $request)
+    public function store(Request $request, StudentUserProvisioningService $provisioning)
     {
         abort_unless($request->user()->can('manage_student_roster'), 403);
 
@@ -82,7 +83,7 @@ class StudentController extends Controller
             'name' => 'required_without:first_name|string|max:255',
             'first_name' => 'required_without:name|string|max:255',
             'last_name' => 'nullable|string|max:255',
-            'admission_no' => 'nullable|string|max:64|unique:students,admission_no',
+            'admission_no' => 'required|string|max:64|unique:students,admission_no',
             'section_id' => 'nullable|exists:sections,id',
             'roll_no' => 'nullable|string|max:32',
             'cnic' => 'nullable|string|max:20',
@@ -106,8 +107,16 @@ class StudentController extends Controller
             $data['guardian_cnic'] = $data['father_cnic'] ?? null;
         }
 
+        unset($data['user_id']);
+
         $student = Student::create($data)->load(['studyGroup:id,name', 'section.schoolClass:id,name']);
 
-        return response()->json($student, 201);
+        $accounts = $provisioning->provisionForStudent($student);
+        $student->load(['user:id,name,email', 'parents:id,name,email']);
+
+        return response()->json([
+            'student' => $student,
+            'accounts' => $accounts,
+        ], 201);
     }
 }

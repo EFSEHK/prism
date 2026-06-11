@@ -285,13 +285,13 @@ export default function App() {
           ) : null}
           {!token ? (
             <>
-              <Text style={styles.label}>Email</Text>
+              <Text style={styles.label}>Admission no. / CNIC / Email</Text>
               <TextInput
                 style={styles.input}
                 value={email}
                 onChangeText={setEmail}
                 autoCapitalize="none"
-                keyboardType="email-address"
+                autoCorrect={false}
                 editable={!loading}
               />
               <Text style={styles.label}>Password</Text>

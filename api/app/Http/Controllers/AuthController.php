@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\User;
+use App\Support\LoginIdentifier;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
@@ -38,11 +39,16 @@ class AuthController extends Controller
     {
         try {
             $request->validate([
-                'email' => 'required|email',
+                'email' => 'required|string|max:255',
                 'password' => 'required',
             ]);
 
-            $user = User::where('email', $request->email)->first();
+            $email = LoginIdentifier::resolveEmail($request->email);
+            $user = User::where('email', $email)->first();
+
+            if (! $user && str_contains($request->email, '@')) {
+                $user = User::where('email', strtolower(trim($request->email)))->first();
+            }
 
             if (!$user || !Hash::check($request->password, $user->password)) {
                 event(new \Illuminate\Auth\Events\Failed('web', $user, [

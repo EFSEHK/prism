@@ -379,7 +379,7 @@
                 </div>
                 <div class="field">
                   <span class="field-label">Admission no.</span>
-                  <input v-model="studentForm.admission_no" />
+                  <input v-model="studentForm.admission_no" required placeholder="A-25-0016" />
                 </div>
                 <div class="field">
                   <span class="field-label">Class</span>
@@ -1270,10 +1270,10 @@ function closeEnrollModal() {
 async function enrollStudent() {
   saving.value = true
   try {
-    await api.post('/efsc/students', {
+    const { data } = await api.post('/efsc/students', {
       study_group_id: Number(studentForm.studyGroupId),
       name: studentForm.name,
-      admission_no: studentForm.admission_no || null,
+      admission_no: studentForm.admission_no,
       section_id: studentForm.sectionId ? Number(studentForm.sectionId) : null,
       roll_no: studentForm.roll_no || null,
       cnic: studentForm.cnic || null,
@@ -1291,7 +1291,19 @@ async function enrollStudent() {
     enrollFilterSectionId.value = studentForm.sectionId || ''
     enrollFilterGroupId.value = String(studentForm.studyGroupId)
     await loadStudents()
-    flashOk('Student enrolled.')
+    const accountLines = []
+    const accounts = data?.accounts
+    if (accounts?.student?.email) {
+      const local = accounts.student.email.split('@')[0]
+      accountLines.push(`Student: ${local}`)
+    }
+    for (const p of accounts?.parents ?? []) {
+      if (p.email) {
+        accountLines.push(`${p.name}: ${p.email.split('@')[0]}`)
+      }
+    }
+    const suffix = accountLines.length ? ` Accounts — ${accountLines.join('; ')}.` : ''
+    flashOk(`Student enrolled.${suffix}`)
   } catch (e) {
     flashErr(e, 'Failed to enroll student')
   } finally {
