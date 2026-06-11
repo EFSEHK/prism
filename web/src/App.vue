@@ -42,7 +42,6 @@
             <RouterLink to="/fees">Fees</RouterLink>
             <RouterLink to="/online-classes">Online</RouterLink>
             <RouterLink to="/leave">Leave</RouterLink>
-            <RouterLink v-if="isParent" to="/alerts">Alerts</RouterLink>
             <button v-if="isParent" type="button" class="link" @click="switchChild">Switch child</button>
           </template>
         </template>

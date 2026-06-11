@@ -14,7 +14,6 @@ export const NAV_ITEMS_CHILD = [
   { id: 'fees', label: 'Fees' },
   { id: 'online', label: 'Online Class' },
   { id: 'leave', label: 'Leave' },
-  { id: 'alerts', label: 'Alerts' },
   { id: 'home', label: 'Switch child' },
 ]
 

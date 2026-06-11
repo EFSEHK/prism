@@ -335,33 +335,58 @@ export function TimetableScreen() {
 }
 
 export function FeedScreen() {
-  const [items, setItems] = useState([])
+  const [alerts, setAlerts] = useState([])
+  const [broadcasts, setBroadcasts] = useState([])
   const [loading, setLoading] = useState(true)
   const [err, setErr] = useState('')
   const load = async () => {
     try {
-      const { data } = await apiClient.get('/efsc/broadcasts')
-      setItems(paginatedItems(data))
+      const [alertsRes, broadcastsRes] = await Promise.all([
+        apiClient.get('/efsc/in-app-notifications'),
+        apiClient.get('/efsc/broadcasts'),
+      ])
+      setAlerts(paginatedItems(alertsRes.data))
+      setBroadcasts(paginatedItems(broadcastsRes.data))
     } catch (e) {
       setErr(formatError(e))
     } finally {
       setLoading(false)
     }
   }
+  const markRead = async (id) => {
+    await apiClient.post(`/efsc/in-app-notifications/${id}/read`)
+    await load()
+  }
   useEffect(() => { load() }, [])
   if (loading) return <ActivityIndicator style={styles.center} />
   return (
     <ScreenWrap refreshing={false} onRefresh={load}>
-      <Text style={styles.h1}>Events & announcements</Text>
+      <Text style={styles.h1}>Notifications</Text>
       {err ? <Text style={ui.err}>{err}</Text> : null}
-      {items.map((f) => (
-        <Card
-          key={f.id}
-          title={f.title}
-          meta={`${f.type} · ${f.scope}${f.published_at ? ` · ${formatDate(f.published_at)}` : ''}`}
-          body={f.body}
-        />
-      ))}
+      <Section title="Alerts">
+        {alerts.length === 0 ? <EmptyNote text="No alerts yet." /> : null}
+        {alerts.map((n) => (
+          <Card
+            key={n.id}
+            title={n.title}
+            meta={formatDate(n.created_at)}
+            body={n.body}
+            sub={n.read_at ? 'Read' : 'Unread — tap to mark read'}
+            onPress={!n.read_at ? () => markRead(n.id) : undefined}
+          />
+        ))}
+      </Section>
+      <Section title="Announcements">
+        {broadcasts.length === 0 ? <EmptyNote text="No announcements yet." /> : null}
+        {broadcasts.map((f) => (
+          <Card
+            key={f.id}
+            title={f.title}
+            meta={f.published_at ? formatDate(f.published_at) : ''}
+            body={f.body}
+          />
+        ))}
+      </Section>
     </ScreenWrap>
   )
 }

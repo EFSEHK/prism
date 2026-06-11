@@ -4,11 +4,10 @@
       <p class="hero-greeting">Welcome back</p>
       <h1>{{ user?.name || 'Parent' }}</h1>
       <p class="hero-meta">
-        {{
-          unread > 0
-            ? `${unread} unread notification${unread === 1 ? '' : 's'}`
-            : 'Select a child to view their dashboard'
-        }}
+        <RouterLink v-if="unread > 0" to="/notifications" class="hero-link">
+          {{ unread }} unread notification{{ unread === 1 ? '' : 's' }} — view
+        </RouterLink>
+        <span v-else>Select a child to view their dashboard</span>
       </p>
     </div>
 
@@ -41,7 +40,7 @@
 
 <script setup>
 import { computed, onMounted } from 'vue'
-import { useRouter } from 'vue-router'
+import { RouterLink, useRouter } from 'vue-router'
 import { useAuthStore } from '../stores/auth'
 import { useParentStore } from '../stores/parent'
 import ChildAvatar from '../components/ChildAvatar.vue'
@@ -88,6 +87,11 @@ async function onSelectChild(child) {
   margin: 0.5rem 0 0;
   font-size: 0.9rem;
   color: #dbeafe;
+}
+.hero-link {
+  color: #fff;
+  font-weight: 600;
+  text-decoration: underline;
 }
 .child-row {
   display: flex;

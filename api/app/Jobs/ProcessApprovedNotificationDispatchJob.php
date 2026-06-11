@@ -51,15 +51,16 @@ class ProcessApprovedNotificationDispatchJob implements ShouldQueue
             return;
         }
 
-        DB::transaction(function () use ($dispatch, $parentUserIds, $title, $body, $data, $fcm) {
+        DB::transaction(function () use ($dispatch, $parentUserIds, $title, $body, $data, $payload, $fcm) {
             $rows = [];
             $now = now();
             foreach ($parentUserIds as $uid) {
+                $parentBody = $this->bodyForParent((int) $uid, $body, $payload, $data);
                 $rows[] = [
                     'user_id' => $uid,
                     'notification_dispatch_request_id' => $dispatch->id,
                     'title' => $title,
-                    'body' => $body,
+                    'body' => $parentBody,
                     'data_json' => json_encode($data),
                     'created_at' => $now,
                     'updated_at' => $now,
@@ -69,7 +70,10 @@ class ProcessApprovedNotificationDispatchJob implements ShouldQueue
                 UserNotification::insert($chunk);
             }
 
-            $fcm->sendToUsers($parentUserIds, $title, $body, $data);
+            foreach ($parentUserIds as $uid) {
+                $parentBody = $this->bodyForParent((int) $uid, $body, $payload, $data);
+                $fcm->sendToUsers([(int) $uid], $title, $parentBody, $data);
+            }
 
             $dispatch->update([
                 'status' => 'sent',
@@ -134,5 +138,52 @@ class ProcessApprovedNotificationDispatchJob implements ShouldQueue
         }
 
         return array_values(array_unique(array_map('intval', $ids)));
+    }
+
+    /**
+     * @param  array<string, mixed>  $payload
+     * @param  array<string, mixed>  $data
+     */
+    private function bodyForParent(int $parentUserId, string $defaultBody, array $payload, array $data): string
+    {
+        if (($data['type'] ?? '') !== 'attendance_absent') {
+            return $defaultBody;
+        }
+
+        $studentIds = $payload['student_ids'] ?? ($data['student_ids'] ?? []);
+        if (! is_array($studentIds) || $studentIds === []) {
+            return $defaultBody;
+        }
+
+        $childIds = DB::table('parent_student')
+            ->where('parent_user_id', $parentUserId)
+            ->whereIn('student_id', $studentIds)
+            ->pluck('student_id');
+
+        if ($childIds->isEmpty()) {
+            return $defaultBody;
+        }
+
+        $names = Student::query()
+            ->whereIn('id', $childIds)
+            ->orderBy('first_name')
+            ->get(['first_name', 'last_name'])
+            ->map(fn (Student $s) => trim("{$s->first_name} {$s->last_name}"))
+            ->filter()
+            ->values();
+
+        if ($names->isEmpty()) {
+            return $defaultBody;
+        }
+
+        $date = (string) ($data['date'] ?? '');
+        $nameList = $names->join(', ');
+        $verb = $names->count() === 1 ? 'was' : 'were';
+
+        if ($date !== '') {
+            return "{$nameList} {$verb} marked absent on {$date}.";
+        }
+
+        return "{$nameList} {$verb} marked absent.";
     }
 }

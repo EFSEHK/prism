@@ -102,12 +102,7 @@ class NotificationDispatchService
             }
 
             if (! $needsApproval) {
-                if ($scheduledFor) {
-                    ProcessApprovedNotificationDispatchJob::dispatch($dispatch->id)
-                        ->delay($scheduledFor);
-                } else {
-                    ProcessApprovedNotificationDispatchJob::dispatch($dispatch->id);
-                }
+                $this->deliver($dispatch);
             }
 
             return $dispatch->fresh(['approvalActions', 'feature']);
@@ -120,11 +115,18 @@ class NotificationDispatchService
             return;
         }
 
+        $this->deliver($dispatch);
+    }
+
+    private function deliver(NotificationDispatchRequest $dispatch): void
+    {
         if ($dispatch->scheduled_for && $dispatch->scheduled_for->isFuture()) {
             ProcessApprovedNotificationDispatchJob::dispatch($dispatch->id)
                 ->delay($dispatch->scheduled_for);
-        } else {
-            ProcessApprovedNotificationDispatchJob::dispatch($dispatch->id);
+
+            return;
         }
+
+        ProcessApprovedNotificationDispatchJob::dispatchSync($dispatch->id);
     }
 }

@@ -31,7 +31,6 @@ import {
   FeesScreen,
   OnlineClassScreen,
   LeaveScreen,
-  AlertsScreen,
 } from './screens/ParentScreens'
 import { childName, formatError } from './utils/format'
 import { ui } from './components/ui'
@@ -265,7 +264,7 @@ export default function App() {
       case 'leave':
         return <LeaveScreen children={children} selectedChildId={selectedChild.id} />
       case 'alerts':
-        return <AlertsScreen />
+        return <FeedScreen />
       default:
         return <ChildDashboardScreen dashboard={dashboard} child={selectedChild} user={user} />
     }

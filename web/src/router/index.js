@@ -28,7 +28,6 @@ import ParentNotificationsView from '../views/parent/ParentNotificationsView.vue
 import ParentFeesView from '../views/parent/ParentFeesView.vue'
 import ParentOnlineClassView from '../views/parent/ParentOnlineClassView.vue'
 import ParentLeaveView from '../views/parent/ParentLeaveView.vue'
-import ParentAlertsView from '../views/parent/ParentAlertsView.vue'
 
 const router = createRouter({
   history: createWebHistory(),
@@ -74,7 +73,7 @@ const router = createRouter({
       meta: { auth: true, requiresChild: true },
     },
     { path: '/leave', component: roleView(ParentLeaveView, LeaveView), meta: { auth: true, requiresChild: true } },
-    { path: '/alerts', component: ParentAlertsView, meta: { auth: true, parentOnly: true, requiresChild: true } },
+    { path: '/alerts', redirect: '/notifications' },
   ],
 })
 

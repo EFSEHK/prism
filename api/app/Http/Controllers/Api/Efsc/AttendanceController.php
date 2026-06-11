@@ -146,6 +146,7 @@ class AttendanceController extends Controller
 
             if ($absentIds !== []) {
                 $section = $attendanceBatch->section()->with('schoolClass')->first();
+                $absentDate = $attendanceBatch->date->format('M j, Y');
                 $dispatchService->create(
                     NotificationFeatureKeys::ATTENDANCE_ABSENT,
                     'AttendanceBatch',
@@ -153,11 +154,13 @@ class AttendanceController extends Controller
                     'study_group',
                     ['student_ids' => array_values(array_unique($absentIds))],
                     [
-                        'title' => 'Attendance notice',
-                        'body' => 'One or more students were marked absent on '.$attendanceBatch->date->format('M j, Y').'.',
+                        'title' => 'Absent today',
+                        'body' => 'Your child was marked absent on '.$absentDate.'.',
+                        'student_ids' => array_values(array_unique($absentIds)),
                         'data' => [
                             'type' => 'attendance_absent',
                             'attendance_batch_id' => $attendanceBatch->id,
+                            'date' => $absentDate,
                         ],
                     ],
                     areaId: $section?->schoolClass?->area_id,
