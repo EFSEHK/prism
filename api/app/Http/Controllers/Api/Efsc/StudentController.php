@@ -8,10 +8,39 @@ use Illuminate\Http\Request;
 
 class StudentController extends Controller
 {
+    public function search(Request $request)
+    {
+        abort_unless($request->user()->can('publish_user_broadcasts'), 403);
+
+        $data = $request->validate([
+            'q' => 'required|string|min:2|max:100',
+        ]);
+
+        $term = $data['q'];
+
+        $students = Student::query()
+            ->with(['section.schoolClass.area:id,name'])
+            ->where(function ($qq) use ($term) {
+                $qq->where('first_name', 'like', "%{$term}%")
+                    ->orWhere('last_name', 'like', "%{$term}%")
+                    ->orWhere('father_name', 'like', "%{$term}%")
+                    ->orWhere('admission_no', 'like', "%{$term}%")
+                    ->orWhereRaw("CONCAT(first_name, ' ', COALESCE(last_name, '')) LIKE ?", ["%{$term}%"]);
+            })
+            ->orderBy('first_name')
+            ->limit(30)
+            ->get(['id', 'first_name', 'last_name', 'father_name', 'admission_no', 'section_id', 'study_group_id']);
+
+        return response()->json($students);
+    }
+
     public function index(Request $request)
     {
         abort_unless(
-            $request->user()->can('manage_student_roster') || $request->user()->can('mark_attendance') || $request->user()->can('enter_marks'),
+            $request->user()->can('manage_student_roster')
+            || $request->user()->can('mark_attendance')
+            || $request->user()->can('enter_marks')
+            || $request->user()->can('publish_user_broadcasts'),
             403
         );
 

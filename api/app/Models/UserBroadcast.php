@@ -21,6 +21,10 @@ class UserBroadcast extends Model
         'title',
         'body',
         'author_user_id',
+        'approval_status',
+        'approved_by_user_id',
+        'approved_at',
+        'rejection_comment',
         'published_at',
     ];
 
@@ -28,6 +32,7 @@ class UserBroadcast extends Model
     {
         return [
             'visible_to_student' => 'boolean',
+            'approved_at' => 'datetime',
             'published_at' => 'datetime',
         ];
     }
@@ -35,6 +40,11 @@ class UserBroadcast extends Model
     public function author(): BelongsTo
     {
         return $this->belongsTo(User::class, 'author_user_id');
+    }
+
+    public function approvedBy(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'approved_by_user_id');
     }
 
     public function area(): BelongsTo

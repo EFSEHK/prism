@@ -130,7 +130,12 @@ Route::middleware([LogAllRequests::class, 'auth:sanctum', CheckInactivity::class
         Route::patch('fee-vouchers/{feeVoucher}/status', [FeeVoucherController::class, 'updateStatus']);
 
         Route::get('broadcasts', [UserBroadcastController::class, 'index']);
+        Route::get('broadcasts/pending', [UserBroadcastController::class, 'pending']);
         Route::post('broadcasts', [UserBroadcastController::class, 'store']);
+        Route::post('broadcasts/{userBroadcast}/approve', [UserBroadcastController::class, 'approve']);
+        Route::post('broadcasts/{userBroadcast}/reject', [UserBroadcastController::class, 'reject']);
+
+        Route::get('students/search', [StudentController::class, 'search']);
 
         Route::get('leave-requests', [LeaveRequestController::class, 'index']);
         Route::post('leave-requests', [LeaveRequestController::class, 'store']);

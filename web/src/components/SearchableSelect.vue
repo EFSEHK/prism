@@ -10,12 +10,15 @@
         <li v-if="allowEmpty" role="option" class="option" :class="{ active: highlightIndex === -1, selected: modelValue === '' || modelValue == null }" @click="select(null)">
           {{ placeholder }}
         </li>
-        <li v-for="(opt, i) in filtered" :key="opt.value" role="option" class="option" :class="{ active: i === highlightIndex, selected: opt.value == modelValue }" @click="select(opt)">
-          {{ opt.label }}
-        </li>
-        <li v-if="!filtered.length" class="empty">
-          {{ query.trim() ? 'No results' : (options.length ? 'No results' : emptyOptionsText) }}
-        </li>
+        <li v-if="loading" class="empty">Searching…</li>
+        <template v-else>
+          <li v-for="(opt, i) in filtered" :key="opt.value" role="option" class="option" :class="{ active: i === highlightIndex, selected: opt.value == modelValue }" @click="select(opt)">
+            {{ opt.label }}
+          </li>
+          <li v-if="!filtered.length" class="empty">
+            {{ emptyMessage }}
+          </li>
+        </template>
       </ul>
     </div>
   </div>
@@ -32,9 +35,12 @@ const props = defineProps({
   allowEmpty: { type: Boolean, default: true },
   disabled: { type: Boolean, default: false },
   emptyOptionsText: { type: String, default: 'Nothing available' },
+  remote: { type: Boolean, default: false },
+  loading: { type: Boolean, default: false },
+  minSearchLength: { type: Number, default: 2 },
 })
 
-const emit = defineEmits(['update:modelValue', 'change'])
+const emit = defineEmits(['update:modelValue', 'change', 'search'])
 
 const root = ref(null)
 const searchInput = ref(null)
@@ -49,9 +55,27 @@ const selectedLabel = computed(() => {
 })
 
 const filtered = computed(() => {
+  if (props.remote) return props.options
   const q = query.value.trim().toLowerCase()
   if (!q) return props.options
   return props.options.filter((o) => o.label.toLowerCase().includes(q))
+})
+
+const emptyMessage = computed(() => {
+  const q = query.value.trim()
+  if (props.remote && q.length < props.minSearchLength) {
+    return `Type at least ${props.minSearchLength} characters to search`
+  }
+  if (q) return 'No results'
+  return props.options.length ? 'No results' : props.emptyOptionsText
+})
+
+let searchTimer = null
+
+watch(query, (q) => {
+  if (!props.remote) return
+  clearTimeout(searchTimer)
+  searchTimer = setTimeout(() => emit('search', q.trim()), 300)
 })
 
 watch(open, async (isOpen) => {

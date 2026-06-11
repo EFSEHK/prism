@@ -267,6 +267,7 @@ class AcademicController extends Controller
             || $request->user()->can('manage_student_roster')
             || $request->user()->can('mark_attendance')
             || $request->user()->can('enter_marks')
+            || $request->user()->can('publish_user_broadcasts')
             || $request->user()->can('view_dashboard')
             || $request->user()->can('view_parent_dashboard')
             || $request->user()->can('view_student_dashboard');
