@@ -41,7 +41,7 @@ class DashboardController extends Controller
 
         if ($user->can('verify_attendance')) {
             $payload['widgets']['attendance_pending_verify'] = AttendanceBatch::query()
-                ->whereIn('status', ['draft', 'submitted'])
+                ->where('status', 'submitted')
                 ->count();
         }
 

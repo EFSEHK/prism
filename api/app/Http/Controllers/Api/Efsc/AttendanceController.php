@@ -35,6 +35,15 @@ class AttendanceController extends Controller
         if ($request->filled('status')) {
             $q->where('status', $request->query('status'));
         }
+        if ($request->filled('status_in')) {
+            $statuses = array_filter(explode(',', (string) $request->query('status_in')));
+            if ($statuses !== []) {
+                $q->whereIn('status', $statuses);
+            }
+        }
+        if ($request->boolean('own_only')) {
+            $q->where('submitted_by_user_id', $request->user()->id);
+        }
         if ($request->filled('date')) {
             $q->whereDate('date', $request->query('date'));
         }
@@ -56,7 +65,16 @@ class AttendanceController extends Controller
 
         $this->assertStudentsInSection((int) $data['section_id'], collect($data['records'])->pluck('student_id')->all());
 
-        $batch = DB::transaction(function () use ($data, $request) {
+        $existing = AttendanceBatch::query()
+            ->where('section_id', $data['section_id'])
+            ->whereDate('date', $data['date'])
+            ->first();
+
+        if ($existing && in_array($existing->status, ['submitted', 'verified'], true)) {
+            abort(422, 'This attendance has already been submitted or approved and cannot be changed.');
+        }
+
+        $batch = DB::transaction(function () use ($data, $request, $existing) {
             $batch = AttendanceBatch::updateOrCreate(
                 [
                     'section_id' => $data['section_id'],
@@ -94,6 +112,11 @@ class AttendanceController extends Controller
     {
         abort_unless($request->user()->can('mark_attendance'), 403);
         abort_unless($attendanceBatch->status === 'draft', 422, 'Only draft batches can be submitted for verification.');
+        abort_unless(
+            (int) $attendanceBatch->submitted_by_user_id === (int) $request->user()->id,
+            403,
+            'You can only submit attendance you marked.'
+        );
 
         $attendanceBatch->update(['status' => 'submitted']);
 
@@ -107,11 +130,7 @@ class AttendanceController extends Controller
     public function verify(Request $request, AttendanceBatch $attendanceBatch, NotificationDispatchService $dispatchService)
     {
         abort_unless($request->user()->can('verify_attendance'), 403);
-        abort_unless(
-            in_array($attendanceBatch->status, ['draft', 'submitted'], true),
-            422,
-            'Batch is not awaiting verification.'
-        );
+        abort_unless($attendanceBatch->status === 'submitted', 422, 'Only submitted attendance can be approved.');
 
         $batch = DB::transaction(function () use ($attendanceBatch, $request, $dispatchService) {
             $attendanceBatch->update([

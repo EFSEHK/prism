@@ -82,6 +82,7 @@
                         type="radio"
                         :name="`attendance-${s.id}`"
                         :value="opt.value"
+                        :disabled="markLocked"
                       />
                       <span>{{ opt.label }}</span>
                     </label>
@@ -91,82 +92,137 @@
             </tbody>
           </table>
         </div>
-        <div class="modal-actions">
-          <button type="button" class="primary" :disabled="saving" @click="saveDraft">
+        <p v-if="markLocked" class="locked-note">
+          This attendance is <strong>{{ statusLabel(currentBatch.status) }}</strong> and cannot be edited.
+          Check <strong>Attendance status</strong> for details.
+        </p>
+        <div v-else class="modal-actions">
+          <button type="button" class="secondary" :disabled="saving || submitting" @click="saveDraft">
             {{ saving ? 'Saving…' : 'Save draft' }}
           </button>
-          <button
-            v-if="currentBatch?.status === 'draft'"
-            type="button"
-            class="secondary"
-            :disabled="submitting"
-            @click="submitBatch"
-          >
-            {{ submitting ? 'Submitting…' : 'Submit for verification' }}
+          <button type="button" class="primary" :disabled="saving || submitting" @click="saveAndSubmit">
+            {{ submitting ? 'Submitting…' : 'Submit attendance' }}
           </button>
         </div>
-        <p v-if="currentBatch" class="status-note">
-          Status: <strong>{{ currentBatch.status }}</strong>
+        <p v-if="currentBatch && !markLocked" class="status-note">
+          Status: <strong>{{ statusLabel(currentBatch.status) }}</strong>
         </p>
       </div>
       <p v-if="markMsg" class="ok">{{ markMsg }}</p>
       <p v-if="markErr" class="error">{{ markErr }}</p>
     </section>
 
-    <!-- View Attendance -->
-    <section v-if="activeTab === 'view'" class="card">
-      <h2>View Attendance</h2>
+    <!-- Pending approval (section head, principal, admin, etc.) -->
+    <section v-if="activeTab === 'pending'" class="card">
+      <h2>Pending approval</h2>
+      <p class="muted small">Submitted attendance awaiting approval. Approved records appear in Attendance summary.</p>
       <div class="enroll-filters">
         <div class="field picker-field">
           <span class="field-label">Class</span>
           <SearchableSelect
-            v-model="viewClassId"
+            v-model="pendingClassId"
             :options="classOptions"
-            placeholder="Select class…"
+            placeholder="All classes"
             search-placeholder="Search classes…"
-            :allow-empty="false"
-            @change="onViewClassChange"
+            @change="onPendingClassChange"
           />
         </div>
         <div class="field picker-field">
           <span class="field-label">Section</span>
           <SearchableSelect
-            v-model="viewSectionId"
-            :options="viewSectionOptions"
+            v-model="pendingSectionId"
+            :options="pendingSectionOptions"
+            placeholder="All sections"
+            search-placeholder="Search sections…"
+            :disabled="!pendingClassId"
+          />
+        </div>
+      </div>
+      <div class="filter-actions">
+        <button type="button" class="primary" :disabled="loadingPending" @click="loadPending">
+          {{ loadingPending ? 'Loading…' : 'Refresh' }}
+        </button>
+      </div>
+
+      <p v-if="pendingErr" class="error">{{ pendingErr }}</p>
+      <p v-else-if="pendingLoaded && !pendingBatches.length" class="empty">No attendance pending approval.</p>
+
+      <div v-if="pendingBatches.length" class="batch-list">
+        <div v-for="b in pendingBatches" :key="b.id" class="batch-item">
+          <button type="button" class="batch-head" @click="togglePendingBatch(b.id)">
+            <span>{{ formatDate(b.date) }}</span>
+            <span class="batch-meta">{{ batchClassSection(b) }}</span>
+            <span class="status-badge submitted">Pending approval</span>
+            <span class="muted">{{ b.records_count }} students · {{ b.submitted_by?.name || '—' }}</span>
+          </button>
+          <div v-if="expandedPendingId === b.id" class="batch-detail">
+            <p v-if="pendingDetailLoading" class="muted">Loading…</p>
+            <template v-else-if="pendingDetail">
+              <div v-for="r in pendingDetail.records" :key="r.id" class="detail-row">
+                <span>{{ r.student?.first_name }} {{ r.student?.last_name }}</span>
+                <span :class="['pill', r.status]">{{ r.status }}</span>
+              </div>
+              <div class="modal-actions">
+                <button type="button" class="primary" :disabled="verifying" @click="approveBatch(b.id)">
+                  {{ verifying ? 'Approving…' : 'Approve attendance' }}
+                </button>
+              </div>
+            </template>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Attendance status (teacher / class incharge — submitted & approved only) -->
+    <section v-if="activeTab === 'status'" class="card">
+      <h2>Attendance status</h2>
+      <p class="muted small">View submitted and approved attendance. Drafts remain editable under Mark Attendance.</p>
+      <div class="enroll-filters">
+        <div class="field picker-field">
+          <span class="field-label">Class</span>
+          <SearchableSelect
+            v-model="statusClassId"
+            :options="classOptions"
+            placeholder="Select class…"
+            search-placeholder="Search classes…"
+            :allow-empty="false"
+            @change="onStatusClassChange"
+          />
+        </div>
+        <div class="field picker-field">
+          <span class="field-label">Section</span>
+          <SearchableSelect
+            v-model="statusSectionId"
+            :options="statusSectionOptions"
             placeholder="Select section…"
             search-placeholder="Search sections…"
-            :disabled="!viewClassId"
+            :disabled="!statusClassId"
             :allow-empty="false"
           />
         </div>
       </div>
       <div class="filter-actions">
-        <button type="button" class="primary" :disabled="!viewSectionId || loadingBatches" @click="loadBatches">
-          {{ loadingBatches ? 'Loading…' : 'Load dates' }}
+        <button type="button" class="primary" :disabled="!statusSectionId || loadingStatus" @click="loadStatusBatches">
+          {{ loadingStatus ? 'Loading…' : 'Load records' }}
         </button>
       </div>
 
-      <p v-if="viewErr" class="error">{{ viewErr }}</p>
-      <p v-else-if="batchesLoaded && !batches.length" class="empty">No attendance records for this section.</p>
+      <p v-if="statusErr" class="error">{{ statusErr }}</p>
+      <p v-else-if="statusLoaded && !statusBatches.length" class="empty">No submitted or approved attendance for this section.</p>
 
-      <div v-if="batches.length" class="batch-list">
-        <div v-for="b in batches" :key="b.id" class="batch-item">
-          <button type="button" class="batch-head" @click="toggleBatch(b.id)">
+      <div v-if="statusBatches.length" class="batch-list">
+        <div v-for="b in statusBatches" :key="b.id" class="batch-item">
+          <button type="button" class="batch-head" @click="toggleStatusBatch(b.id)">
             <span>{{ formatDate(b.date) }}</span>
-            <span class="status-badge" :class="b.status">{{ b.status }}</span>
+            <span class="status-badge" :class="b.status">{{ statusLabel(b.status) }}</span>
             <span class="muted">{{ b.records_count }} students</span>
           </button>
-          <div v-if="expandedBatchId === b.id" class="batch-detail">
-            <p v-if="batchDetailLoading" class="muted">Loading…</p>
-            <template v-else-if="batchDetail">
-              <div v-for="r in batchDetail.records" :key="r.id" class="detail-row">
+          <div v-if="expandedStatusId === b.id" class="batch-detail">
+            <p v-if="statusDetailLoading" class="muted">Loading…</p>
+            <template v-else-if="statusDetail">
+              <div v-for="r in statusDetail.records" :key="r.id" class="detail-row">
                 <span>{{ r.student?.first_name }} {{ r.student?.last_name }}</span>
                 <span :class="['pill', r.status]">{{ r.status }}</span>
-              </div>
-              <div v-if="canVerify && ['draft', 'submitted'].includes(batchDetail.status)" class="modal-actions">
-                <button type="button" class="primary" :disabled="verifying" @click="verifyBatch(batchDetail.id)">
-                  {{ verifying ? 'Approving…' : 'Approve attendance' }}
-                </button>
               </div>
             </template>
           </div>
@@ -318,13 +374,20 @@ import { usePermissions } from '../composables/usePermissions'
 import { formatDate, todayInputDate, monthStartInputDate } from '../composables/format'
 
 const { can } = usePermissions()
-const canVerify = computed(() => can('verify_attendance'))
+const canMark = computed(() => can('mark_attendance'))
+const canApprove = computed(() => can('verify_attendance'))
+const canViewSummary = computed(() => can('view_attendance_reports') || can('verify_attendance'))
+const canViewStatus = computed(() => canMark.value && !canApprove.value)
 
-const tabs = [
-  { id: 'mark', label: 'Mark Attendance' },
-  { id: 'view', label: 'View Attendance' },
-  { id: 'summary', label: 'Attendance Summary' },
-]
+const tabs = computed(() => {
+  const list = []
+  if (canApprove.value) list.push({ id: 'pending', label: 'Pending approval' })
+  if (canMark.value) list.push({ id: 'mark', label: 'Mark Attendance' })
+  if (canViewStatus.value) list.push({ id: 'status', label: 'Attendance status' })
+  if (canViewSummary.value) list.push({ id: 'summary', label: 'Attendance Summary' })
+  return list
+})
+
 const attendanceStatuses = [
   { value: 'present', label: 'Present' },
   { value: 'absent', label: 'Absent' },
@@ -348,15 +411,30 @@ const submitting = ref(false)
 const markMsg = ref('')
 const markErr = ref('')
 
-const viewClassId = ref('')
-const viewSectionId = ref('')
-const batches = ref([])
-const batchesLoaded = ref(false)
-const loadingBatches = ref(false)
-const viewErr = ref('')
-const expandedBatchId = ref(null)
-const batchDetail = ref(null)
-const batchDetailLoading = ref(false)
+const markLocked = computed(() =>
+  Boolean(currentBatch.value && ['submitted', 'verified'].includes(currentBatch.value.status)),
+)
+
+const pendingClassId = ref('')
+const pendingSectionId = ref('')
+const pendingBatches = ref([])
+const pendingLoaded = ref(false)
+const loadingPending = ref(false)
+const pendingErr = ref('')
+const expandedPendingId = ref(null)
+const pendingDetail = ref(null)
+const pendingDetailLoading = ref(false)
+
+const statusClassId = ref('')
+const statusSectionId = ref('')
+const statusBatches = ref([])
+const statusLoaded = ref(false)
+const loadingStatus = ref(false)
+const statusErr = ref('')
+const expandedStatusId = ref(null)
+const statusDetail = ref(null)
+const statusDetailLoading = ref(false)
+
 const verifying = ref(false)
 
 const summaryAreaId = ref('')
@@ -397,14 +475,21 @@ const markSections = computed(() =>
     : []
 )
 
-const viewSections = computed(() =>
-  viewClassId.value
-    ? allSections.value.filter((s) => String(s.school_class_id) === viewClassId.value)
+const pendingSections = computed(() =>
+  pendingClassId.value
+    ? allSections.value.filter((s) => String(s.school_class_id) === pendingClassId.value)
+    : allSections.value
+)
+
+const statusSections = computed(() =>
+  statusClassId.value
+    ? allSections.value.filter((s) => String(s.school_class_id) === statusClassId.value)
     : []
 )
 
 const markSectionOptions = computed(() => toOptions(markSections.value))
-const viewSectionOptions = computed(() => toOptions(viewSections.value))
+const pendingSectionOptions = computed(() => toOptions(pendingSections.value))
+const statusSectionOptions = computed(() => toOptions(statusSections.value))
 
 const summaryClasses = computed(() =>
   summaryAreaId.value
@@ -428,7 +513,32 @@ const summaryClassOptions = computed(() =>
 )
 const summarySectionOptions = computed(() => toOptions(summarySections.value))
 
-onMounted(loadAcademic)
+function statusLabel(status) {
+  if (status === 'submitted') return 'Pending approval'
+  if (status === 'verified') return 'Approved'
+  if (status === 'draft') return 'Draft'
+  return status
+}
+
+function batchClassSection(batch) {
+  const cls = batch.section?.school_class?.name ?? batch.section?.schoolClass?.name
+  const sec = batch.section?.name
+  if (cls && sec) return `${cls} · ${sec}`
+  return cls || sec || '—'
+}
+
+function setDefaultTab() {
+  const ids = tabs.value.map((t) => t.id)
+  if (canApprove.value && ids.includes('pending')) activeTab.value = 'pending'
+  else if (canMark.value && ids.includes('mark')) activeTab.value = 'mark'
+  else if (ids.length) activeTab.value = ids[0]
+}
+
+onMounted(async () => {
+  await loadAcademic()
+  setDefaultTab()
+  if (activeTab.value === 'pending') loadPending()
+})
 
 async function loadAcademic() {
   const [areaRes, classRes, secRes] = await Promise.all([
@@ -441,9 +551,9 @@ async function loadAcademic() {
   allSections.value = secRes.data?.data ?? secRes.data ?? []
   if (allClasses.value.length) {
     classId.value = String(allClasses.value[0].id)
-    viewClassId.value = String(allClasses.value[0].id)
+    statusClassId.value = String(allClasses.value[0].id)
     onMarkClassChange()
-    onViewClassChange()
+    onStatusClassChange()
   }
 }
 
@@ -456,13 +566,17 @@ function onMarkClassChange() {
   markErr.value = ''
 }
 
-function onViewClassChange() {
-  const secs = viewSections.value
-  viewSectionId.value = secs.length ? String(secs[0].id) : ''
-  batches.value = []
-  batchesLoaded.value = false
-  expandedBatchId.value = null
-  batchDetail.value = null
+function onPendingClassChange() {
+  pendingSectionId.value = ''
+}
+
+function onStatusClassChange() {
+  const secs = statusSections.value
+  statusSectionId.value = secs.length ? String(secs[0].id) : ''
+  statusBatches.value = []
+  statusLoaded.value = false
+  expandedStatusId.value = null
+  statusDetail.value = null
 }
 
 function onSummaryAreaChange() {
@@ -499,6 +613,11 @@ watch(summarySectionId, () => {
 
 watch(activeTab, (tab) => {
   if (tab === 'summary') maybeAutoLoadSummary()
+  if (tab === 'pending') loadPending()
+})
+
+watch(tabs, () => {
+  if (!tabs.value.some((t) => t.id === activeTab.value)) setDefaultTab()
 })
 
 async function loadMarkStudents() {
@@ -546,7 +665,7 @@ async function saveDraft() {
       records: markStudents.value.map((s) => ({ student_id: s.id, status: statuses[s.id] })),
     })
     currentBatch.value = data
-    markMsg.value = 'Draft saved. Section head will verify and approve.'
+    markMsg.value = 'Draft saved. Submit when ready for section head approval.'
   } catch (e) {
     markErr.value = e.response?.data?.message || 'Save failed'
   } finally {
@@ -561,7 +680,8 @@ async function submitBatch() {
   try {
     const { data } = await api.post(`/efsc/attendance/batches/${currentBatch.value.id}/submit`)
     currentBatch.value = data
-    markMsg.value = 'Submitted for section head verification.'
+    markMsg.value = 'Submitted for approval. Track status under Attendance status.'
+    markStudents.value = []
   } catch (e) {
     markErr.value = e.response?.data?.message || 'Submit failed'
   } finally {
@@ -569,57 +689,120 @@ async function submitBatch() {
   }
 }
 
-async function loadBatches() {
-  if (!viewSectionId.value) return
-  loadingBatches.value = true
-  viewErr.value = ''
-  expandedBatchId.value = null
-  batchDetail.value = null
+async function saveAndSubmit() {
+  if (!sectionId.value || !markStudents.value.length || markLocked.value) return
+  saving.value = true
+  markErr.value = ''
+  markMsg.value = ''
   try {
-    const { data } = await api.get('/efsc/attendance/batches', {
-      params: { section_id: viewSectionId.value, per_page: 100 },
+    const { data } = await api.post('/efsc/attendance/batches', {
+      section_id: Number(sectionId.value),
+      date: markDate.value,
+      records: markStudents.value.map((s) => ({ student_id: s.id, status: statuses[s.id] })),
     })
-    batches.value = data?.data ?? []
-    batchesLoaded.value = true
+    currentBatch.value = data
+    saving.value = false
+    await submitBatch()
   } catch (e) {
-    viewErr.value = e.response?.data?.message || 'Failed to load attendance dates'
-    batches.value = []
-  } finally {
-    loadingBatches.value = false
+    markErr.value = e.response?.data?.message || 'Submit failed'
+    saving.value = false
   }
 }
 
-async function toggleBatch(id) {
-  if (expandedBatchId.value === id) {
-    expandedBatchId.value = null
-    batchDetail.value = null
+async function loadPending() {
+  loadingPending.value = true
+  pendingErr.value = ''
+  expandedPendingId.value = null
+  pendingDetail.value = null
+  try {
+    const params = { status: 'submitted', per_page: 100 }
+    if (pendingSectionId.value) params.section_id = pendingSectionId.value
+    else if (pendingClassId.value) params.school_class_id = pendingClassId.value
+    const { data } = await api.get('/efsc/attendance/batches', { params })
+    pendingBatches.value = data?.data ?? []
+    pendingLoaded.value = true
+  } catch (e) {
+    pendingErr.value = e.response?.data?.message || 'Failed to load pending attendance'
+    pendingBatches.value = []
+  } finally {
+    loadingPending.value = false
+  }
+}
+
+async function togglePendingBatch(id) {
+  if (expandedPendingId.value === id) {
+    expandedPendingId.value = null
+    pendingDetail.value = null
     return
   }
-  expandedBatchId.value = id
-  batchDetailLoading.value = true
+  expandedPendingId.value = id
+  pendingDetailLoading.value = true
   try {
     const { data } = await api.get(`/efsc/attendance/batches/${id}`)
-    batchDetail.value = data
+    pendingDetail.value = data
   } catch (e) {
-    viewErr.value = e.response?.data?.message || 'Failed to load batch'
-    batchDetail.value = null
+    pendingErr.value = e.response?.data?.message || 'Failed to load batch'
+    pendingDetail.value = null
   } finally {
-    batchDetailLoading.value = false
+    pendingDetailLoading.value = false
   }
 }
 
-async function verifyBatch(id) {
+async function approveBatch(id) {
   verifying.value = true
-  viewErr.value = ''
+  pendingErr.value = ''
   try {
-    const { data } = await api.post(`/efsc/attendance/batches/${id}/verify`)
-    batchDetail.value = data
-    const idx = batches.value.findIndex((b) => b.id === id)
-    if (idx >= 0) batches.value[idx] = { ...batches.value[idx], status: 'verified' }
+    await api.post(`/efsc/attendance/batches/${id}/verify`)
+    pendingBatches.value = pendingBatches.value.filter((b) => b.id !== id)
+    expandedPendingId.value = null
+    pendingDetail.value = null
   } catch (e) {
-    viewErr.value = e.response?.data?.message || 'Verification failed'
+    pendingErr.value = e.response?.data?.message || 'Approval failed'
   } finally {
     verifying.value = false
+  }
+}
+
+async function loadStatusBatches() {
+  if (!statusSectionId.value) return
+  loadingStatus.value = true
+  statusErr.value = ''
+  expandedStatusId.value = null
+  statusDetail.value = null
+  try {
+    const params = {
+      section_id: statusSectionId.value,
+      status_in: 'submitted,verified',
+      per_page: 100,
+    }
+    if (canMark.value && !canViewSummary.value) params.own_only = 1
+    const { data } = await api.get('/efsc/attendance/batches', { params })
+    statusBatches.value = data?.data ?? []
+    statusLoaded.value = true
+  } catch (e) {
+    statusErr.value = e.response?.data?.message || 'Failed to load attendance records'
+    statusBatches.value = []
+  } finally {
+    loadingStatus.value = false
+  }
+}
+
+async function toggleStatusBatch(id) {
+  if (expandedStatusId.value === id) {
+    expandedStatusId.value = null
+    statusDetail.value = null
+    return
+  }
+  expandedStatusId.value = id
+  statusDetailLoading.value = true
+  try {
+    const { data } = await api.get(`/efsc/attendance/batches/${id}`)
+    statusDetail.value = data
+  } catch (e) {
+    statusErr.value = e.response?.data?.message || 'Failed to load batch'
+    statusDetail.value = null
+  } finally {
+    statusDetailLoading.value = false
   }
 }
 
@@ -974,13 +1157,31 @@ async function loadSummary() {
   width: 100%;
   display: flex;
   align-items: center;
-  gap: 0.75rem;
+  flex-wrap: wrap;
+  gap: 0.5rem 0.75rem;
   padding: 0.75rem 1rem;
   background: #fafafa;
   border: none;
   cursor: pointer;
   text-align: left;
   font-size: 0.9rem;
+}
+.batch-meta {
+  color: #52525b;
+  font-size: 0.85rem;
+}
+.locked-note {
+  margin-top: 1rem;
+  padding: 0.65rem 0.85rem;
+  background: #fffbeb;
+  border: 1px solid #fde68a;
+  border-radius: 6px;
+  font-size: 0.9rem;
+  color: #92400e;
+}
+.small {
+  font-size: 0.85rem;
+  margin: -0.5rem 0 1rem;
 }
 .batch-detail {
   padding: 0.75rem 1rem;
@@ -1006,6 +1207,10 @@ async function loadSummary() {
 .status-badge.draft { background: #fef3c7; color: #92400e; }
 .status-badge.submitted { background: #dbeafe; color: #1e40af; }
 .status-badge.verified { background: #dcfce7; color: #166534; }
+.status-radio input:disabled + span {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
 .pill {
   font-size: 0.75rem;
   font-weight: 600;

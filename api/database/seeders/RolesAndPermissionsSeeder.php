@@ -64,17 +64,17 @@ class RolesAndPermissionsSeeder extends Seeder
 
         Role::findByName('admin', 'web')->syncPermissions([
             'view_dashboard', 'manage_users', 'manage_roles', 'manage_academic_structure',
-            'manage_student_roster', 'view_attendance_reports', 'view_marks_reports',
+            'manage_student_roster', 'verify_attendance', 'view_attendance_reports', 'view_marks_reports',
             'publish_user_broadcasts', 'manage_leave_requests',
         ]);
 
         Role::findByName('principal', 'web')->syncPermissions([
-            'view_dashboard', 'view_attendance_reports', 'view_marks_reports',
+            'view_dashboard', 'verify_attendance', 'view_attendance_reports', 'view_marks_reports',
             'publish_user_broadcasts', 'approve_notification_dispatches',
         ]);
 
         Role::findByName('vice_principal', 'web')->syncPermissions([
-            'view_dashboard', 'view_attendance_reports', 'view_marks_reports',
+            'view_dashboard', 'verify_attendance', 'view_attendance_reports', 'view_marks_reports',
             'publish_user_broadcasts', 'approve_notification_dispatches',
         ]);
 
