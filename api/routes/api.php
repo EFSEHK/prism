@@ -28,6 +28,9 @@ use App\Http\Controllers\Api\Efsc\StudentController;
 use App\Http\Controllers\Api\Efsc\TimetableController;
 use App\Http\Controllers\Api\Efsc\UserBroadcastController;
 use App\Http\Controllers\Api\Efsc\UserNotificationController;
+use App\Http\Controllers\Api\MobileVersionController;
+
+Route::get('/mobile/version', [MobileVersionController::class, 'show']);
 
 Route::post('/register', [AuthController::class, 'register']);
 Route::post('/login', [AuthController::class, 'login']);

@@ -34,6 +34,7 @@ import {
 } from './screens/ParentScreens'
 import { childName, formatError } from './utils/format'
 import { ui } from './components/ui'
+import { runStartupUpdateChecks } from './services/appUpdates'
 
 const DASHBOARD_INCLUDE =
   'homework,timetable,marks,broadcasts,fees,online_classes,leave,datesheet,notifications'
@@ -62,6 +63,10 @@ export default function App() {
   const [err, setErr] = useState('')
   const [viewAsRole, setViewAsRoleState] = useState('')
   const [viewAsOptions, setViewAsOptions] = useState([])
+
+  useEffect(() => {
+    runStartupUpdateChecks()
+  }, [])
 
   useEffect(() => {
     setAuthToken(token)

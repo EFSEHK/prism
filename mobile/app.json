@@ -8,12 +8,24 @@
     "assetBundlePatterns": [
       "**/*"
     ],
+    "runtimeVersion": {
+      "policy": "appVersion"
+    },
+    "updates": {
+      "enabled": true,
+      "checkAutomatically": "ON_LOAD",
+      "fallbackToCacheTimeout": 0
+    },
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "com.school.EFSC-YA"
+      "bundleIdentifier": "com.school.efscya"
     },
     "android": {
-      "package": "com.school.EFSC-YA"
+      "package": "com.school.efscya",
+      "versionCode": 1,
+      "permissions": [
+        "REQUEST_INSTALL_PACKAGES"
+      ]
     },
     "web": {
       "bundler": "metro",
@@ -21,6 +33,9 @@
     },
     "plugins": [
       "expo-asset"
-    ]
+    ],
+    "extra": {
+      "apiUrl": "http://EFSC-YA.test/api"
+    }
   }
 }

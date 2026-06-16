@@ -8,9 +8,9 @@ School platform for attendance, marks, homework, notifications, leave workflows,
 
 | Path | Description |
 |------|-------------|
-| [`api/`](api/) | Laravel 12 API: Sanctum auth, Spatie roles/permissions, school modules under `/api/efsc/*`. |
+| [`api/`](api/) | Laravel 12 API: Sanctum auth, Spatie roles/permissions, school modules under `/api/efsc/*`, public welcome page, developer release portal. |
 | [`web/`](web/) | Vue 3 + Vite SPA for staff/admin and learners. |
-| [`mobile/`](mobile/) | Expo + React Native app for parents/students (staff: use web). |
+| [`mobile/`](mobile/) | Expo + React Native app for parents/students (staff: use web). Standalone Android APK for off–Play Store distribution. |
 
 ---
 
@@ -24,10 +24,13 @@ Study groups are independent of classes. Students belong to a study group and op
 
 ## Roles & test accounts
 
-Password `Test.123` for all `@efsc-ya.test` accounts. LASK accounts unchanged.
+Password `Test.123` for all `@efsc-ya.test` accounts unless noted.
 
 | Email | Password | Role |
 |-------|----------|------|
+| `superadmin@efsc-ya.test` | `S.Admin.123` | superadmin |
+| `developer@efsc-ya.test` | `Developer.123` | developer |
+| `admin@efsc-ya.test` | `Admin.123` | admin |
 | `superadmin@lask.com` | `S.Admin.123` | superadmin |
 | `admin@lask.com` | `Admin.123` | admin |
 | `developer@lask.com` | `Developer.123` | developer |
@@ -50,7 +53,10 @@ Password `Test.123` for all `@efsc-ya.test` accounts. LASK accounts unchanged.
 ```bash
 cd api
 composer install
+cp .env.example .env   # set DB credentials
+php artisan key:generate
 php artisan migrate:fresh --seed
+php artisan storage:link
 php artisan serve
 ```
 
@@ -64,7 +70,155 @@ Open **http://localhost:5173**. API routes use `/api/efsc/*`.
 
 **Superadmin:** `/admin/permissions` — manage role permissions and per-user direct grants.
 
-**Mobile:** `cd mobile && npx expo start` — parents/students use learner dashboard; staff see a message to use web.
+**Mobile (development):** `cd mobile && npm install && npx expo start` — parents/students use learner dashboard; staff see a message to use web. Expo Go is for dev only; production uses the standalone APK (see below).
+
+---
+
+## Public welcome page & developer portal
+
+The API serves a public landing page and a hidden release-management portal (no Play Store required).
+
+| URL | Purpose |
+|------|---------|
+| `http://EFSC-YA.test/` | Public welcome page — app description, link to web app, Android APK download |
+| `http://EFSC-YA.test/sys/portal-access` | Hidden login (developer / superadmin only) → release settings |
+| `http://EFSC-YA.test/sys/portal-access/releases` | Upload APK, set web URL, version name/code, release notes |
+| `GET /api/mobile/version` | JSON for in-app update check (`version`, `version_code`, `apk_url`) |
+
+**Developer portal login** (not linked from the welcome page):
+
+- `developer@efsc-ya.test` / `Developer.123`
+- `superadmin@efsc-ya.test` / `S.Admin.123`
+
+**Optional `.env` keys** (see `api/.env.example`):
+
+```env
+DEFAULT_WEB_APP_URL=http://localhost:5173
+DEV_PORTAL_PATH=sys/portal-access
+```
+
+APK files are stored at `api/storage/app/public/releases/` and served at `/storage/releases/...` after `php artisan storage:link`.
+
+---
+
+## Mobile app — development
+
+```bash
+cd mobile
+npm install
+npx expo start          # Expo Go / QR for device testing
+npm run web             # Browser at http://localhost:8081
+```
+
+Copy `mobile/.env.example` to `mobile/.env`:
+
+- `EXPO_PUBLIC_API_URL=http://EFSC-YA.test/api`
+- `EXPO_PUBLIC_API_LAN_IP=` your PC Wi‑Fi IP (`ipconfig`) — required on a **physical phone**
+
+The app calls your LAN IP with `Host: EFSC-YA.test` so Laragon’s vhost matches. **Android emulator** can omit `LAN_IP` (uses `10.0.2.2` automatically).
+
+---
+
+## Mobile app — Android APK (off–Play Store)
+
+Production distribution uses a **standalone signed APK**, not Expo Go.
+
+### Signing key (save securely)
+
+| Item | Value |
+|------|-------|
+| Keystore file | `mobile/credentials/android/efsc-ya-release.keystore` |
+| Alias | `efsc-ya` |
+| Store password | `EFSC-YA-Store-2026!` |
+| Key password | `EFSC-YA-Store-2026!` (PKCS12 — same as store password) |
+| Validity | 10,000 days |
+
+**Important:** Back up the keystore and passwords offline. Every future APK must use this same keystore, or users must uninstall before installing a new build.
+
+### Build APK locally (Windows)
+
+**Prerequisites:**
+
+- Android Studio JBR: `C:\Program Files\Android\Android Studio\jbr`
+- Android SDK: `%LOCALAPPDATA%\Android\Sdk`
+- `org.gradle.java.home` is set in `mobile/android/gradle.properties`
+
+**Build:**
+
+```powershell
+cd mobile
+npm install
+npx expo prebuild --platform android
+cd android
+$env:JAVA_HOME = "C:\Program Files\Android\Android Studio\jbr"
+$env:ANDROID_HOME = "$env:LOCALAPPDATA\Android\Sdk"
+.\gradlew.bat assembleRelease
+```
+
+**Output:**
+
+| Path | Description |
+|------|-------------|
+| `mobile/android/app/build/outputs/apk/release/app-release.apk` | Gradle output |
+| `mobile/dist/EFSC-YA-1.0.0.apk` | Copy for manual sharing |
+| `api/storage/app/public/releases/` | Upload via developer portal (served on welcome page) |
+
+To regenerate the keystore (first time only): `mobile/scripts/setup-android-signing.ps1`
+
+### Share the APK
+
+**Developers**
+
+1. Build or copy the APK to `mobile/dist/`.
+2. Sign in at `http://EFSC-YA.test/sys/portal-access`.
+3. Open **Release settings** → upload APK (or place file in `api/storage/app/public/releases/`).
+4. Set **version name** (e.g. `1.0.0`) and **version code** (integer; must increase for each new APK).
+5. Set **web app URL** (production Vue URL).
+6. Save — the welcome page shows **Download Android app**.
+
+**Parents / staff (first install)**
+
+1. Open `http://EFSC-YA.test/` on the phone browser.
+2. Tap **Download Android app**.
+3. Allow download → open file → **Install**.
+4. If blocked: Settings → allow installs from the browser (one-time).
+
+**Other channels:** USB, WhatsApp, or school LAN — share `mobile/dist/EFSC-YA-*.apk` or the welcome-page link.
+
+---
+
+## Mobile updates (without Play Store)
+
+Two mechanisms work together:
+
+| Method | When to use | User experience |
+|--------|-------------|-----------------|
+| **OTA (Expo Updates)** | JS-only changes: screens, logic, UI | Update on next app open — **no reinstall** |
+| **In-app APK updater** | Native changes, new permissions, Expo SDK bump, `versionCode` increase | **“Update available”** prompt → tap → Android install screen |
+
+**On each app launch:** OTA check first (silent), then APK version check via `GET /api/mobile/version`.
+
+### A) JS-only updates (OTA)
+
+Requires one-time EAS setup: `eas init` in `mobile/`, then set `updates.url` in `app.json`.
+
+```bash
+cd mobile
+eas update --branch production --message "Describe change"
+```
+
+Users get the update on next cold start. No APK reinstall.
+
+### B) Native / version-code updates (new APK)
+
+1. Bump in `mobile/app.json`: `version` (e.g. `1.0.1`) and `android.versionCode` (e.g. `2`).
+2. Rebuild APK (see build steps above).
+3. Upload via developer portal; increase version code in the form.
+4. Installed users see an update prompt on launch.
+
+Same package name + same signing key = Android replaces the app without manual uninstall.
+
+**Rule of thumb:** Use OTA for day-to-day fixes; ship a new APK only when native code or `versionCode` changes.
 
 ---
 
@@ -84,3 +238,4 @@ Open **http://localhost:5173**. API routes use `/api/efsc/*`.
 cd api
 php artisan test
 ```
+

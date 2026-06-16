@@ -11,6 +11,7 @@ class DatabaseSeeder extends Seeder
         $this->call([
             UsersTableSeeder::class,
             RolesAndPermissionsSeeder::class,
+            AppReleaseSettingsSeeder::class,
             NotificationCatalogSeeder::class,
             SchoolDataSeeder::class,
         ]);
