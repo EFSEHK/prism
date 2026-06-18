@@ -42,16 +42,16 @@ mobile/dist/EFSC-YA-1.0.0.apk
 ### For developers
 
 1. Build (or reuse) the APK at `mobile/dist/EFSC-YA-1.0.0.apk`.
-2. Sign in to the hidden portal: `http://EFSC-YA.test/sys/portal-access`
+2. Sign in to the hidden portal: `https://sap-api.innovisiq.com/sys/portal-access`
    - Accounts: `developer@efsc-ya.test` or `superadmin@efsc-ya.test`
 3. Open **Release settings** → upload APK (or confirm file is already in `api/storage/app/public/releases/`).
 4. Set **version name** (`1.0.0`) and **version code** (`1`, must increase for each new APK).
 5. Set **web app URL** (e.g. production Vue URL).
-6. Save — the public welcome page at `http://EFSC-YA.test/` shows **Download Android app**.
+6. Save — the public welcome page at `https://sap-api.innovisiq.com/` shows **Download Android app**.
 
 ### For parents / staff (first install)
 
-1. Open the school welcome page on the phone browser: `http://EFSC-YA.test/` (or production URL).
+1. Open the school welcome page on the phone browser: `https://sap-api.innovisiq.com/` (or local dev URL).
 2. Tap **Download Android app**.
 3. If prompted, allow the browser to download APK files.
 4. Open the downloaded file → tap **Install**.

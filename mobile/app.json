@@ -35,7 +35,7 @@
       "expo-asset"
     ],
     "extra": {
-      "apiUrl": "http://EFSC-YA.test/api"
+      "apiUrl": "https://sap-api.innovisiq.com/api"
     }
   }
 }

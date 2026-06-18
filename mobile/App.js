@@ -285,7 +285,7 @@ export default function App() {
             <Text style={styles.hint}>LAN: {API_BRIDGE_HOST}</Text>
           ) : null}
           {USES_EMULATOR_API ? (
-            <Text style={styles.warn}>Set mobile/.env for Laragon (EFSC-YA.test).</Text>
+            <Text style={styles.warn}>Dev: set mobile/.env (prism.test). Prod: sap-api.innovisiq.com</Text>
           ) : null}
           {!token ? (
             <>

@@ -74,15 +74,57 @@ Open **http://localhost:5173**. API routes use `/api/efsc/*`.
 
 ---
 
+## Production URLs
+
+| Service | URL | Deploy target |
+|---------|-----|----------------|
+| **API (Laravel)** | `https://sap-api.innovisiq.com` | `api/public` on server |
+| **Web (Vue)** | `https://sap.innovisiq.com` | `web/dist` static files |
+| **Mobile** | APK hosted by API | `api/storage/app/public/releases/` |
+
+**API `.env` on server:**
+
+```env
+APP_URL=https://sap-api.innovisiq.com
+APP_ENV=production
+APP_DEBUG=false
+DEFAULT_WEB_APP_URL=https://sap.innovisiq.com
+LARAVEL_CORS_ALLOWED_ORIGINS=https://sap.innovisiq.com
+SANCTUM_STATEFUL_DOMAINS=sap.innovisiq.com
+```
+
+**Web production build:**
+
+```bash
+cd web
+cp .env.production.example .env.production
+npm run build
+# deploy web/dist/ → sap.innovisiq.com
+```
+
+**Mobile production APK** (rebuild required after URL change):
+
+```bash
+cd mobile
+cp .env.production.example .env.production
+# or set EXPO_PUBLIC_API_URL=https://sap-api.innovisiq.com/api
+npx expo prebuild --platform android
+# then gradlew assembleRelease (see Mobile APK section)
+```
+
+Canonical URLs are also defined in [`api/config/urls.php`](api/config/urls.php).
+
+---
+
 ## Public welcome page & developer portal
 
 The API serves a public landing page and a hidden release-management portal (no Play Store required).
 
 | URL | Purpose |
 |------|---------|
-| `http://EFSC-YA.test/` | Public welcome page — app description, link to web app, Android APK download |
-| `http://EFSC-YA.test/sys/portal-access` | Hidden login (developer / superadmin only) → release settings |
-| `http://EFSC-YA.test/sys/portal-access/releases` | Upload APK, set web URL, version name/code, release notes |
+| `/` (local: `http://EFSC-YA.test/`, prod: `https://sap-api.innovisiq.com/`) | Public welcome page — app description, link to web app, Android APK download |
+| `/sys/portal-access` | Hidden login (developer / superadmin only) → release settings |
+| `/sys/portal-access/releases` | Upload APK, set web URL, version name/code, release notes |
 | `GET /api/mobile/version` | JSON for in-app update check (`version`, `version_code`, `apk_url`) |
 
 **Developer portal login** (not linked from the welcome page):
@@ -93,7 +135,10 @@ The API serves a public landing page and a hidden release-management portal (no 
 **Optional `.env` keys** (see `api/.env.example`):
 
 ```env
+# Local
 DEFAULT_WEB_APP_URL=http://localhost:5173
+# Production
+DEFAULT_WEB_APP_URL=https://sap.innovisiq.com
 DEV_PORTAL_PATH=sys/portal-access
 ```
 
@@ -110,12 +155,14 @@ npx expo start          # Expo Go / QR for device testing
 npm run web             # Browser at http://localhost:8081
 ```
 
-Copy `mobile/.env.example` to `mobile/.env`:
+Copy `mobile/.env.example` to `mobile/.env` for **local** dev:
 
-- `EXPO_PUBLIC_API_URL=http://EFSC-YA.test/api`
+- `EXPO_PUBLIC_API_URL=http://prism.test/api` (or `http://EFSC-YA.test/api`)
 - `EXPO_PUBLIC_API_LAN_IP=` your PC Wi‑Fi IP (`ipconfig`) — required on a **physical phone**
 
-The app calls your LAN IP with `Host: EFSC-YA.test` so Laragon’s vhost matches. **Android emulator** can omit `LAN_IP` (uses `10.0.2.2` automatically).
+For **production APK**, use `mobile/.env.production.example` → `EXPO_PUBLIC_API_URL=https://sap-api.innovisiq.com/api` (no LAN IP).
+
+The app bridges `prism.test` / `EFSC-YA.test` to your LAN IP with a `Host` header on physical devices. Production uses `sap-api.innovisiq.com` directly.
 
 ---
 
@@ -170,7 +217,7 @@ To regenerate the keystore (first time only): `mobile/scripts/setup-android-sign
 **Developers**
 
 1. Build or copy the APK to `mobile/dist/`.
-2. Sign in at `http://EFSC-YA.test/sys/portal-access`.
+2. Sign in at `https://sap-api.innovisiq.com/sys/portal-access` (or local `http://EFSC-YA.test/sys/portal-access`).
 3. Open **Release settings** → upload APK (or place file in `api/storage/app/public/releases/`).
 4. Set **version name** (e.g. `1.0.0`) and **version code** (integer; must increase for each new APK).
 5. Set **web app URL** (production Vue URL).
@@ -178,7 +225,7 @@ To regenerate the keystore (first time only): `mobile/scripts/setup-android-sign
 
 **Parents / staff (first install)**
 
-1. Open `http://EFSC-YA.test/` on the phone browser.
+1. Open `https://sap-api.innovisiq.com/` on the phone browser (or local welcome URL).
 2. Tap **Download Android app**.
 3. Allow download → open file → **Install**.
 4. If blocked: Settings → allow installs from the browser (one-time).
