@@ -18,6 +18,7 @@ import {
   setViewAsRole,
 } from './apiClient'
 import SideMenu, { HamburgerIcon, navItemsForContext } from './components/SideMenu'
+import EyeIcon from './components/EyeIcon'
 import ViewAsPicker from './components/ViewAsPicker'
 import {
   ParentHomeScreen,
@@ -51,8 +52,9 @@ function LogoutIcon() {
 }
 
 export default function App() {
-  const [email, setEmail] = useState('parent@efsc-ya.test')
+  const [email, setEmail] = useState('parent@efsc-ya.com')
   const [password, setPassword] = useState('Test.123')
+  const [showPassword, setShowPassword] = useState(false)
   const [token, setToken] = useState('')
   const [user, setUser] = useState(null)
   const [dashboard, setDashboard] = useState(null)
@@ -299,14 +301,26 @@ export default function App() {
                 editable={!loading}
               />
               <Text style={styles.label}>Password</Text>
-              <TextInput
-                style={styles.input}
-                value={password}
-                onChangeText={setPassword}
-                secureTextEntry
-                editable={!loading}
-                onSubmitEditing={login}
-              />
+              <View style={styles.passwordField}>
+                <TextInput
+                  style={styles.passwordInput}
+                  value={password}
+                  onChangeText={setPassword}
+                  secureTextEntry={!showPassword}
+                  editable={!loading}
+                  onSubmitEditing={login}
+                />
+                <Pressable
+                  style={styles.passwordToggle}
+                  onPress={() => setShowPassword((v) => !v)}
+                  disabled={loading}
+                  accessibilityLabel={showPassword ? 'Hide password' : 'Show password'}
+                  accessibilityRole="button"
+                  hitSlop={8}
+                >
+                  <EyeIcon hidden={showPassword} />
+                </Pressable>
+              </View>
               {err ? <Text style={ui.err}>{err}</Text> : null}
               {loading ? <ActivityIndicator style={{ marginBottom: 12 }} /> : null}
               <Pressable
@@ -397,6 +411,27 @@ const styles = StyleSheet.create({
     padding: 12,
     marginBottom: 12,
     backgroundColor: '#fff',
+  },
+  passwordField: {
+    position: 'relative',
+    marginBottom: 12,
+  },
+  passwordInput: {
+    borderWidth: 1,
+    borderColor: '#cbd5e1',
+    borderRadius: 8,
+    padding: 12,
+    paddingRight: 48,
+    backgroundColor: '#fff',
+  },
+  passwordToggle: {
+    position: 'absolute',
+    right: 4,
+    top: 0,
+    bottom: 0,
+    width: 44,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   ok: { color: '#15803d', marginBottom: 8 },
   button: {

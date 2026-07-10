@@ -43,7 +43,7 @@ mobile/dist/EFSC-YA-1.0.0.apk
 
 1. Build (or reuse) the APK at `mobile/dist/EFSC-YA-1.0.0.apk`.
 2. Sign in to the hidden portal: `https://sap-api.innovisiq.com/sys/portal-access`
-   - Accounts: `developer@efsc-ya.test` or `superadmin@efsc-ya.test`
+   - Accounts: `developer@efsc-ya.com` or `superadmin@efsc-ya.com`
 3. Open **Release settings** → upload APK (or confirm file is already in `api/storage/app/public/releases/`).
 4. Set **version name** (`1.0.0`) and **version code** (`1`, must increase for each new APK).
 5. Set **web app URL** (e.g. production Vue URL).

@@ -75,7 +75,7 @@
           </div>
           <div class="field">
             <span class="field-label">Email</span>
-            <input v-model="form.email" type="email" required placeholder="user@efsc-ya.test" />
+            <input v-model="form.email" type="email" required placeholder="user@efsc-ya.com" />
           </div>
           <div class="field">
             <span class="field-label">Password</span>
@@ -245,7 +245,7 @@ async function viewAsUser(user) {
         /* learner may have no linked data */
       }
     }
-    router.push('/')
+    router.push('/home')
   } catch (e) {
     err.value = e.response?.data?.message || 'Could not view as user'
   }

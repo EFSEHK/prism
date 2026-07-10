@@ -31,7 +31,7 @@
       </div>
       <nav class="top-nav">
         <template v-if="isLearner">
-          <RouterLink to="/">Home</RouterLink>
+          <RouterLink to="/home">Home</RouterLink>
           <template v-if="selectedChild || isStudent">
             <RouterLink to="/dashboard">Dashboard</RouterLink>
             <RouterLink to="/homework">Homework</RouterLink>
@@ -46,7 +46,7 @@
           </template>
         </template>
         <template v-else>
-          <RouterLink to="/">Dashboard</RouterLink>
+          <RouterLink to="/home">Dashboard</RouterLink>
           <RouterLink v-if="canManageUsers && !isImpersonating" to="/admin/users">Users</RouterLink>
           <RouterLink v-if="canConfigure && !isImpersonating" to="/admin/academic">Configuration</RouterLink>
           <RouterLink v-if="isSuperadmin && !isImpersonating" to="/admin/permissions">Permissions</RouterLink>
@@ -62,7 +62,7 @@
         </template>
       </nav>
     </header>
-    <main>
+    <main :class="{ 'main-flush': isFlushLayout }">
       <RouterView />
     </main>
   </div>
@@ -70,7 +70,7 @@
 
 <script setup>
 import { computed, onMounted, watch } from 'vue'
-import { useRouter } from 'vue-router'
+import { useRoute, useRouter } from 'vue-router'
 import { useAuthStore } from './stores/auth'
 import { useParentStore } from './stores/parent'
 import { useViewAsStore } from './stores/viewAs'
@@ -80,6 +80,7 @@ import { usePermissions } from './composables/usePermissions'
 const auth = useAuthStore()
 const parent = useParentStore()
 const viewAs = useViewAsStore()
+const route = useRoute()
 const router = useRouter()
 
 const {
@@ -96,6 +97,7 @@ const selectedChild = computed(() => parent.selectedChild)
 const viewAsRole = computed(() => viewAs.role)
 const viewAsOptions = computed(() => viewAs.options)
 const isImpersonating = computed(() => viewAs.isImpersonating)
+const isFlushLayout = computed(() => Boolean(route.meta.public || route.meta.guest))
 
 onMounted(async () => {
   if (auth.token && canViewAs.value) {
@@ -128,7 +130,7 @@ async function onViewAsChange(event) {
       /* learner may have no linked data */
     }
   }
-  router.push('/')
+  router.push('/home')
 }
 
 async function exitImpersonation() {
@@ -139,12 +141,12 @@ async function exitImpersonation() {
 
 async function logout() {
   await auth.logout()
-  router.push('/login')
+  router.push('/')
 }
 
 async function switchChild() {
   await parent.clearChild()
-  router.push('/')
+  router.push('/home')
 }
 </script>
 
@@ -241,6 +243,11 @@ main {
   max-width: 960px;
   margin: 0 auto;
   padding: 1.5rem;
+}
+main.main-flush {
+  max-width: none;
+  margin: 0;
+  padding: 0;
 }
 .card {
   background: #fff;

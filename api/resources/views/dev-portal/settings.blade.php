@@ -79,7 +79,7 @@
                 <div class="field">
                     <label for="web_app_url">Web app URL</label>
                     <input id="web_app_url" type="url" name="web_app_url" value="{{ old('web_app_url', $settings->web_app_url) }}" placeholder="https://school.example.com">
-                    <div class="hint">Shown on the public welcome page as “Open web app”.</div>
+                    <div class="hint">Public API root and /login redirect here (web landing + sign-in).</div>
                 </div>
 
                 <h2 class="section-title">Android</h2>

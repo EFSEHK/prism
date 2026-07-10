@@ -5,6 +5,7 @@ import { useRoles } from '../composables/useRoles'
 import { usePermissions } from '../composables/usePermissions'
 import { useViewAsStore } from '../stores/viewAs'
 import { roleView } from '../composables/useRoleView'
+import LandingView from '../views/LandingView.vue'
 import LoginView from '../views/LoginView.vue'
 import DashboardView from '../views/DashboardView.vue'
 import ParentHomeView from '../views/ParentHomeView.vue'
@@ -32,8 +33,9 @@ import ParentLeaveView from '../views/parent/ParentLeaveView.vue'
 const router = createRouter({
   history: createWebHistory(),
   routes: [
+    { path: '/', component: LandingView, meta: { public: true } },
     { path: '/login', component: LoginView, meta: { guest: true } },
-    { path: '/', component: roleView(ParentHomeView, DashboardView), meta: { auth: true } },
+    { path: '/home', component: roleView(ParentHomeView, DashboardView), meta: { auth: true } },
     { path: '/dashboard', component: ChildDashboardView, meta: { auth: true, requiresChild: true } },
     { path: '/admin/users', component: UsersAdminView, meta: { auth: true, usersAccess: true } },
     { path: '/admin/permissions', component: PermissionsAdminView, meta: { auth: true, superadminOnly: true } },
@@ -80,24 +82,25 @@ const router = createRouter({
 router.beforeEach((to) => {
   const auth = useAuthStore()
   if (to.meta.auth && !auth.token) return '/login'
-  if (to.meta.guest && auth.token) return '/'
+  if (to.meta.guest && auth.token) return '/home'
+  if (to.meta.public && auth.token && to.path === '/') return '/home'
 
   const viewAs = useViewAsStore()
   const { isLearner, isParent, isSuperadmin, canManageUsers } = useRoles()
 
-  if (viewAs.isImpersonating && to.path.startsWith('/admin')) return '/'
-  if (to.meta.usersAccess && !canManageUsers.value) return '/'
-  if (to.meta.superadminOnly && !isSuperadmin.value) return '/'
+  if (viewAs.isImpersonating && to.path.startsWith('/admin')) return '/home'
+  if (to.meta.usersAccess && !canManageUsers.value) return '/home'
+  if (to.meta.superadminOnly && !isSuperadmin.value) return '/home'
   if (to.meta.configAccess) {
     const { canConfigure } = usePermissions()
-    if (!canConfigure.value) return '/'
+    if (!canConfigure.value) return '/home'
   }
-  if (to.meta.staffOnly && isLearner.value) return '/'
-  if (to.meta.parentOnly && !isParent.value) return '/'
+  if (to.meta.staffOnly && isLearner.value) return '/home'
+  if (to.meta.parentOnly && !isParent.value) return '/home'
 
   if (to.meta.requiresChild && isParent.value) {
     const parent = useParentStore()
-    if (!parent.selectedChild) return '/'
+    if (!parent.selectedChild) return '/home'
   }
 })
 

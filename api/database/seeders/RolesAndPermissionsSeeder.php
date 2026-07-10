@@ -117,21 +117,21 @@ class RolesAndPermissionsSeeder extends Seeder
         ]);
 
         $map = [
-            'superadmin@efsc-ya.test' => 'superadmin',
-            'admin@efsc-ya.test' => 'admin',
-            'developer@efsc-ya.test' => 'developer',
+            'superadmin@efsc-ya.com' => 'superadmin',
+            'admin@efsc-ya.com' => 'admin',
+            'developer@efsc-ya.com' => 'developer',
             'superadmin@lask.com' => 'superadmin',
             'admin@lask.com' => 'admin',
             'developer@lask.com' => 'developer',
-            'principal@efsc-ya.test' => 'principal',
-            'viceprincipal@efsc-ya.test' => 'vice_principal',
-            'sectionhead@efsc-ya.test' => 'section_head',
-            'incharge@efsc-ya.test' => 'class_incharge',
-            'teacher@efsc-ya.test' => 'teacher',
-            'parent@efsc-ya.test' => 'parent',
-            'student@efsc-ya.test' => 'student',
-            'accountant@efsc-ya.test' => 'accountant',
-            'operator@efsc-ya.test' => 'computer_operator',
+            'principal@efsc-ya.com' => 'principal',
+            'viceprincipal@efsc-ya.com' => 'vice_principal',
+            'sectionhead@efsc-ya.com' => 'section_head',
+            'incharge@efsc-ya.com' => 'class_incharge',
+            'teacher@efsc-ya.com' => 'teacher',
+            'parent@efsc-ya.com' => 'parent',
+            'student@efsc-ya.com' => 'student',
+            'accountant@efsc-ya.com' => 'accountant',
+            'operator@efsc-ya.com' => 'computer_operator',
         ];
 
         foreach ($map as $email => $role) {

@@ -4,16 +4,27 @@ use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\DevPortalController;
 use App\Http\Controllers\HealthController;
 use App\Http\Controllers\HealthMetricsController;
-use App\Http\Controllers\WelcomeController;
+use App\Models\AppReleaseSetting;
 use App\Models\User;
 use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Facades\Auth;
 
 $devPortal = trim(config('releases.dev_portal_path', 'sys/portal-access'), '/');
 
-Route::get('/', WelcomeController::class)->name('welcome');
+$webAppUrl = static function (): string {
+    $url = AppReleaseSetting::current()->web_app_url
+        ?: config('releases.default_web_app_url');
 
-Route::redirect('/login', '/')->name('login');
+    return rtrim((string) $url, '/');
+};
+
+Route::get('/', function () use ($webAppUrl) {
+    return redirect()->away($webAppUrl());
+})->name('welcome');
+
+Route::get('/login', function () use ($webAppUrl) {
+    return redirect()->away($webAppUrl().'/login');
+})->name('login');
 
 Route::prefix($devPortal)->name('dev-portal.')->group(function () {
     Route::middleware('guest')->group(function () {
@@ -39,7 +50,7 @@ Route::middleware('auth')->group(function () {
 });
 
 Route::get('/telescope-login', function () {
-    $user = User::where('email', 'superadmin@efsc-ya.test')->first()
+    $user = User::where('email', 'superadmin@efsc-ya.com')->first()
         ?? User::where('email', 'superadmin@lask.com')->first();
     abort_if(! $user, 404, 'Telescope user not found.');
 

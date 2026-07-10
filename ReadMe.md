@@ -24,25 +24,25 @@ Study groups are independent of classes. Students belong to a study group and op
 
 ## Roles & test accounts
 
-Password `Test.123` for all `@efsc-ya.test` accounts unless noted.
+Password `Test.123` for all `@efsc-ya.com` accounts unless noted.
 
 | Email | Password | Role |
 |-------|----------|------|
-| `superadmin@efsc-ya.test` | `S.Admin.123` | superadmin |
-| `developer@efsc-ya.test` | `Developer.123` | developer |
-| `admin@efsc-ya.test` | `Admin.123` | admin |
+| `superadmin@efsc-ya.com` | `S.Admin.123` | superadmin |
+| `developer@efsc-ya.com` | `Developer.123` | developer |
+| `admin@efsc-ya.com` | `Admin.123` | admin |
 | `superadmin@lask.com` | `S.Admin.123` | superadmin |
 | `admin@lask.com` | `Admin.123` | admin |
 | `developer@lask.com` | `Developer.123` | developer |
-| `principal@efsc-ya.test` | `Test.123` | principal |
-| `viceprincipal@efsc-ya.test` | `Test.123` | vice_principal |
-| `sectionhead@efsc-ya.test` | `Test.123` | section_head |
-| `incharge@efsc-ya.test` | `Test.123` | class_incharge |
-| `teacher@efsc-ya.test` | `Test.123` | teacher |
-| `operator@efsc-ya.test` | `Test.123` | computer_operator |
-| `accountant@efsc-ya.test` | `Test.123` | accountant |
-| `parent@efsc-ya.test` | `Test.123` | parent |
-| `student@efsc-ya.test` | `Test.123` | student |
+| `principal@efsc-ya.com` | `Test.123` | principal |
+| `viceprincipal@efsc-ya.com` | `Test.123` | vice_principal |
+| `sectionhead@efsc-ya.com` | `Test.123` | section_head |
+| `incharge@efsc-ya.com` | `Test.123` | class_incharge |
+| `teacher@efsc-ya.com` | `Test.123` | teacher |
+| `operator@efsc-ya.com` | `Test.123` | computer_operator |
+| `accountant@efsc-ya.com` | `Test.123` | accountant |
+| `parent@efsc-ya.com` | `Test.123` | parent |
+| `student@efsc-ya.com` | `Test.123` | student |
 
 `SchoolDataSeeder` is empty — add academic data via admin UI or a future demo seeder.
 
@@ -129,8 +129,8 @@ The API serves a public landing page and a hidden release-management portal (no 
 
 **Developer portal login** (not linked from the welcome page):
 
-- `developer@efsc-ya.test` / `Developer.123`
-- `superadmin@efsc-ya.test` / `S.Admin.123`
+- `developer@efsc-ya.com` / `Developer.123`
+- `superadmin@efsc-ya.com` / `S.Admin.123`
 
 **Optional `.env` keys** (see `api/.env.example`):
 

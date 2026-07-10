@@ -30,9 +30,16 @@ class LoginIdentifier
 
     /**
      * Resolve a login identifier (admission no., CNIC, or email) to a stored email.
+     * Appends @{domain} when the user omits it; full emails are kept as entered.
      */
     public static function resolveEmail(string $input): string
     {
+        $input = trim(strtolower($input));
+
+        if (str_contains($input, '@')) {
+            return $input;
+        }
+
         return self::emailFromLocalPart($input);
     }
 }
