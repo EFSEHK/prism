@@ -15,7 +15,9 @@ return Application::configure(basePath: dirname(__DIR__))
         },
     )
     ->withMiddleware(function (Middleware $middleware) {
-        //
+        $middleware->alias([
+            'dev.portal' => \App\Http\Middleware\EnsureDeveloperOrSuperadmin::class,
+        ]);
     })
     ->withExceptions(function (Exceptions $exceptions) {
         //

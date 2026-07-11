@@ -2,6 +2,16 @@
     RewriteEngine On
 
     # Laragon vhost document root is the repo root; Laravel lives in api/public.
+
     # Map /api/* to the Laravel API routes (same as /api/public/api/*).
     RewriteRule ^api/(.*)$ api/public/api/$1 [L]
+
+    # Root → Laravel welcome / redirect
+    RewriteRule ^$ api/public/ [L]
+
+    # Other Laravel web routes & public assets (portal, storage, telescope, …)
+    # Skip real files/dirs at the repo root (web/, mobile/, ReadMe.md, …).
+    RewriteCond %{REQUEST_FILENAME} !-f
+    RewriteCond %{REQUEST_FILENAME} !-d
+    RewriteRule ^(.*)$ api/public/$1 [L]
 </IfModule>
