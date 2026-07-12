@@ -370,7 +370,7 @@ export default function StaffAttendanceScreen() {
 }
 
 const styles = StyleSheet.create({
-  scroll: { paddingBottom: 32 },
+  scroll: { padding: 16, paddingBottom: 32 },
   h1: { fontSize: 22, fontWeight: '700', marginBottom: 12, color: '#0f172a' },
   tabRow: { gap: 8, marginBottom: 16 },
   tab: {
