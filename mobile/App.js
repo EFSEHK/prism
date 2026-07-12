@@ -19,12 +19,12 @@ import {
   setViewAsUser,
   clearViewAs,
 } from './apiClient'
-import SideMenu, { HamburgerIcon, navItemsForContext } from './components/SideMenu'
+import SideMenu, { HamburgerIcon, HomeIcon, navItemsForContext } from './components/SideMenu'
 import EyeIcon from './components/EyeIcon'
 import ViewAsPicker from './components/ViewAsPicker'
+import FeatureDashboard from './components/FeatureDashboard'
 import {
   ParentHomeScreen,
-  ChildDashboardScreen,
   HomeworkScreen,
   MarksScreen,
   AttendanceScreen,
@@ -38,20 +38,10 @@ import {
 import { childName, formatError } from './utils/format'
 import { ui } from './components/ui'
 import { runStartupUpdateChecks } from './services/appUpdates'
+import { learnerFeatures, staffFeaturesFor } from './features'
 
 const DASHBOARD_INCLUDE =
   'homework,timetable,marks,broadcasts,fees,online_classes,leave,datesheet,notifications'
-
-function LogoutIcon() {
-  return (
-    <View style={styles.logoutIconWrap}>
-      <View style={styles.logoutDoor} />
-      <View style={styles.logoutArrowBody} />
-      <View style={styles.logoutArrowHeadUp} />
-      <View style={styles.logoutArrowHeadDown} />
-    </View>
-  )
-}
 
 export default function App() {
   const [email, setEmail] = useState('parent@efsc-ya.com')
@@ -114,7 +104,35 @@ export default function App() {
     return (source?.permissions || []).map((p) => (typeof p === 'string' ? p : p.name))
   }
 
-  async function enterContext({ roles, perms }) {
+  const loadDashboard = useCallback(async (studentId = null) => {
+    const params = { include: DASHBOARD_INCLUDE }
+    if (studentId) {
+      params.student_id = studentId
+    }
+    const { data } = await apiClient.get('/efsc/learner/dashboard', { params })
+    setDashboard(data)
+    return data
+  }, [])
+
+  async function enterLearnerContext(roles) {
+    const data = await loadDashboard()
+    const isParent = roles.includes('parent')
+    const isStudent = roles.includes('student')
+    // Parents pick a child first; students land on the icon dashboard.
+    if (!isParent && isStudent) {
+      const kids = data?.children ?? []
+      if (kids.length > 0) {
+        await loadDashboard(kids[0].id)
+        setSelectedChild(kids[0])
+        setTab('dashboard')
+        return
+      }
+    }
+    setSelectedChild(null)
+    setTab('home')
+  }
+
+  async function enterContext({ roles }) {
     setDashboard(null)
     setSelectedChild(null)
     setTab('home')
@@ -123,14 +141,14 @@ export default function App() {
     if (roles.includes('parent') || roles.includes('student')) {
       setLoading(true)
       try {
-        await loadDashboard()
+        await enterLearnerContext(roles)
       } catch (e) {
         setErr(formatError(e))
       } finally {
         setLoading(false)
       }
-    } else if (perms.includes('mark_attendance') || roles.includes('computer_operator')) {
-      setTab('attendance')
+    } else {
+      setTab('dashboard')
     }
   }
 
@@ -141,12 +159,7 @@ export default function App() {
     setViewAsRole(roleName)
 
     const effectiveRoles = roleName ? [roleName] : actualRoleNames
-    const option = viewAsOptions.find((r) => r.name === roleName)
-    const perms = roleName
-      ? (option?.permissions || [])
-      : permissionNamesFrom(user)
-
-    await enterContext({ roles: effectiveRoles, perms })
+    await enterContext({ roles: effectiveRoles })
   }
 
   async function applyViewAsUser(summary) {
@@ -169,7 +182,7 @@ export default function App() {
       setViewAsUser(next.id)
       setLoading(false)
       const roles = (next.roles || []).map((r) => r.name)
-      await enterContext({ roles, perms: permissionNames })
+      await enterContext({ roles })
     } catch (e) {
       clearViewAs()
       setImpersonateUser(null)
@@ -185,20 +198,10 @@ export default function App() {
     setViewAsRole('')
     setDashboard(null)
     setSelectedChild(null)
-    setTab('home')
+    setTab('dashboard')
     setErr('')
     setMenuOpen(false)
   }
-
-  const loadDashboard = useCallback(async (studentId = null) => {
-    const params = { include: DASHBOARD_INCLUDE }
-    if (studentId) {
-      params.student_id = studentId
-    }
-    const { data } = await apiClient.get('/efsc/learner/dashboard', { params })
-    setDashboard(data)
-    return data
-  }, [])
 
   async function login() {
     Keyboard.dismiss()
@@ -221,7 +224,6 @@ export default function App() {
       setViewAsOptions([])
       setViewAsUsers([])
       const roles = (data.user?.roles || []).map((r) => r.name)
-      const perms = (data.user?.permissions || []).map((p) => p.name)
       const privileged = roles.includes('superadmin')
       if (privileged) {
         try {
@@ -231,9 +233,9 @@ export default function App() {
         }
       }
       if (roles.includes('parent') || roles.includes('student')) {
-        await loadDashboard()
-      } else if (perms.includes('mark_attendance') || roles.includes('computer_operator')) {
-        setTab('attendance')
+        await enterLearnerContext(roles)
+      } else {
+        setTab('dashboard')
       }
     } catch (e) {
       setAuthToken('')
@@ -307,12 +309,19 @@ export default function App() {
     : viewAsRole
       ? (viewAsOption?.permissions || [])
       : (user?.permissions || []).map((p) => p.name)
-  const isLearnerRole = roleNames.includes('parent') || roleNames.includes('student')
+  const isParentRole = roleNames.includes('parent')
+  const isLearnerRole = isParentRole || roleNames.includes('student')
+  const isStaffRole = !isLearnerRole
   const isStaffAttendance =
     permissions.includes('mark_attendance') || roleNames.includes('computer_operator')
   const showApp = token && !err && (isLearnerRole ? !!dashboard : true)
   const hasSelectedChild = Boolean(selectedChild)
-  const navItems = navItemsForContext(hasSelectedChild, isStaffAttendance && !isLearnerRole)
+  const navItems = isStaffRole
+    ? [
+        { id: 'dashboard', label: 'Dashboard' },
+        ...(isStaffAttendance ? [{ id: 'attendance', label: 'Attendance' }] : []),
+      ]
+    : navItemsForContext(hasSelectedChild, false)
   const activeLabel = navItems.find((item) => item.id === tab)?.label ?? 'Home'
   const children = dashboard?.children ?? []
   const headerSubtitle = activeLabel
@@ -321,19 +330,44 @@ export default function App() {
     || (impersonateUser?.name)
     || user?.name
     || ''
+  const displayUserName = impersonateUser?.name || user?.name || ''
+  const staffFeatureList = staffFeaturesFor({ roles: roleNames, permissions })
+  const learnerFeatureList = learnerFeatures()
+  const unread = dashboard?.unread_notifications ?? 0
+
+  function goHome() {
+    if (isStaffRole || hasSelectedChild) {
+      setTab('dashboard')
+      return
+    }
+    setTab('home')
+  }
+
+  function renderFeatureDashboard({ child = null, features, subtitle }) {
+    return (
+      <FeatureDashboard
+        features={features}
+        child={child}
+        userName={displayUserName}
+        subtitle={subtitle}
+        onSelectFeature={(id) => setTab(id)}
+      />
+    )
+  }
 
   function renderTab() {
-    if (!isLearnerRole) {
-      if (isStaffAttendance) {
+    if (isStaffRole) {
+      if (tab === 'attendance' && isStaffAttendance) {
         return <StaffAttendanceScreen />
       }
-      return (
-        <View style={styles.staffMsg}>
-          <Text style={styles.staffMsgTitle}>Staff account</Text>
-          <Text style={styles.hint}>Use the EFSC-YA web app for staff features. Mobile is optimized for parents and students.</Text>
-        </View>
-      )
+      return renderFeatureDashboard({
+        features: staffFeatureList,
+        subtitle: staffFeatureList.length
+          ? 'Choose a feature to continue'
+          : 'No mobile features for this role yet',
+      })
     }
+
     if (!hasSelectedChild) {
       return (
         <ParentHomeScreen dashboard={dashboard} user={user} onSelectChild={selectChild} />
@@ -342,7 +376,14 @@ export default function App() {
 
     switch (tab) {
       case 'dashboard':
-        return <ChildDashboardScreen dashboard={dashboard} child={selectedChild} user={user} />
+      case 'home':
+        return renderFeatureDashboard({
+          child: selectedChild,
+          features: learnerFeatureList,
+          subtitle: unread > 0
+            ? `${unread} unread notification${unread === 1 ? '' : 's'}`
+            : 'Choose a feature to continue',
+        })
       case 'homework':
         return <HomeworkScreen />
       case 'marks':
@@ -362,7 +403,11 @@ export default function App() {
       case 'alerts':
         return <FeedScreen />
       default:
-        return <ChildDashboardScreen dashboard={dashboard} child={selectedChild} user={user} />
+        return renderFeatureDashboard({
+          child: selectedChild,
+          features: learnerFeatureList,
+          subtitle: 'Choose a feature to continue',
+        })
     }
   }
 
@@ -438,12 +483,12 @@ export default function App() {
         <>
           <View style={styles.header}>
             <Pressable
-              onPress={() => setMenuOpen(true)}
+              onPress={goHome}
               style={styles.menuBtn}
               hitSlop={8}
-              accessibilityLabel="Open menu"
+              accessibilityLabel="Home"
             >
-              <HamburgerIcon />
+              <HomeIcon />
             </Pressable>
             <View style={styles.headerCenter}>
               <Text style={styles.headerTitle}>EFSC-YA</Text>
@@ -477,8 +522,13 @@ export default function App() {
                 </>
               ) : null}
               <View style={styles.headerSeparator} />
-              <Pressable onPress={logout} style={styles.headerLogoutBtn} hitSlop={8} accessibilityLabel="Logout">
-                <LogoutIcon />
+              <Pressable
+                onPress={() => setMenuOpen(true)}
+                style={styles.headerMenuBtn}
+                hitSlop={8}
+                accessibilityLabel="Open menu"
+              >
+                <HamburgerIcon />
               </Pressable>
             </View>
           </View>
@@ -494,6 +544,7 @@ export default function App() {
             items={navItems}
             onChange={handleNavChange}
             onClose={() => setMenuOpen(false)}
+            onLogout={logout}
           />
         </>
       )}
@@ -555,8 +606,6 @@ const styles = StyleSheet.create({
     borderRadius: 8,
   },
   logoutText: { color: '#475569', fontWeight: '600' },
-  staffMsg: { padding: 24 },
-  staffMsgTitle: { fontSize: 20, fontWeight: '700', marginBottom: 8 },
   header: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -606,53 +655,11 @@ const styles = StyleSheet.create({
     color: '#2563eb',
     fontWeight: '700',
   },
-  headerLogoutBtn: {
+  headerMenuBtn: {
     width: 28,
     height: 28,
     alignItems: 'center',
     justifyContent: 'center',
-  },
-  logoutIconWrap: {
-    width: 16,
-    height: 16,
-    position: 'relative',
-  },
-  logoutDoor: {
-    position: 'absolute',
-    right: 1,
-    top: 2,
-    width: 7,
-    height: 12,
-    borderWidth: 1.5,
-    borderColor: '#2563eb',
-    borderLeftWidth: 0,
-    borderRadius: 1,
-  },
-  logoutArrowBody: {
-    position: 'absolute',
-    left: 1,
-    top: 7,
-    width: 8,
-    height: 1.8,
-    backgroundColor: '#2563eb',
-  },
-  logoutArrowHeadUp: {
-    position: 'absolute',
-    left: 6,
-    top: 5,
-    width: 5,
-    height: 1.8,
-    backgroundColor: '#2563eb',
-    transform: [{ rotate: '35deg' }],
-  },
-  logoutArrowHeadDown: {
-    position: 'absolute',
-    left: 6,
-    top: 9,
-    width: 5,
-    height: 1.8,
-    backgroundColor: '#2563eb',
-    transform: [{ rotate: '-35deg' }],
   },
   body: { flex: 1 },
   loadingOverlay: {

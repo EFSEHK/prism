@@ -1,6 +1,10 @@
 import { View, Text, Pressable, ScrollView, StyleSheet, Modal } from 'react-native'
+import Svg, { Path } from 'react-native-svg'
 
-export const NAV_ITEMS_STAFF = [{ id: 'attendance', label: 'Attendance' }]
+export const NAV_ITEMS_STAFF = [
+  { id: 'dashboard', label: 'Dashboard' },
+  { id: 'attendance', label: 'Attendance' },
+]
 
 export const NAV_ITEMS_HOME = [{ id: 'home', label: 'Home' }]
 
@@ -20,22 +24,41 @@ export const NAV_ITEMS_CHILD = [
 /** @deprecated Use NAV_ITEMS_HOME or NAV_ITEMS_CHILD */
 export const NAV_ITEMS = NAV_ITEMS_CHILD
 
-export function navItemsForContext(hasSelectedChild, isStaffAttendance = false) {
-  if (isStaffAttendance) return NAV_ITEMS_STAFF
+export function navItemsForContext(hasSelectedChild, isStaff = false) {
+  if (isStaff) return NAV_ITEMS_STAFF
   return hasSelectedChild ? NAV_ITEMS_CHILD : NAV_ITEMS_HOME
 }
 
-export function HamburgerIcon() {
+export function HamburgerIcon({ color = '#0f172a' }) {
   return (
     <View style={styles.hamburger}>
-      <View style={styles.bar} />
-      <View style={styles.bar} />
-      <View style={styles.bar} />
+      <View style={[styles.bar, { backgroundColor: color }]} />
+      <View style={[styles.bar, { backgroundColor: color }]} />
+      <View style={[styles.bar, { backgroundColor: color }]} />
     </View>
   )
 }
 
-export default function SideMenu({ visible, active, items, onChange, onClose }) {
+export function HomeIcon({ size = 22, color = '#0f172a' }) {
+  return (
+    <Svg
+      width={size}
+      height={size}
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke={color}
+      strokeWidth={2}
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      accessibilityElementsHidden
+      importantForAccessibility="no-hide-descendants"
+    >
+      <Path d="M3 9.5L12 3l9 6.5V20a1 1 0 0 1-1 1h-5v-6H9v6H4a1 1 0 0 1-1-1V9.5z" />
+    </Svg>
+  )
+}
+
+export default function SideMenu({ visible, active, items, onChange, onClose, onLogout }) {
   const navItems = items ?? NAV_ITEMS_CHILD
   const hasMultipleItems = navItems.length > 1
 
@@ -44,14 +67,20 @@ export default function SideMenu({ visible, active, items, onChange, onClose }) 
     onClose()
   }
 
+  function handleLogout() {
+    onClose()
+    onLogout?.()
+  }
+
   return (
     <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}>
       <View style={styles.overlay}>
+        <Pressable style={styles.backdrop} onPress={onClose} accessibilityLabel="Close menu" />
         <View style={styles.drawer}>
           <Text style={styles.drawerTitle}>Menu</Text>
           <ScrollView showsVerticalScrollIndicator={false}>
             {navItems.map((item) => (
-              <View key={item.id}>
+              <View key={`${item.id}-${item.label}`}>
                 {hasMultipleItems && item.id === 'home' ? <View style={styles.menuSeparator} /> : null}
                 <Pressable
                   onPress={() => select(item.id)}
@@ -63,9 +92,16 @@ export default function SideMenu({ visible, active, items, onChange, onClose }) 
                 </Pressable>
               </View>
             ))}
+            {onLogout ? (
+              <>
+                <View style={styles.menuSeparator} />
+                <Pressable onPress={handleLogout} style={styles.item}>
+                  <Text style={[styles.label, styles.logoutLabel]}>Logout</Text>
+                </Pressable>
+              </>
+            ) : null}
           </ScrollView>
         </View>
-        <Pressable style={styles.backdrop} onPress={onClose} accessibilityLabel="Close menu" />
       </View>
     </Modal>
   )
@@ -85,8 +121,8 @@ const styles = StyleSheet.create({
     backgroundColor: '#fff',
     paddingTop: 48,
     paddingBottom: 16,
-    borderRightWidth: 1,
-    borderRightColor: '#e2e8f0',
+    borderLeftWidth: 1,
+    borderLeftColor: '#e2e8f0',
   },
   drawerTitle: {
     fontSize: 13,
@@ -104,15 +140,15 @@ const styles = StyleSheet.create({
     marginBottom: 8,
     marginHorizontal: 20,
   },
+  itemActive: {
+    backgroundColor: '#eff6ff',
+    borderRightColor: '#2563eb',
+  },
   item: {
     paddingHorizontal: 20,
     paddingVertical: 14,
-    borderLeftWidth: 3,
-    borderLeftColor: 'transparent',
-  },
-  itemActive: {
-    backgroundColor: '#eff6ff',
-    borderLeftColor: '#2563eb',
+    borderRightWidth: 3,
+    borderRightColor: 'transparent',
   },
   label: {
     fontSize: 16,
@@ -121,6 +157,9 @@ const styles = StyleSheet.create({
   },
   labelActive: {
     color: '#2563eb',
+  },
+  logoutLabel: {
+    color: '#b91c1c',
   },
   hamburger: {
     width: 22,
