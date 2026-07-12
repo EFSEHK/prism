@@ -10,6 +10,7 @@ import {
 } from 'react-native'
 import { apiClient } from '../apiClient'
 import { formatError, paginatedItems } from '../utils/format'
+import { withTimeout } from '../utils/withTimeout'
 import { Card, EmptyNote, Section, ui } from '../components/ui'
 
 function ScreenWrap({ children, onRefresh }) {
@@ -43,10 +44,14 @@ export function ApprovalsScreen() {
   async function load() {
     setErr('')
     try {
-      const [b, d] = await Promise.all([
-        apiClient.get('/efsc/broadcasts/pending'),
-        apiClient.get('/efsc/notification-dispatches/pending'),
-      ])
+      const [b, d] = await withTimeout(
+        Promise.all([
+          apiClient.get('/efsc/broadcasts/pending'),
+          apiClient.get('/efsc/notification-dispatches/pending'),
+        ]),
+        20000,
+        'Approvals',
+      )
       setBroadcasts(Array.isArray(b.data) ? b.data : (b.data?.data ?? []))
       setDispatches(paginatedItems(d.data))
     } catch (e) {
@@ -150,7 +155,7 @@ export function UsersScreen() {
   async function load() {
     setErr('')
     try {
-      const { data } = await apiClient.get('/users')
+      const { data } = await withTimeout(apiClient.get('/users'), 20000, 'Users')
       setUsers(Array.isArray(data) ? data : (data?.data ?? []))
     } catch (e) {
       setErr(formatError(e))
@@ -190,11 +195,15 @@ export function ConfigurationScreen() {
   async function load() {
     setErr('')
     try {
-      const [c, s, a] = await Promise.all([
-        apiClient.get('/efsc/academic/classes'),
-        apiClient.get('/efsc/academic/sections'),
-        apiClient.get('/efsc/academic/areas'),
-      ])
+      const [c, s, a] = await withTimeout(
+        Promise.all([
+          apiClient.get('/efsc/academic/classes'),
+          apiClient.get('/efsc/academic/sections'),
+          apiClient.get('/efsc/academic/areas'),
+        ]),
+        20000,
+        'Configuration',
+      )
       setClasses(c.data?.data ?? c.data ?? [])
       setSections(s.data?.data ?? s.data ?? [])
       setAreas(a.data?.data ?? a.data ?? [])
@@ -250,7 +259,7 @@ export function PermissionsScreen() {
   async function load() {
     setErr('')
     try {
-      const { data } = await apiClient.get('/roles')
+      const { data } = await withTimeout(apiClient.get('/roles'), 20000, 'Permissions')
       setRoles(Array.isArray(data) ? data : (data?.data ?? []))
     } catch (e) {
       setErr(formatError(e))

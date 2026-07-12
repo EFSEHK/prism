@@ -38,13 +38,13 @@ import {
   OnlineClassScreen,
   LeaveScreen,
 } from './screens/ParentScreens'
-import ComingSoonScreen from './screens/ComingSoonScreen'
 import {
   ApprovalsScreen,
   UsersScreen,
   ConfigurationScreen,
   PermissionsScreen,
 } from './screens/StaffModuleScreens'
+import NavigationErrorBoundary from './components/NavigationErrorBoundary'
 import { childName, formatError } from './utils/format'
 import { ui } from './components/ui'
 import { runStartupUpdateChecks } from './services/appUpdates'
@@ -347,7 +347,7 @@ export default function App() {
       switchChild()
       return
     }
-    setTab(id)
+    selectFeatureSafe(id)
   }
 
   const roleNames = impersonateUser
@@ -393,6 +393,24 @@ export default function App() {
     setTab('home')
   }
 
+  function selectFeatureSafe(id) {
+    try {
+      if (!id || isCatalogComingSoon(modules, id)) {
+        return
+      }
+      if (id !== 'dashboard' && id !== 'home' && !isCatalogLive(modules, id) && isStaffRole) {
+        setErr('This feature is not available.')
+        setTab('dashboard')
+        return
+      }
+      setErr('')
+      setTab(id)
+    } catch (e) {
+      setErr(formatError(e) || 'Something went wrong — please try again')
+      setTab(isStaffRole || isStudentRole || hasSelectedChild ? 'dashboard' : 'home')
+    }
+  }
+
   function renderFeatureDashboard({ child = null, features, subtitle }) {
     return (
       <FeatureDashboard
@@ -400,7 +418,7 @@ export default function App() {
         child={child}
         userName={displayUserName}
         subtitle={subtitle}
-        onSelectFeature={(id) => setTab(id)}
+        onSelectFeature={selectFeatureSafe}
       />
     )
   }
@@ -454,7 +472,15 @@ export default function App() {
           return <PermissionsScreen />
         default:
           return (
-            <ComingSoonScreen title={modules.find((m) => m.id === tab)?.label || tab} />
+            <View style={{ flex: 1, padding: 24, justifyContent: 'center' }}>
+              <Text style={{ fontSize: 18, fontWeight: '700', marginBottom: 8 }}>Something went wrong</Text>
+              <Text style={{ color: '#64748b', marginBottom: 16 }}>
+                This screen is not available. Please try again from the dashboard.
+              </Text>
+              <Pressable style={styles.button} onPress={() => setTab('dashboard')}>
+                <Text style={styles.buttonText}>Back to dashboard</Text>
+              </Pressable>
+            </View>
           )
       }
     }
@@ -650,7 +676,14 @@ export default function App() {
               <ActivityIndicator size="large" color="#2563eb" />
             </View>
           ) : null}
-          <View style={styles.body}>{renderTab()}</View>
+          <View style={styles.body}>
+            <NavigationErrorBoundary
+              key={tab}
+              onReset={() => setTab(isStaffRole || isStudentRole || hasSelectedChild ? 'dashboard' : 'home')}
+            >
+              {renderTab()}
+            </NavigationErrorBoundary>
+          </View>
           <SideMenu
             visible={menuOpen}
             active={tab}
