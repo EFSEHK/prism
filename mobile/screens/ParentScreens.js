@@ -142,35 +142,170 @@ export function HomeScreen(props) {
 
 export function HomeworkScreen() {
   const [items, setItems] = useState([])
+  const [studyGroups, setStudyGroups] = useState([])
+  const [subjects, setSubjects] = useState([])
+  const [studyGroupId, setStudyGroupId] = useState('')
+  const [title, setTitle] = useState('')
+  const [body, setBody] = useState('')
+  const [dueDate, setDueDate] = useState('')
+  const [subjectId, setSubjectId] = useState('')
   const [loading, setLoading] = useState(true)
+  const [saving, setSaving] = useState(false)
   const [err, setErr] = useState('')
+  const [ok, setOk] = useState('')
+
+  const loadMeta = async () => {
+    const [sg, sub] = await Promise.all([
+      apiClient.get('/efsc/academic/study-groups'),
+      apiClient.get('/efsc/academic/subjects'),
+    ])
+    const groups = sg.data?.data ?? sg.data ?? []
+    const subjectList = sub.data?.data ?? sub.data ?? []
+    setStudyGroups(Array.isArray(groups) ? groups : [])
+    setSubjects(Array.isArray(subjectList) ? subjectList : [])
+    if (!studyGroupId && groups.length) {
+      setStudyGroupId(String(groups[0].id))
+    }
+  }
+
   const load = async () => {
     setErr('')
     try {
-      const { data } = await apiClient.get('/efsc/homework', { params: { per_page: 30 } })
+      const params = { per_page: 30 }
+      if (studyGroupId) params.study_group_id = studyGroupId
+      const { data } = await apiClient.get('/efsc/homework', { params })
       setItems(paginatedItems(data))
     } catch (e) {
       setErr(formatError(e))
+      setItems([])
     } finally {
       setLoading(false)
     }
   }
-  useEffect(() => { load() }, [])
-  if (loading) return <ActivityIndicator style={styles.center} />
+
+  const create = async () => {
+    setErr('')
+    setOk('')
+    if (!studyGroupId || !title.trim()) {
+      setErr('Study group and title are required.')
+      return
+    }
+    setSaving(true)
+    try {
+      await apiClient.post('/efsc/homework', {
+        study_group_id: Number(studyGroupId),
+        subject_id: subjectId ? Number(subjectId) : null,
+        title: title.trim(),
+        body,
+        due_date: dueDate || null,
+      })
+      setOk('Posted — awaiting section head approval.')
+      setTitle('')
+      setBody('')
+      setDueDate('')
+      setSubjectId('')
+      await load()
+    } catch (e) {
+      setErr(formatError(e))
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  useEffect(() => {
+    let cancelled = false
+    ;(async () => {
+      try {
+        await loadMeta()
+      } catch (e) {
+        if (!cancelled) setErr(formatError(e))
+      }
+    })()
+    return () => { cancelled = true }
+  }, [])
+
+  useEffect(() => { load() }, [studyGroupId])
+
+  if (loading && items.length === 0) return <ActivityIndicator style={styles.center} />
+
   return (
     <ScreenWrap refreshing={false} onRefresh={load}>
       <Text style={styles.h1}>Homework diary</Text>
       {err ? <Text style={ui.err}>{err}</Text> : null}
-      {items.length === 0 ? <EmptyNote text="No homework posts." /> : null}
-      {items.map((h) => (
-        <Card
-          key={h.id}
-          title={h.title}
-          meta={`${h.subject?.name || ''} · ${h.school_class?.name || ''}`}
-          body={h.body}
-          sub={h.due_date ? `Due ${formatDate(h.due_date)}` : null}
+      {ok ? <Text style={styles.ok}>{ok}</Text> : null}
+
+      {studyGroups.length > 0 ? (
+        <View style={styles.pickerWrap}>
+          <Text style={styles.label}>Study group</Text>
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.chipRow}>
+            {studyGroups.map((g) => (
+              <Pressable
+                key={g.id}
+                onPress={() => setStudyGroupId(String(g.id))}
+                style={[styles.chip, studyGroupId === String(g.id) && styles.chipActive]}
+              >
+                <Text style={[styles.chipText, studyGroupId === String(g.id) && styles.chipTextActive]}>
+                  {g.name}
+                </Text>
+              </Pressable>
+            ))}
+          </ScrollView>
+        </View>
+      ) : null}
+
+      <Section title="New post">
+        <TextInput style={styles.input} placeholder="Title" value={title} onChangeText={setTitle} />
+        <TextInput
+          style={[styles.input, styles.textarea]}
+          placeholder="Body"
+          value={body}
+          onChangeText={setBody}
+          multiline
         />
-      ))}
+        <TextInput
+          style={styles.input}
+          placeholder="Due date (YYYY-MM-DD)"
+          value={dueDate}
+          onChangeText={setDueDate}
+        />
+        {subjects.length > 0 ? (
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.chipRow}>
+            <Pressable
+              onPress={() => setSubjectId('')}
+              style={[styles.chip, !subjectId && styles.chipActive]}
+            >
+              <Text style={[styles.chipText, !subjectId && styles.chipTextActive]}>—</Text>
+            </Pressable>
+            {subjects.map((s) => (
+              <Pressable
+                key={s.id}
+                onPress={() => setSubjectId(String(s.id))}
+                style={[styles.chip, subjectId === String(s.id) && styles.chipActive]}
+              >
+                <Text style={[styles.chipText, subjectId === String(s.id) && styles.chipTextActive]}>
+                  {s.name}
+                </Text>
+              </Pressable>
+            ))}
+          </ScrollView>
+        ) : null}
+        <Pressable style={[styles.btn, saving && styles.btnDisabled]} onPress={create} disabled={saving}>
+          <Text style={styles.btnText}>{saving ? 'Posting…' : 'Post homework'}</Text>
+        </Pressable>
+      </Section>
+
+      <Section title="Recent">
+        {items.length === 0 ? <EmptyNote text="No homework posts." /> : null}
+        {items.map((h) => (
+          <Card
+            key={h.id}
+            title={h.title}
+            meta={`${h.subject?.name || ''} · ${h.status || ''}`.trim()}
+            body={h.body}
+            sub={h.due_date ? `Due ${formatDate(h.due_date)}` : null}
+          />
+        ))}
+      </Section>
     </ScreenWrap>
   )
 }
@@ -606,6 +741,21 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginBottom: 12,
   },
+  btnDisabled: { opacity: 0.6 },
   btnText: { color: '#fff', fontWeight: '600' },
   ok: { color: '#15803d', marginBottom: 8 },
+  textarea: { minHeight: 80, textAlignVertical: 'top' },
+  pickerWrap: { marginBottom: 12 },
+  chipRow: { gap: 8, paddingVertical: 4 },
+  chip: {
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 20,
+    backgroundColor: '#f1f5f9',
+    borderWidth: 1,
+    borderColor: '#e2e8f0',
+  },
+  chipActive: { backgroundColor: '#dbeafe', borderColor: '#2563eb' },
+  chipText: { fontSize: 14, color: '#334155' },
+  chipTextActive: { color: '#1d4ed8', fontWeight: '600' },
 })
