@@ -38,7 +38,7 @@ import {
 import { childName, formatError } from './utils/format'
 import { ui } from './components/ui'
 import { runStartupUpdateChecks } from './services/appUpdates'
-import { learnerFeatures, staffFeaturesFor } from './features'
+import { learnerFeatures, staffFeaturesFor, FEATURE_READY } from './features'
 
 const DASHBOARD_INCLUDE =
   'homework,timetable,marks,broadcasts,fees,online_classes,leave,datesheet,notifications'
@@ -76,6 +76,20 @@ export default function App() {
       setViewAsRole(viewAsRole)
     }
   }, [viewAsRole, impersonateUser])
+
+  // Students never use the parent child-picker; bind self if dashboard has a profile.
+  useEffect(() => {
+    const roles = impersonateUser
+      ? (impersonateUser.roles || []).map((r) => r.name)
+      : viewAsRole
+        ? [viewAsRole]
+        : (user?.roles || []).map((r) => r.name)
+    if (!roles.includes('student') || roles.includes('parent') || selectedChild) return
+    const kids = dashboard?.children ?? []
+    if (kids.length === 0) return
+    setSelectedChild(kids[0])
+    setTab((current) => (current === 'home' ? 'dashboard' : current))
+  }, [impersonateUser, viewAsRole, user, selectedChild, dashboard])
 
   const actualRoleNames = (user?.roles || []).map((r) => r.name)
   const isActuallySuperadmin = actualRoleNames.includes('superadmin')
@@ -118,15 +132,17 @@ export default function App() {
     const data = await loadDashboard()
     const isParent = roles.includes('parent')
     const isStudent = roles.includes('student')
-    // Parents pick a child first; students land on the icon dashboard.
-    if (!isParent && isStudent) {
+    // Parents pick a child first; students go straight to the feature dashboard.
+    if (isStudent && !isParent) {
       const kids = data?.children ?? []
       if (kids.length > 0) {
         await loadDashboard(kids[0].id)
         setSelectedChild(kids[0])
-        setTab('dashboard')
-        return
+      } else {
+        setSelectedChild(null)
       }
+      setTab('dashboard')
+      return
     }
     setSelectedChild(null)
     setTab('home')
@@ -310,7 +326,8 @@ export default function App() {
       ? (viewAsOption?.permissions || [])
       : (user?.permissions || []).map((p) => p.name)
   const isParentRole = roleNames.includes('parent')
-  const isLearnerRole = isParentRole || roleNames.includes('student')
+  const isStudentRole = roleNames.includes('student')
+  const isLearnerRole = isParentRole || isStudentRole
   const isStaffRole = !isLearnerRole
   const isStaffAttendance =
     permissions.includes('mark_attendance') || roleNames.includes('computer_operator')
@@ -319,13 +336,16 @@ export default function App() {
   const navItems = isStaffRole
     ? [
         { id: 'dashboard', label: 'Dashboard' },
-        ...(isStaffAttendance ? [{ id: 'attendance', label: 'Attendance' }] : []),
+        ...(isStaffAttendance && FEATURE_READY.attendance
+          ? [{ id: 'attendance', label: 'Attendance' }]
+          : []),
       ]
-    : navItemsForContext(hasSelectedChild, false)
+    : navItemsForContext(hasSelectedChild, false, isStudentRole)
   const activeLabel = navItems.find((item) => item.id === tab)?.label ?? 'Home'
   const children = dashboard?.children ?? []
+  const learnerChild = selectedChild || (isStudentRole ? children[0] ?? null : null)
   const headerSubtitle = activeLabel
-  const selectedChildLabel = hasSelectedChild ? childName(selectedChild) : ''
+  const selectedChildLabel = learnerChild ? childName(learnerChild) : ''
   const headerRightName = selectedChildLabel
     || (impersonateUser?.name)
     || user?.name
@@ -336,7 +356,7 @@ export default function App() {
   const unread = dashboard?.unread_notifications ?? 0
 
   function goHome() {
-    if (isStaffRole || hasSelectedChild) {
+    if (isStaffRole || isStudentRole || hasSelectedChild) {
       setTab('dashboard')
       return
     }
@@ -357,7 +377,7 @@ export default function App() {
 
   function renderTab() {
     if (isStaffRole) {
-      if (tab === 'attendance' && isStaffAttendance) {
+      if (tab === 'attendance' && isStaffAttendance && FEATURE_READY.attendance) {
         return <StaffAttendanceScreen />
       }
       return renderFeatureDashboard({
@@ -368,17 +388,31 @@ export default function App() {
       })
     }
 
-    if (!hasSelectedChild) {
+    // Parents must pick a child; students skip this and land on the dashboard.
+    if (isParentRole && !hasSelectedChild) {
       return (
         <ParentHomeScreen dashboard={dashboard} user={user} onSelectChild={selectChild} />
       )
+    }
+
+    const childId = learnerChild?.id
+    const featureOpen = tab === 'dashboard' || tab === 'home' || FEATURE_READY[tab] === true
+
+    if (!featureOpen) {
+      return renderFeatureDashboard({
+        child: learnerChild,
+        features: learnerFeatureList,
+        subtitle: unread > 0
+          ? `${unread} unread notification${unread === 1 ? '' : 's'}`
+          : 'Choose a feature to continue',
+      })
     }
 
     switch (tab) {
       case 'dashboard':
       case 'home':
         return renderFeatureDashboard({
-          child: selectedChild,
+          child: learnerChild,
           features: learnerFeatureList,
           subtitle: unread > 0
             ? `${unread} unread notification${unread === 1 ? '' : 's'}`
@@ -389,7 +423,7 @@ export default function App() {
       case 'marks':
         return <MarksScreen />
       case 'attendance':
-        return <AttendanceScreen children={children} selectedChildId={selectedChild.id} />
+        return <AttendanceScreen children={children} selectedChildId={childId} />
       case 'timetable':
         return <TimetableScreen />
       case 'notifications':
@@ -399,12 +433,12 @@ export default function App() {
       case 'online':
         return <OnlineClassScreen />
       case 'leave':
-        return <LeaveScreen children={children} selectedChildId={selectedChild.id} />
+        return <LeaveScreen children={children} selectedChildId={childId} />
       case 'alerts':
         return <FeedScreen />
       default:
         return renderFeatureDashboard({
-          child: selectedChild,
+          child: learnerChild,
           features: learnerFeatureList,
           subtitle: 'Choose a feature to continue',
         })

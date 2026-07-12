@@ -1,5 +1,6 @@
 import { View, Text, Pressable, ScrollView, StyleSheet, Modal } from 'react-native'
 import Svg, { Path } from 'react-native-svg'
+import { FEATURE_READY } from '../features'
 
 export const NAV_ITEMS_STAFF = [
   { id: 'dashboard', label: 'Dashboard' },
@@ -21,12 +22,25 @@ export const NAV_ITEMS_CHILD = [
   { id: 'home', label: 'Switch child' },
 ]
 
+/** Student nav — same as child dashboard, without Switch child. */
+export const NAV_ITEMS_STUDENT = NAV_ITEMS_CHILD.filter((item) => item.id !== 'home')
+
 /** @deprecated Use NAV_ITEMS_HOME or NAV_ITEMS_CHILD */
 export const NAV_ITEMS = NAV_ITEMS_CHILD
 
-export function navItemsForContext(hasSelectedChild, isStaff = false) {
-  if (isStaff) return NAV_ITEMS_STAFF
-  return hasSelectedChild ? NAV_ITEMS_CHILD : NAV_ITEMS_HOME
+const ALWAYS_VISIBLE_NAV = new Set(['dashboard', 'home'])
+
+function onlyReadyNavItems(items) {
+  return items.filter(
+    (item) => ALWAYS_VISIBLE_NAV.has(item.id) || FEATURE_READY[item.id] === true,
+  )
+}
+
+export function navItemsForContext(hasSelectedChild, isStaff = false, isStudent = false) {
+  if (isStaff) return onlyReadyNavItems(NAV_ITEMS_STAFF)
+  if (isStudent) return onlyReadyNavItems(NAV_ITEMS_STUDENT)
+  if (!hasSelectedChild) return NAV_ITEMS_HOME
+  return onlyReadyNavItems(NAV_ITEMS_CHILD)
 }
 
 export function HamburgerIcon({ color = '#0f172a' }) {
