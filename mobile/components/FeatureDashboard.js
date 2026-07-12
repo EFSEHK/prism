@@ -55,7 +55,7 @@ export default function FeatureDashboard({
   }
 
   function handlePress(feature) {
-    if (feature.ready === false) {
+    if (feature.ready === false || feature.comingSoon) {
       notifyComingSoon()
       return
     }
@@ -90,7 +90,7 @@ export default function FeatureDashboard({
         <View style={styles.grid}>
           {features.map((feature) => {
             const Icon = FEATURE_ICON_MAP[feature.id]
-            const ready = feature.ready !== false
+            const ready = feature.ready !== false && !feature.comingSoon
             const tint = ready ? feature.tint : GREY_TINT
             const soft = ready ? feature.soft : GREY_SOFT
 

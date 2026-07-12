@@ -19,7 +19,12 @@ import {
   setViewAsUser,
   clearViewAs,
 } from './apiClient'
-import SideMenu, { HamburgerIcon, HomeIcon, navItemsForContext } from './components/SideMenu'
+import SideMenu, {
+  HamburgerIcon,
+  HomeIcon,
+  navItemsForContext,
+  staffNavItemsFromModules,
+} from './components/SideMenu'
 import EyeIcon from './components/EyeIcon'
 import ViewAsPicker from './components/ViewAsPicker'
 import FeatureDashboard from './components/FeatureDashboard'
@@ -29,16 +34,15 @@ import {
   MarksScreen,
   AttendanceScreen,
   StaffAttendanceScreen,
-  TimetableScreen,
   FeedScreen,
-  FeesScreen,
   OnlineClassScreen,
   LeaveScreen,
 } from './screens/ParentScreens'
+import ComingSoonScreen from './screens/ComingSoonScreen'
 import { childName, formatError } from './utils/format'
 import { ui } from './components/ui'
 import { runStartupUpdateChecks } from './services/appUpdates'
-import { learnerFeatures, staffFeaturesFor, FEATURE_READY } from './features'
+import { learnerFeatures, staffFeaturesFor, isPendingMobileScreen, isCatalogComingSoon } from './features'
 
 const DASHBOARD_INCLUDE =
   'homework,timetable,marks,broadcasts,fees,online_classes,leave,datesheet,notifications'
@@ -60,6 +64,7 @@ export default function App() {
   const [viewAsUsers, setViewAsUsers] = useState([])
   const [viewAsUsersLoading, setViewAsUsersLoading] = useState(false)
   const [impersonateUser, setImpersonateUser] = useState(null)
+  const [modules, setModules] = useState([])
 
   useEffect(() => {
     runStartupUpdateChecks()
@@ -118,6 +123,13 @@ export default function App() {
     return (source?.permissions || []).map((p) => (typeof p === 'string' ? p : p.name))
   }
 
+  const loadModules = useCallback(async () => {
+    const { data } = await apiClient.get('/efsc/modules', { params: { platform: 'mobile' } })
+    const list = Array.isArray(data?.data) ? data.data : (Array.isArray(data) ? data : [])
+    setModules(list.filter((m) => m && m.enabled !== false))
+    return list
+  }, [])
+
   const loadDashboard = useCallback(async (studentId = null) => {
     const params = { include: DASHBOARD_INCLUDE }
     if (studentId) {
@@ -127,6 +139,14 @@ export default function App() {
     setDashboard(data)
     return data
   }, [])
+
+  async function refreshModulesSafe() {
+    try {
+      await loadModules()
+    } catch {
+      setModules([])
+    }
+  }
 
   async function enterLearnerContext(roles) {
     const data = await loadDashboard()
@@ -153,6 +173,8 @@ export default function App() {
     setSelectedChild(null)
     setTab('home')
     setErr('')
+
+    await refreshModulesSafe()
 
     if (roles.includes('parent') || roles.includes('student')) {
       setLoading(true)
@@ -217,6 +239,7 @@ export default function App() {
     setTab('dashboard')
     setErr('')
     setMenuOpen(false)
+    await refreshModulesSafe()
   }
 
   async function login() {
@@ -226,6 +249,7 @@ export default function App() {
     setDashboard(null)
     setUser(null)
     setSelectedChild(null)
+    setModules([])
     setTab('home')
     try {
       const { data } = await apiClient.post('/login', { email, password })
@@ -248,6 +272,7 @@ export default function App() {
           /* ignore */
         }
       }
+      await refreshModulesSafe()
       if (roles.includes('parent') || roles.includes('student')) {
         await enterLearnerContext(roles)
       } else {
@@ -259,6 +284,7 @@ export default function App() {
       setUser(null)
       setDashboard(null)
       setSelectedChild(null)
+      setModules([])
       setErr(formatError(e))
     } finally {
       setLoading(false)
@@ -277,6 +303,7 @@ export default function App() {
     setUser(null)
     setDashboard(null)
     setSelectedChild(null)
+    setModules([])
     setViewAsRoleState('')
     setViewAsOptions([])
     setViewAsUsers([])
@@ -319,28 +346,22 @@ export default function App() {
     : viewAsRole
       ? [viewAsRole]
       : actualRoleNames
-  const viewAsOption = viewAsOptions.find((r) => r.name === viewAsRole)
-  const permissions = impersonateUser
-    ? (impersonateUser.permissions || [])
-    : viewAsRole
-      ? (viewAsOption?.permissions || [])
-      : (user?.permissions || []).map((p) => p.name)
   const isParentRole = roleNames.includes('parent')
   const isStudentRole = roleNames.includes('student')
   const isLearnerRole = isParentRole || isStudentRole
   const isStaffRole = !isLearnerRole
-  const isStaffAttendance =
-    permissions.includes('mark_attendance') || roleNames.includes('computer_operator')
+  const moduleEnabledIds = new Set(
+    modules.filter((m) => m.enabled !== false).map((m) => m.id),
+  )
+  const comingSoonIds = new Set(
+    modules.filter((m) => m.coming_soon === true).map((m) => m.id),
+  )
+  const attendanceEnabled = moduleEnabledIds.has('attendance') && !comingSoonIds.has('attendance')
   const showApp = token && !err && (isLearnerRole ? !!dashboard : true)
   const hasSelectedChild = Boolean(selectedChild)
   const navItems = isStaffRole
-    ? [
-        { id: 'dashboard', label: 'Dashboard' },
-        ...(isStaffAttendance && FEATURE_READY.attendance
-          ? [{ id: 'attendance', label: 'Attendance' }]
-          : []),
-      ]
-    : navItemsForContext(hasSelectedChild, false, isStudentRole)
+    ? staffNavItemsFromModules(modules)
+    : navItemsForContext(hasSelectedChild, false, isStudentRole, moduleEnabledIds, comingSoonIds)
   const activeLabel = navItems.find((item) => item.id === tab)?.label ?? 'Home'
   const children = dashboard?.children ?? []
   const learnerChild = selectedChild || (isStudentRole ? children[0] ?? null : null)
@@ -351,8 +372,8 @@ export default function App() {
     || user?.name
     || ''
   const displayUserName = impersonateUser?.name || user?.name || ''
-  const staffFeatureList = staffFeaturesFor({ roles: roleNames, permissions })
-  const learnerFeatureList = learnerFeatures()
+  const staffFeatureList = staffFeaturesFor(modules)
+  const learnerFeatureList = learnerFeatures(modules)
   const unread = dashboard?.unread_notifications ?? 0
 
   function goHome() {
@@ -377,8 +398,30 @@ export default function App() {
 
   function renderTab() {
     if (isStaffRole) {
-      if (tab === 'attendance' && isStaffAttendance && FEATURE_READY.attendance) {
+      if (tab === 'dashboard' || tab === 'home') {
+        return renderFeatureDashboard({
+          features: staffFeatureList,
+          subtitle: staffFeatureList.length
+            ? 'Choose a feature to continue'
+            : 'No mobile features for this role yet',
+        })
+      }
+      if (tab === 'attendance' && attendanceEnabled) {
         return <StaffAttendanceScreen />
+      }
+      if (isCatalogComingSoon(modules, tab)) {
+        return renderFeatureDashboard({
+          features: staffFeatureList,
+          subtitle: staffFeatureList.length
+            ? 'Choose a feature to continue'
+            : 'No mobile features for this role yet',
+        })
+      }
+      if (moduleEnabledIds.has(tab)) {
+        if (isPendingMobileScreen(tab)) {
+          const label = modules.find((m) => m.id === tab)?.label || tab
+          return <ComingSoonScreen title={label} />
+        }
       }
       return renderFeatureDashboard({
         features: staffFeatureList,
@@ -396,7 +439,9 @@ export default function App() {
     }
 
     const childId = learnerChild?.id
-    const featureOpen = tab === 'dashboard' || tab === 'home' || FEATURE_READY[tab] === true
+    const featureOpen = tab === 'dashboard'
+      || tab === 'home'
+      || (moduleEnabledIds.has(tab) && !comingSoonIds.has(tab))
 
     if (!featureOpen) {
       return renderFeatureDashboard({
@@ -425,11 +470,17 @@ export default function App() {
       case 'attendance':
         return <AttendanceScreen children={children} selectedChildId={childId} />
       case 'timetable':
-        return <TimetableScreen />
+      case 'fees':
+        // Catalog marks these coming_soon to match web ComingSoonView.
+        return renderFeatureDashboard({
+          child: learnerChild,
+          features: learnerFeatureList,
+          subtitle: unread > 0
+            ? `${unread} unread notification${unread === 1 ? '' : 's'}`
+            : 'Choose a feature to continue',
+        })
       case 'notifications':
         return <FeedScreen />
-      case 'fees':
-        return <FeesScreen />
       case 'online':
         return <OnlineClassScreen />
       case 'leave':

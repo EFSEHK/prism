@@ -1,6 +1,5 @@
 import { View, Text, Pressable, ScrollView, StyleSheet, Modal } from 'react-native'
 import Svg, { Path } from 'react-native-svg'
-import { FEATURE_READY } from '../features'
 
 export const NAV_ITEMS_STAFF = [
   { id: 'dashboard', label: 'Dashboard' },
@@ -30,17 +29,59 @@ export const NAV_ITEMS = NAV_ITEMS_CHILD
 
 const ALWAYS_VISIBLE_NAV = new Set(['dashboard', 'home'])
 
-function onlyReadyNavItems(items) {
+/**
+ * @param {Array<{ id: string, label: string }>} items
+ * @param {Set<string>|string[]|null} enabledIds - module ids enabled by GET /efsc/modules
+ */
+function onlyEnabledNavItems(items, enabledIds) {
+  if (!enabledIds) {
+    return items.filter((item) => ALWAYS_VISIBLE_NAV.has(item.id))
+  }
+  const enabled = enabledIds instanceof Set ? enabledIds : new Set(enabledIds)
   return items.filter(
-    (item) => ALWAYS_VISIBLE_NAV.has(item.id) || FEATURE_READY[item.id] === true,
+    (item) => ALWAYS_VISIBLE_NAV.has(item.id) || enabled.has(item.id),
   )
 }
 
-export function navItemsForContext(hasSelectedChild, isStaff = false, isStudent = false) {
-  if (isStaff) return onlyReadyNavItems(NAV_ITEMS_STAFF)
-  if (isStudent) return onlyReadyNavItems(NAV_ITEMS_STUDENT)
+/**
+ * Build staff side-nav from the module catalog (dashboard first, then enabled modules).
+ * @param {Array<{ id: string, label?: string, enabled?: boolean, platforms?: string[] }>} modules
+ */
+export function staffNavItemsFromModules(modules = []) {
+  const items = [{ id: 'dashboard', label: 'Dashboard' }]
+  for (const mod of modules) {
+    if (!mod || mod.id === 'dashboard' || mod.enabled === false) continue
+    if (mod.coming_soon === true) continue
+    const platforms = mod.platforms || ['web', 'mobile']
+    if (!platforms.includes('mobile')) continue
+    items.push({ id: mod.id, label: mod.label || mod.id })
+  }
+  return items
+}
+
+/**
+ * @param {boolean} hasSelectedChild
+ * @param {boolean} isStaff
+ * @param {boolean} isStudent
+ * @param {Set<string>|string[]|null} enabledIds
+ * @param {Set<string>|string[]|null} comingSoonIds - catalog coming_soon modules (excluded from nav)
+ */
+export function navItemsForContext(
+  hasSelectedChild,
+  isStaff = false,
+  isStudent = false,
+  enabledIds = null,
+  comingSoonIds = null,
+) {
+  const comingSoon = comingSoonIds instanceof Set
+    ? comingSoonIds
+    : new Set(comingSoonIds || [])
+  const filterComingSoon = (items) => items.filter((item) => !comingSoon.has(item.id))
+
+  if (isStaff) return filterComingSoon(onlyEnabledNavItems(NAV_ITEMS_STAFF, enabledIds))
+  if (isStudent) return filterComingSoon(onlyEnabledNavItems(NAV_ITEMS_STUDENT, enabledIds))
   if (!hasSelectedChild) return NAV_ITEMS_HOME
-  return onlyReadyNavItems(NAV_ITEMS_CHILD)
+  return filterComingSoon(onlyEnabledNavItems(NAV_ITEMS_CHILD, enabledIds))
 }
 
 export function HamburgerIcon({ color = '#0f172a' }) {

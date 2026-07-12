@@ -33,32 +33,24 @@
         <template v-if="isLearner">
           <RouterLink to="/home">Home</RouterLink>
           <template v-if="selectedChild || isStudent">
-            <RouterLink to="/dashboard">Dashboard</RouterLink>
-            <RouterLink to="/homework">Homework</RouterLink>
-            <RouterLink to="/marks">Marks</RouterLink>
-            <RouterLink to="/attendance">Attendance</RouterLink>
-            <RouterLink to="/timetable">Timetable</RouterLink>
-            <RouterLink to="/notifications">Notifications</RouterLink>
-            <RouterLink to="/fees">Fees</RouterLink>
-            <RouterLink to="/online-classes">Online</RouterLink>
-            <RouterLink to="/leave">Leave</RouterLink>
+            <RouterLink
+              v-for="mod in learnerNavModules"
+              :key="mod.id"
+              :to="mod.route_web || learnerFallbackRoute(mod.id)"
+            >
+              {{ mod.label }}
+            </RouterLink>
             <button v-if="isParent" type="button" class="link" @click="switchChild">Switch child</button>
           </template>
         </template>
         <template v-else>
-          <RouterLink to="/home">Dashboard</RouterLink>
-          <RouterLink v-if="canManageUsers && !isImpersonating" to="/admin/users">Users</RouterLink>
-          <RouterLink v-if="canConfigure && !isImpersonating" to="/admin/academic">Configuration</RouterLink>
-          <RouterLink v-if="isSuperadmin && !isImpersonating" to="/admin/permissions">Permissions</RouterLink>
-          <RouterLink v-if="canApprove" to="/approvals">Approvals</RouterLink>
-          <RouterLink v-if="canStaff" to="/attendance">Attendance</RouterLink>
-          <RouterLink v-if="canStaff" to="/marks">Marks</RouterLink>
-          <RouterLink v-if="canStaff" to="/homework">Homework</RouterLink>
-          <RouterLink v-if="canTimetable" to="/timetable">Timetable</RouterLink>
-          <RouterLink v-if="canStaff" to="/online-classes">Online</RouterLink>
-          <RouterLink v-if="canFees" to="/fees">Fees</RouterLink>
-          <RouterLink v-if="canBroadcasts" to="/notifications">Notifications</RouterLink>
-          <RouterLink v-if="canLeave" to="/leave">Leave</RouterLink>
+          <RouterLink
+            v-for="mod in staffNavModules"
+            :key="mod.id"
+            :to="mod.route_web || '/home'"
+          >
+            {{ staffNavLabel(mod) }}
+          </RouterLink>
         </template>
       </nav>
     </header>
@@ -74,20 +66,19 @@ import { useRoute, useRouter } from 'vue-router'
 import { useAuthStore } from './stores/auth'
 import { useParentStore } from './stores/parent'
 import { useViewAsStore } from './stores/viewAs'
+import { useModulesStore, ADMIN_SHELL_MODULE_IDS } from './stores/modules'
 import { useRoles } from './composables/useRoles'
-import { usePermissions } from './composables/usePermissions'
 
 const auth = useAuthStore()
 const parent = useParentStore()
 const viewAs = useViewAsStore()
+const modules = useModulesStore()
 const route = useRoute()
 const router = useRouter()
 
 const {
-  isLearner, isParent, isStudent, isSuperadmin, canViewAs, canManageUsers,
-  canApprove, canStaff, canTimetable, canFees, canBroadcasts, canLeave,
+  isLearner, isParent, isStudent, canViewAs,
 } = useRoles()
-const { canConfigure } = usePermissions()
 
 const displayName = computed(() => {
   if (viewAs.isImpersonating) return viewAs.impersonateUser?.name ?? ''
@@ -99,7 +90,72 @@ const viewAsOptions = computed(() => viewAs.options)
 const isImpersonating = computed(() => viewAs.isImpersonating)
 const isFlushLayout = computed(() => Boolean(route.meta.public || route.meta.guest))
 
+const staffNavModules = computed(() => {
+  return modules.items.filter((m) => {
+    if (m.enabled === false) return false
+    const platforms = m.platforms || ['web', 'mobile']
+    if (!platforms.includes('web')) return false
+    if (isImpersonating.value && ADMIN_SHELL_MODULE_IDS.includes(m.id)) return false
+    return true
+  })
+})
+
+const learnerNavModules = computed(() => {
+  const preferredOrder = [
+    'dashboard',
+    'homework',
+    'marks',
+    'attendance',
+    'timetable',
+    'notifications',
+    'fees',
+    'online',
+    'leave',
+  ]
+  const byId = Object.fromEntries(
+    modules.items
+      .filter((m) => m.enabled !== false && (m.platforms || ['web']).includes('web'))
+      .map((m) => [m.id, m]),
+  )
+  return preferredOrder
+    .map((id) => byId[id])
+    .filter(Boolean)
+})
+
+function staffNavLabel(mod) {
+  if (mod.id === 'dashboard') return 'Dashboard'
+  if (mod.id === 'online') return 'Online'
+  return mod.label
+}
+
+function learnerFallbackRoute(id) {
+  const map = {
+    dashboard: '/dashboard',
+    homework: '/homework',
+    marks: '/marks',
+    attendance: '/attendance',
+    timetable: '/timetable',
+    notifications: '/notifications',
+    fees: '/fees',
+    online: '/online-classes',
+    leave: '/leave',
+  }
+  return map[id] || '/home'
+}
+
+async function ensureModules() {
+  if (!auth.token) return
+  try {
+    await modules.fetchModules('web')
+  } catch {
+    /* ignore — empty nav until retry */
+  }
+}
+
 onMounted(async () => {
+  if (auth.token) {
+    await ensureModules()
+  }
   if (auth.token && canViewAs.value) {
     try {
       await viewAs.loadOptions()
@@ -119,10 +175,22 @@ watch(canViewAs, async (allowed) => {
   }
 })
 
+watch(
+  () => [viewAs.role, viewAs.impersonateUser?.id, auth.token],
+  async ([, , token]) => {
+    if (!token) {
+      modules.clear()
+      return
+    }
+    await ensureModules()
+  },
+)
+
 async function onViewAsChange(event) {
   const roleName = event.target.value
   viewAs.setRole(roleName)
   await parent.clearChild()
+  await ensureModules()
   if (roleName === 'parent' || roleName === 'student') {
     try {
       await parent.loadDashboard()
@@ -136,6 +204,7 @@ async function onViewAsChange(event) {
 async function exitImpersonation() {
   viewAs.stopImpersonation()
   await parent.clearChild()
+  await ensureModules()
   router.push('/admin/users')
 }
 
