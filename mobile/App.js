@@ -252,7 +252,10 @@ export default function App() {
     setModules([])
     setTab('home')
     try {
-      const { data } = await apiClient.post('/login', { email, password })
+      const { data } = await apiClient.post('/login', {
+        email: String(email || '').trim(),
+        password: String(password || '').trim(),
+      })
       if (!data?.access_token) throw new Error('No access token in response')
       setAuthToken(data.access_token)
       setToken(data.access_token)

@@ -5,7 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\User;
 use App\Support\LoginIdentifier;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Validation\ValidationException;
 use Illuminate\Support\Facades\Log;
@@ -23,7 +23,7 @@ class AuthController extends Controller
         $user = User::create([
             'name' => $request->name,
             'email' => $request->email,
-            'password' => Hash::make($request->password),
+            'password' => $request->password,
         ]);
 
         $token = $user->createToken('auth_token')->plainTextToken;
@@ -40,29 +40,39 @@ class AuthController extends Controller
         try {
             $request->validate([
                 'email' => 'required|string|max:255',
-                'password' => 'required',
+                'password' => 'required|string',
             ]);
 
-            $email = LoginIdentifier::resolveEmail($request->email);
+            $rawIdentifier = trim((string) $request->input('email'));
+            $password = (string) $request->input('password');
+            // Trim password edges only — never alter internal spaces (passwords may contain them).
+            $password = trim($password);
+
+            $email = LoginIdentifier::resolveEmail($rawIdentifier);
             $user = User::where('email', $email)->first();
 
-            if (! $user && str_contains($request->email, '@')) {
-                $user = User::where('email', strtolower(trim($request->email)))->first();
+            if (! $user && str_contains($rawIdentifier, '@')) {
+                $user = User::where('email', strtolower($rawIdentifier))->first();
             }
 
-            if (!$user || !Hash::check($request->password, $user->password)) {
+            $passwordOk = $user && Hash::check($password, $user->password);
+
+            if (! $user || ! $passwordOk) {
+                $this->logLoginFailure($request, $rawIdentifier, $email, $user !== null, $passwordOk);
+
                 event(new \Illuminate\Auth\Events\Failed('web', $user, [
-                    'email' => $request->email,
-                    'password' => '******'
+                    'email' => $rawIdentifier,
+                    'password' => '******',
                 ]));
+
                 return response()->json([
-                    'message' => 'Invalid login details'
+                    'message' => 'Invalid login details',
                 ], 401);
             }
 
             $user->tokens()->delete();
             $token = $user->createToken('auth_token');
-            
+
             event(new \Illuminate\Auth\Events\Login('web', $user, false));
 
             $user->load(['roles:id,name']);
@@ -106,4 +116,31 @@ class AuthController extends Controller
             ], 500);
         }
     }
-} 
+
+    /**
+     * Structured failure log so intermittent 401s can be diagnosed without guessing.
+     * Never logs the password or full secret material.
+     */
+    private function logLoginFailure(
+        Request $request,
+        string $rawIdentifier,
+        string $resolvedEmail,
+        bool $userFound,
+        bool $passwordOk,
+    ): void {
+        Log::warning('login.failed', [
+            'reason' => ! $userFound ? 'user_not_found' : 'password_mismatch',
+            'identifier_has_at' => str_contains($rawIdentifier, '@'),
+            'identifier_length' => strlen($rawIdentifier),
+            'resolved_email' => $resolvedEmail,
+            'user_found' => $userFound,
+            'password_ok' => $passwordOk,
+            'users_table_count' => User::query()->count(),
+            'db_connection' => config('database.default'),
+            'db_database' => DB::connection()->getDatabaseName(),
+            'app_env' => config('app.env'),
+            'ip' => $request->ip(),
+            'user_agent' => substr((string) $request->userAgent(), 0, 180),
+        ]);
+    }
+}
