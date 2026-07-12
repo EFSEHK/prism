@@ -187,6 +187,7 @@ class ModuleCatalogService
      *   id: string,
      *   label: string,
      *   enabled: bool,
+     *   status: 'live'|'coming_soon'|'disabled',
      *   coming_soon: bool,
      *   platforms: list<string>,
      *   route_web: string|null,
@@ -195,11 +196,19 @@ class ModuleCatalogService
      */
     private function toModulePayload(array $definition): array
     {
+        $comingSoon = (bool) ($definition['coming_soon'] ?? false);
+        $status = $definition['status'] ?? ($comingSoon ? 'coming_soon' : 'live');
+        if (! in_array($status, ['live', 'coming_soon', 'disabled'], true)) {
+            $status = $comingSoon ? 'coming_soon' : 'live';
+        }
+
         return [
             'id' => $definition['id'],
             'label' => $definition['label'],
-            'enabled' => true,
-            'coming_soon' => (bool) ($definition['coming_soon'] ?? false),
+            // enabled remains for older clients; prefer `status` for tri-state UI.
+            'enabled' => $status !== 'disabled',
+            'status' => $status,
+            'coming_soon' => $status === 'coming_soon',
             'platforms' => $definition['platforms'],
             'route_web' => $definition['route_web'],
             'route_mobile' => $definition['route_mobile'],

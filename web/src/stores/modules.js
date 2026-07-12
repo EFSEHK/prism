@@ -12,7 +12,13 @@ export const useModulesStore = defineStore('modules', () => {
   const error = ref('')
 
   const enabledIds = computed(() => new Set(
-    items.value.filter((m) => m.enabled !== false).map((m) => m.id),
+    items.value
+      .filter((m) => {
+        if (m.status === 'disabled') return false
+        if (m.enabled === false) return false
+        return true
+      })
+      .map((m) => m.id),
   ))
 
   function isEnabled(id) {
@@ -21,6 +27,15 @@ export const useModulesStore = defineStore('modules', () => {
 
   function moduleById(id) {
     return items.value.find((m) => m.id === id) || null
+  }
+
+  function moduleStatus(idOrModule) {
+    const m = typeof idOrModule === 'string' ? moduleById(idOrModule) : idOrModule
+    if (!m) return 'disabled'
+    if (m.status === 'live' || m.status === 'coming_soon' || m.status === 'disabled') return m.status
+    if (m.enabled === false) return 'disabled'
+    if (m.coming_soon === true) return 'coming_soon'
+    return 'live'
   }
 
   function clear() {
@@ -36,7 +51,7 @@ export const useModulesStore = defineStore('modules', () => {
     try {
       const { data } = await api.get('/efsc/modules', { params: { platform } })
       const list = Array.isArray(data?.data) ? data.data : (Array.isArray(data) ? data : [])
-      items.value = list.filter((m) => m && m.enabled !== false)
+      items.value = list.filter((m) => m && m.status !== 'disabled' && m.enabled !== false)
       loaded.value = true
       return items.value
     } catch (e) {
@@ -57,6 +72,7 @@ export const useModulesStore = defineStore('modules', () => {
     enabledIds,
     isEnabled,
     moduleById,
+    moduleStatus,
     clear,
     fetchModules,
   }

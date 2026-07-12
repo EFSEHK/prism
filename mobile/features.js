@@ -1,23 +1,9 @@
 /**
  * Feature tiles for the mobile home/dashboard icon grid.
  *
- * Enablement comes from GET /efsc/modules (backend ModuleCatalogService).
- * - `coming_soon: true` (matches web ComingSoonView stubs) → grey tile + Alert "Coming soon"
- * - PENDING_MOBILE_SCREENS → catalog-live on web, mobile UI not built → in-tab Coming soon
+ * Enablement comes ONLY from GET /efsc/modules (ModuleCatalogService).
+ * Render from `status`: "live" | "coming_soon" | "disabled" — no local readiness maps.
  */
-
-/** Staff module IDs that are live on web but lack a dedicated mobile screen. */
-export const PENDING_MOBILE_SCREENS = [
-  'approvals',
-  'marks',
-  'homework',
-  'online',
-  'notifications',
-  'leave',
-  'users',
-  'configuration',
-  'permissions',
-]
 
 const LEARNER_FEATURE_DEFS = [
   { id: 'homework', label: 'Homework', tint: '#2563eb', soft: '#eff6ff' },
@@ -45,37 +31,49 @@ const STAFF_FEATURE_META = {
   permissions: { tint: '#b45309', soft: '#fffbeb', label: 'Permissions' },
 }
 
+/** Normalize catalog module to tri-state status. */
+export function moduleStatus(module) {
+  if (!module) return 'disabled'
+  if (module.status === 'live' || module.status === 'coming_soon' || module.status === 'disabled') {
+    return module.status
+  }
+  if (module.enabled === false) return 'disabled'
+  if (module.coming_soon === true) return 'coming_soon'
+  return 'live'
+}
+
 function moduleEnabledOnMobile(module) {
-  if (!module || module.enabled === false) return false
+  if (moduleStatus(module) === 'disabled') return false
   const platforms = module.platforms || ['web', 'mobile']
   return platforms.includes('mobile')
 }
 
+function toFeatureTile(m, meta = {}) {
+  const status = moduleStatus(m)
+  return {
+    id: m.id,
+    label: m.label || meta.label || m.id,
+    tint: meta.tint || '#64748b',
+    soft: meta.soft || '#f8fafc',
+    status,
+    ready: status === 'live',
+    comingSoon: status === 'coming_soon',
+  }
+}
+
 /**
  * Build staff dashboard tiles from the API module catalog.
- * @param {Array<{ id: string, label?: string, enabled?: boolean, coming_soon?: boolean, platforms?: string[] }>} modules
+ * @param {Array<{ id: string, label?: string, status?: string, enabled?: boolean, coming_soon?: boolean, platforms?: string[] }>} modules
  */
 export function staffFeaturesFor(modules = []) {
   return (modules || [])
     .filter((m) => m.id !== 'dashboard' && moduleEnabledOnMobile(m))
-    .map((m) => {
-      const meta = STAFF_FEATURE_META[m.id] || {}
-      const comingSoon = m.coming_soon === true
-      return {
-        id: m.id,
-        label: m.label || meta.label || m.id,
-        tint: meta.tint || '#64748b',
-        soft: meta.soft || '#f8fafc',
-        ready: !comingSoon,
-        comingSoon,
-        pendingScreen: !comingSoon && PENDING_MOBILE_SCREENS.includes(m.id),
-      }
-    })
+    .map((m) => toFeatureTile(m, STAFF_FEATURE_META[m.id] || {}))
 }
 
 /**
  * Learner tiles: prefer catalog when provided; otherwise fall back to full learner set.
- * @param {Array<{ id: string, label?: string, enabled?: boolean, coming_soon?: boolean, platforms?: string[] }>} [modules]
+ * @param {Array<{ id: string, label?: string, status?: string, enabled?: boolean, coming_soon?: boolean, platforms?: string[] }>} [modules]
  */
 export function learnerFeatures(modules) {
   if (Array.isArray(modules) && modules.length > 0) {
@@ -84,29 +82,21 @@ export function learnerFeatures(modules) {
     )
     return LEARNER_FEATURE_DEFS
       .filter((f) => byId[f.id])
-      .map((f) => {
-        const comingSoon = byId[f.id]?.coming_soon === true
-        return {
-          ...f,
-          ready: !comingSoon,
-          comingSoon,
-          pendingScreen: false,
-        }
-      })
+      .map((f) => toFeatureTile(byId[f.id], f))
   }
 
   return LEARNER_FEATURE_DEFS.map((f) => ({
     ...f,
+    status: 'live',
     ready: true,
     comingSoon: false,
-    pendingScreen: false,
   }))
 }
 
-export function isPendingMobileScreen(id) {
-  return PENDING_MOBILE_SCREENS.includes(id)
+export function isCatalogComingSoon(modules, id) {
+  return (modules || []).some((m) => m.id === id && moduleStatus(m) === 'coming_soon')
 }
 
-export function isCatalogComingSoon(modules, id) {
-  return (modules || []).some((m) => m.id === id && m.coming_soon === true)
+export function isCatalogLive(modules, id) {
+  return (modules || []).some((m) => m.id === id && moduleStatus(m) === 'live')
 }

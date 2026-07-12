@@ -55,10 +55,11 @@ export default function FeatureDashboard({
   }
 
   function handlePress(feature) {
-    if (feature.ready === false || feature.comingSoon) {
+    if (feature.status === 'coming_soon' || feature.ready === false || feature.comingSoon) {
       notifyComingSoon()
       return
     }
+    if (feature.status === 'disabled') return
     onSelectFeature?.(feature.id)
   }
 
@@ -90,7 +91,9 @@ export default function FeatureDashboard({
         <View style={styles.grid}>
           {features.map((feature) => {
             const Icon = FEATURE_ICON_MAP[feature.id]
-            const ready = feature.ready !== false && !feature.comingSoon
+            const ready = feature.status
+              ? feature.status === 'live'
+              : (feature.ready !== false && !feature.comingSoon)
             const tint = ready ? feature.tint : GREY_TINT
             const soft = ready ? feature.soft : GREY_SOFT
 

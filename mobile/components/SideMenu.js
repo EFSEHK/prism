@@ -50,8 +50,10 @@ function onlyEnabledNavItems(items, enabledIds) {
 export function staffNavItemsFromModules(modules = []) {
   const items = [{ id: 'dashboard', label: 'Dashboard' }]
   for (const mod of modules) {
-    if (!mod || mod.id === 'dashboard' || mod.enabled === false) continue
-    if (mod.coming_soon === true) continue
+    if (!mod || mod.id === 'dashboard') continue
+    const status = mod.status
+      || (mod.enabled === false ? 'disabled' : (mod.coming_soon ? 'coming_soon' : 'live'))
+    if (status === 'disabled' || status === 'coming_soon') continue
     const platforms = mod.platforms || ['web', 'mobile']
     if (!platforms.includes('mobile')) continue
     items.push({ id: mod.id, label: mod.label || mod.id })

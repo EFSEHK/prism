@@ -100,8 +100,12 @@ class ModuleCatalogServiceTest extends TestCase
 
         $this->assertTrue($byId->get('timetable')['coming_soon']);
         $this->assertTrue($byId->get('fees')['coming_soon']);
+        $this->assertSame('coming_soon', $byId->get('timetable')['status']);
+        $this->assertSame('coming_soon', $byId->get('fees')['status']);
         $this->assertFalse($byId->get('attendance')['coming_soon']);
+        $this->assertSame('live', $byId->get('attendance')['status']);
         $this->assertFalse($byId->get('marks')['coming_soon']);
+        $this->assertSame('live', $byId->get('marks')['status']);
     }
 
     private function seedPermissions(): void

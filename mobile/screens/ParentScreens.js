@@ -456,7 +456,7 @@ export function OnlineClassScreen() {
   )
 }
 
-export function LeaveScreen({ children, selectedChildId }) {
+export function LeaveScreen({ children = [], selectedChildId }) {
   const [items, setItems] = useState([])
   const [studentId, setStudentId] = useState(selectedChildId ?? children[0]?.id)
   useEffect(() => {

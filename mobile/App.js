@@ -39,10 +39,16 @@ import {
   LeaveScreen,
 } from './screens/ParentScreens'
 import ComingSoonScreen from './screens/ComingSoonScreen'
+import {
+  ApprovalsScreen,
+  UsersScreen,
+  ConfigurationScreen,
+  PermissionsScreen,
+} from './screens/StaffModuleScreens'
 import { childName, formatError } from './utils/format'
 import { ui } from './components/ui'
 import { runStartupUpdateChecks } from './services/appUpdates'
-import { learnerFeatures, staffFeaturesFor, isPendingMobileScreen, isCatalogComingSoon } from './features'
+import { learnerFeatures, staffFeaturesFor, isCatalogComingSoon, isCatalogLive, moduleStatus } from './features'
 
 const DASHBOARD_INCLUDE =
   'homework,timetable,marks,broadcasts,fees,online_classes,leave,datesheet,notifications'
@@ -126,7 +132,7 @@ export default function App() {
   const loadModules = useCallback(async () => {
     const { data } = await apiClient.get('/efsc/modules', { params: { platform: 'mobile' } })
     const list = Array.isArray(data?.data) ? data.data : (Array.isArray(data) ? data : [])
-    setModules(list.filter((m) => m && m.enabled !== false))
+    setModules(list.filter((m) => m && moduleStatus(m) !== 'disabled'))
     return list
   }, [])
 
@@ -354,12 +360,12 @@ export default function App() {
   const isLearnerRole = isParentRole || isStudentRole
   const isStaffRole = !isLearnerRole
   const moduleEnabledIds = new Set(
-    modules.filter((m) => m.enabled !== false).map((m) => m.id),
+    modules.filter((m) => moduleStatus(m) !== 'disabled').map((m) => m.id),
   )
   const comingSoonIds = new Set(
-    modules.filter((m) => m.coming_soon === true).map((m) => m.id),
+    modules.filter((m) => moduleStatus(m) === 'coming_soon').map((m) => m.id),
   )
-  const attendanceEnabled = moduleEnabledIds.has('attendance') && !comingSoonIds.has('attendance')
+  const attendanceEnabled = isCatalogLive(modules, 'attendance')
   const showApp = token && !err && (isLearnerRole ? !!dashboard : true)
   const hasSelectedChild = Boolean(selectedChild)
   const navItems = isStaffRole
@@ -409,9 +415,6 @@ export default function App() {
             : 'No mobile features for this role yet',
         })
       }
-      if (tab === 'attendance' && attendanceEnabled) {
-        return <StaffAttendanceScreen />
-      }
       if (isCatalogComingSoon(modules, tab)) {
         return renderFeatureDashboard({
           features: staffFeatureList,
@@ -420,18 +423,40 @@ export default function App() {
             : 'No mobile features for this role yet',
         })
       }
-      if (moduleEnabledIds.has(tab)) {
-        if (isPendingMobileScreen(tab)) {
-          const label = modules.find((m) => m.id === tab)?.label || tab
-          return <ComingSoonScreen title={label} />
-        }
+      if (!isCatalogLive(modules, tab) && tab !== 'dashboard' && tab !== 'home') {
+        return renderFeatureDashboard({
+          features: staffFeatureList,
+          subtitle: staffFeatureList.length
+            ? 'Choose a feature to continue'
+            : 'No mobile features for this role yet',
+        })
       }
-      return renderFeatureDashboard({
-        features: staffFeatureList,
-        subtitle: staffFeatureList.length
-          ? 'Choose a feature to continue'
-          : 'No mobile features for this role yet',
-      })
+      switch (tab) {
+        case 'attendance':
+          return attendanceEnabled ? <StaffAttendanceScreen /> : null
+        case 'approvals':
+          return <ApprovalsScreen />
+        case 'marks':
+          return <MarksScreen />
+        case 'homework':
+          return <HomeworkScreen />
+        case 'online':
+          return <OnlineClassScreen />
+        case 'notifications':
+          return <FeedScreen />
+        case 'leave':
+          return <LeaveScreen />
+        case 'users':
+          return <UsersScreen />
+        case 'configuration':
+          return <ConfigurationScreen />
+        case 'permissions':
+          return <PermissionsScreen />
+        default:
+          return (
+            <ComingSoonScreen title={modules.find((m) => m.id === tab)?.label || tab} />
+          )
+      }
     }
 
     // Parents must pick a child; students skip this and land on the dashboard.
@@ -474,7 +499,7 @@ export default function App() {
         return <AttendanceScreen children={children} selectedChildId={childId} />
       case 'timetable':
       case 'fees':
-        // Catalog marks these coming_soon to match web ComingSoonView.
+        // Catalog status coming_soon — dashboard + alert only (no navigation into a void).
         return renderFeatureDashboard({
           child: learnerChild,
           features: learnerFeatureList,
