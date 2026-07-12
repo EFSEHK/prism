@@ -62,11 +62,28 @@ export function setAuthToken(token) {
   }
 }
 
-/** Preview another role (superadmin only). */
+/** Clear both view-as headers. */
+export function clearViewAs() {
+  delete apiClient.defaults.headers.common['X-View-As-Role']
+  delete apiClient.defaults.headers.common['X-View-As-User']
+}
+
+/** Preview another role (superadmin only). Clears user impersonation. */
 export function setViewAsRole(roleName) {
+  delete apiClient.defaults.headers.common['X-View-As-User']
   if (roleName) {
     apiClient.defaults.headers.common['X-View-As-Role'] = roleName
   } else {
     delete apiClient.defaults.headers.common['X-View-As-Role']
+  }
+}
+
+/** Impersonate another user (superadmin only). Clears role preview. */
+export function setViewAsUser(userId) {
+  delete apiClient.defaults.headers.common['X-View-As-Role']
+  if (userId) {
+    apiClient.defaults.headers.common['X-View-As-User'] = String(userId)
+  } else {
+    delete apiClient.defaults.headers.common['X-View-As-User']
   }
 }

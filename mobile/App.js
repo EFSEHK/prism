@@ -16,6 +16,8 @@ import {
   USES_EMULATOR_API,
   setAuthToken,
   setViewAsRole,
+  setViewAsUser,
+  clearViewAs,
 } from './apiClient'
 import SideMenu, { HamburgerIcon, navItemsForContext } from './components/SideMenu'
 import EyeIcon from './components/EyeIcon'
@@ -65,6 +67,9 @@ export default function App() {
   const [err, setErr] = useState('')
   const [viewAsRole, setViewAsRoleState] = useState('')
   const [viewAsOptions, setViewAsOptions] = useState([])
+  const [viewAsUsers, setViewAsUsers] = useState([])
+  const [viewAsUsersLoading, setViewAsUsersLoading] = useState(false)
+  const [impersonateUser, setImpersonateUser] = useState(null)
 
   useEffect(() => {
     runStartupUpdateChecks()
@@ -75,11 +80,17 @@ export default function App() {
   }, [token])
 
   useEffect(() => {
-    setViewAsRole(viewAsRole)
-  }, [viewAsRole])
+    if (impersonateUser?.id) {
+      setViewAsUser(impersonateUser.id)
+    } else {
+      setViewAsRole(viewAsRole)
+    }
+  }, [viewAsRole, impersonateUser])
 
   const actualRoleNames = (user?.roles || []).map((r) => r.name)
-  const canViewAs = actualRoleNames.includes('superadmin')
+  const isActuallySuperadmin = actualRoleNames.includes('superadmin')
+  const canViewAs = isActuallySuperadmin && !impersonateUser
+  const isImpersonating = Boolean(impersonateUser)
 
   async function loadViewAsOptions() {
     const { data } = await apiClient.get('/view-as/roles')
@@ -87,21 +98,29 @@ export default function App() {
     return data
   }
 
-  async function applyViewAs(roleName) {
-    setViewAsRoleState(roleName)
-    setViewAsRole(roleName)
+  async function loadViewAsUsers() {
+    setViewAsUsersLoading(true)
+    try {
+      const { data } = await apiClient.get('/users')
+      setViewAsUsers(Array.isArray(data) ? data : [])
+    } catch {
+      setViewAsUsers([])
+    } finally {
+      setViewAsUsersLoading(false)
+    }
+  }
+
+  function permissionNamesFrom(source) {
+    return (source?.permissions || []).map((p) => (typeof p === 'string' ? p : p.name))
+  }
+
+  async function enterContext({ roles, perms }) {
     setDashboard(null)
     setSelectedChild(null)
     setTab('home')
     setErr('')
 
-    const effectiveRoles = roleName ? [roleName] : actualRoleNames
-    const option = viewAsOptions.find((r) => r.name === roleName)
-    const perms = roleName
-      ? (option?.permissions || [])
-      : (user?.permissions || []).map((p) => p.name)
-
-    if (effectiveRoles.includes('parent') || effectiveRoles.includes('student')) {
+    if (roles.includes('parent') || roles.includes('student')) {
       setLoading(true)
       try {
         await loadDashboard()
@@ -110,9 +129,65 @@ export default function App() {
       } finally {
         setLoading(false)
       }
-    } else if (perms.includes('mark_attendance') || effectiveRoles.includes('computer_operator')) {
+    } else if (perms.includes('mark_attendance') || roles.includes('computer_operator')) {
       setTab('attendance')
     }
+  }
+
+  async function applyViewAs(roleName) {
+    setImpersonateUser(null)
+    setViewAsUser(null)
+    setViewAsRoleState(roleName)
+    setViewAsRole(roleName)
+
+    const effectiveRoles = roleName ? [roleName] : actualRoleNames
+    const option = viewAsOptions.find((r) => r.name === roleName)
+    const perms = roleName
+      ? (option?.permissions || [])
+      : permissionNamesFrom(user)
+
+    await enterContext({ roles: effectiveRoles, perms })
+  }
+
+  async function applyViewAsUser(summary) {
+    setErr('')
+    setLoading(true)
+    try {
+      // Call as real superadmin (clear any role preview first).
+      clearViewAs()
+      setViewAsRoleState('')
+      const { data } = await apiClient.get(`/users/${summary.id}`)
+      const permissionNames = permissionNamesFrom(data)
+      const next = {
+        id: data.id,
+        name: data.name,
+        email: data.email,
+        roles: data.roles || [],
+        permissions: permissionNames,
+      }
+      setImpersonateUser(next)
+      setViewAsUser(next.id)
+      setLoading(false)
+      const roles = (next.roles || []).map((r) => r.name)
+      await enterContext({ roles, perms: permissionNames })
+    } catch (e) {
+      clearViewAs()
+      setImpersonateUser(null)
+      setLoading(false)
+      setErr(formatError(e))
+    }
+  }
+
+  async function exitImpersonation() {
+    setImpersonateUser(null)
+    setViewAsUser(null)
+    setViewAsRoleState('')
+    setViewAsRole('')
+    setDashboard(null)
+    setSelectedChild(null)
+    setTab('home')
+    setErr('')
+    setMenuOpen(false)
   }
 
   const loadDashboard = useCallback(async (studentId = null) => {
@@ -141,13 +216,16 @@ export default function App() {
       setUser(data.user ?? null)
       setViewAsRoleState('')
       setViewAsRole('')
+      setViewAsUser(null)
+      setImpersonateUser(null)
       setViewAsOptions([])
+      setViewAsUsers([])
       const roles = (data.user?.roles || []).map((r) => r.name)
       const perms = (data.user?.permissions || []).map((p) => p.name)
       const privileged = roles.includes('superadmin')
       if (privileged) {
         try {
-          await loadViewAsOptions()
+          await Promise.all([loadViewAsOptions(), loadViewAsUsers()])
         } catch {
           /* ignore */
         }
@@ -176,13 +254,15 @@ export default function App() {
       /* ignore */
     }
     setAuthToken('')
-    setViewAsRole('')
+    clearViewAs()
     setToken('')
     setUser(null)
     setDashboard(null)
     setSelectedChild(null)
     setViewAsRoleState('')
     setViewAsOptions([])
+    setViewAsUsers([])
+    setImpersonateUser(null)
     setTab('home')
     setMenuOpen(false)
     setErr('')
@@ -216,11 +296,17 @@ export default function App() {
     setTab(id)
   }
 
-  const roleNames = viewAsRole ? [viewAsRole] : actualRoleNames
+  const roleNames = impersonateUser
+    ? (impersonateUser.roles || []).map((r) => r.name)
+    : viewAsRole
+      ? [viewAsRole]
+      : actualRoleNames
   const viewAsOption = viewAsOptions.find((r) => r.name === viewAsRole)
-  const permissions = viewAsRole
-    ? (viewAsOption?.permissions || [])
-    : (user?.permissions || []).map((p) => p.name)
+  const permissions = impersonateUser
+    ? (impersonateUser.permissions || [])
+    : viewAsRole
+      ? (viewAsOption?.permissions || [])
+      : (user?.permissions || []).map((p) => p.name)
   const isLearnerRole = roleNames.includes('parent') || roleNames.includes('student')
   const isStaffAttendance =
     permissions.includes('mark_attendance') || roleNames.includes('computer_operator')
@@ -231,7 +317,10 @@ export default function App() {
   const children = dashboard?.children ?? []
   const headerSubtitle = activeLabel
   const selectedChildLabel = hasSelectedChild ? childName(selectedChild) : ''
-  const headerRightName = selectedChildLabel || user?.name || ''
+  const headerRightName = selectedChildLabel
+    || (impersonateUser?.name)
+    || user?.name
+    || ''
 
   function renderTab() {
     if (!isLearnerRole) {
@@ -362,13 +451,28 @@ export default function App() {
             </View>
             <View style={styles.headerRight}>
               <Text numberOfLines={1} style={styles.headerRightName}>{headerRightName}</Text>
-              {canViewAs ? (
+              {isImpersonating ? (
+                <>
+                  <View style={styles.headerSeparator} />
+                  <Pressable
+                    onPress={exitImpersonation}
+                    style={styles.exitViewBtn}
+                    hitSlop={6}
+                    accessibilityLabel="Back to Super Admin"
+                  >
+                    <Text style={styles.exitViewText} numberOfLines={1}>Back</Text>
+                  </Pressable>
+                </>
+              ) : canViewAs ? (
                 <>
                   <View style={styles.headerSeparator} />
                   <ViewAsPicker
                     options={viewAsOptions}
+                    users={viewAsUsers}
+                    usersLoading={viewAsUsersLoading}
                     value={viewAsRole}
-                    onChange={(name) => applyViewAs(name)}
+                    onChangeRole={(name) => applyViewAs(name)}
+                    onChangeUser={(u) => applyViewAsUser(u)}
                   />
                 </>
               ) : null}
@@ -488,6 +592,19 @@ const styles = StyleSheet.create({
     height: 18,
     backgroundColor: '#cbd5e1',
     marginHorizontal: 10,
+  },
+  exitViewBtn: {
+    borderWidth: 1,
+    borderColor: '#93c5fd',
+    backgroundColor: '#eff6ff',
+    borderRadius: 4,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+  },
+  exitViewText: {
+    fontSize: 11,
+    color: '#2563eb',
+    fontWeight: '700',
   },
   headerLogoutBtn: {
     width: 28,

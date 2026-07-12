@@ -137,7 +137,7 @@ There are **29** Spatie permissions. Defaults are seeded in `RolesAndPermissions
 | Feature / option | Web | Mobile | API | Roles |
 |------------------|-----|--------|-----|-------|
 | View as **role** (header / picker) | ✓ | ✓ | `GET /api/view-as/roles` + middleware | `superadmin` only |
-| View as **user** (impersonate from Users admin) | ✓ | — | Apply View-as user middleware | `superadmin` only |
+| View as **user** (impersonate) | ✓ (from Users admin) | ✓ | Apply View-as user middleware (`X-View-As-User`) | `superadmin` only |
 | Exit / back to Super Admin | ✓ | ✓ (clear view-as) | Headers cleared | `superadmin` |
 | Cannot target `superadmin` or `developer` | ✓ | ✓ | ✓ | Enforced |
 | Admin routes blocked while impersonating | ✓ (`/admin/*`) | — | — | Impersonation session |
@@ -469,6 +469,7 @@ Home, Dashboard, Homework, Marks, Attendance, Timetable, Notifications, Fees, On
 | Login / logout | ✓ | ✓ | ✓ | ✓ |
 | In-app APK update check | ✓ | ✓ | ✓ | ✓ |
 | View-as role picker | — | — | — | ✓ |
+| View-as user (impersonate) | — | — | — | ✓ |
 | Home + child pick | ✓ | If View-as learner | — | Via View-as |
 | Dashboard, Homework, Marks, Attendance, Timetable, Notifications, Fees, Online Class, Leave, Switch child | ✓ | If View-as learner | — | Via View-as |
 | Staff Attendance (Mark / View / Summary) | — | ✓ | — | Via View-as |
