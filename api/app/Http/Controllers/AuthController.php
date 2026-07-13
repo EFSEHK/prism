@@ -65,9 +65,17 @@ class AuthController extends Controller
                     'password' => '******',
                 ]));
 
-                return response()->json([
-                    'message' => 'Invalid login details',
-                ], 401);
+                $payload = ['message' => 'Invalid login details'];
+
+                // Local/dev only: empty users table is almost always a wiped DB from
+                // tests hitting MySQL — surface a hint instead of a mysterious 401.
+                if (app()->environment(['local', 'development']) && User::query()->count() === 0) {
+                    $payload['hint'] = 'Users table is empty on '
+                        .DB::connection()->getDatabaseName()
+                        .'. Re-seed with: php artisan db:seed --class=UsersTableSeeder && php artisan db:seed --class=RolesAndPermissionsSeeder';
+                }
+
+                return response()->json($payload, 401);
             }
 
             // Keep existing tokens so web and mobile sessions can coexist.

@@ -4,7 +4,6 @@ namespace Database\Seeders;
 
 use App\Models\User;
 use Illuminate\Database\Seeder;
-use Illuminate\Support\Facades\Hash;
 
 class UsersTableSeeder extends Seeder
 {
@@ -26,11 +25,12 @@ class UsersTableSeeder extends Seeder
         ];
 
         foreach ($users as $u) {
+            // Plain password — User model `password` => `hashed` cast hashes once.
             User::updateOrCreate(
                 ['email' => $u['email']],
                 [
                     'name' => $u['name'],
-                    'password' => Hash::make($u['password']),
+                    'password' => $u['password'],
                 ]
             );
         }
