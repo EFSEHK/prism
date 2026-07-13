@@ -77,7 +77,7 @@ async function submit() {
   err.value = ''
   submitting.value = true
   try {
-    await auth.login(email.value, password.value)
+    await auth.login(email.value.trim(), password.value.trim())
     router.push('/home')
   } catch (e) {
     err.value = e.response?.data?.message || 'Login failed'

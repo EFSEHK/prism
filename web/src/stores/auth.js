@@ -2,6 +2,7 @@ import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
 import api from '../api/client'
 import { useViewAsStore } from './viewAs'
+import { useModulesStore } from './modules'
 
 export const useAuthStore = defineStore('auth', () => {
   const token = ref(localStorage.getItem('efsc_token') || '')
@@ -24,11 +25,17 @@ export const useAuthStore = defineStore('auth', () => {
     localStorage.removeItem('efsc_user')
     delete api.defaults.headers.common.Authorization
     useViewAsStore().clear()
+    useModulesStore().clear()
   }
 
   async function login(email, password) {
     const { data } = await api.post('/login', { email, password })
     setSession(data.access_token, data.user)
+    try {
+      await useModulesStore().fetchModules('web')
+    } catch {
+      /* nav will retry on mount */
+    }
     return data
   }
 

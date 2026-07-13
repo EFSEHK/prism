@@ -43,7 +43,7 @@ Repository folder: `prism/`
 |-----|------|-------|------------------|
 | **API** | `api/` | Laravel 12, Sanctum, Spatie roles/permissions | Backend for all clients; welcome page; developer portal |
 | **Web** | `web/` | Vue 3 + Vite + Pinia | Staff / admin primary surface; also parent & student learner views |
-| **Mobile** | `mobile/` | Expo SDK 54 / React Native | Parents & students; staff attendance marking only |
+| **Mobile** | `mobile/` | Expo SDK 54 / React Native | Parents & students; staff uses backend module catalog (Attendance screen live; other staff modules Coming soon until built) |
 
 **Academic hierarchy**
 
@@ -464,16 +464,19 @@ Home, Dashboard, Homework, Marks, Attendance, Timetable, Notifications, Fees, On
 
 ## 23. Mobile feature matrix
 
-| Feature | Parent / Student | Staff with `mark_attendance` or `computer_operator` | Other staff | Superadmin |
-|---------|------------------|-----------------------------------------------------|-------------|------------|
-| Login / logout | ✓ | ✓ | ✓ | ✓ |
-| In-app APK update check | ✓ | ✓ | ✓ | ✓ |
-| View-as role picker | — | — | — | ✓ |
-| View-as user (impersonate) | — | — | — | ✓ |
-| Home + child pick | ✓ | If View-as learner | — | Via View-as |
-| Dashboard, Homework, Marks, Attendance, Timetable, Notifications, Fees, Online Class, Leave, Switch child | ✓ | If View-as learner | — | Via View-as |
-| Staff Attendance (Mark / View / Summary) | — | ✓ | — | Via View-as |
-| Other staff modules | — | — | Message: use web app | Via View-as / web |
+| Feature | Parent / Student | Staff (catalog-enabled) | Superadmin |
+|---------|------------------|-------------------------|------------|
+| Login / logout | ✓ | ✓ | ✓ |
+| In-app APK update check | ✓ | ✓ | ✓ |
+| View-as role picker | — | — | ✓ |
+| View-as user (impersonate) | — | — | ✓ |
+| Module catalog (`GET /efsc/modules`) | ✓ | ✓ | ✓ |
+| Home + child pick | ✓ | If View-as learner | Via View-as |
+| Dashboard, Homework, Marks, Attendance, Timetable, Notifications, Fees, Online Class, Leave | ✓ (screens) | Tiles when catalog enables; only **Attendance** has a full staff screen today — others open in-tab Coming soon | Same |
+| Staff Attendance (Mark / View / Summary) | — | When `attendance` enabled | ✓ |
+
+Nav/tile enablement is **backend-driven** (same endpoint as web). `PENDING_MOBILE_SCREENS` in `mobile/features.js` lists staff module IDs that still need real mobile UIs (not a second permission gate).
+
 
 ---
 
@@ -486,6 +489,7 @@ All school modules live under `/api/efsc/*` (authenticated Sanctum group unless 
 | Auth | `POST /login`, `POST /register`, `POST /logout`, `GET /user` |
 | View-as | `GET /view-as/roles` |
 | Users / roles / permissions | CRUD users; roles; permissions; assign/remove |
+| **Module catalog** | **`GET efsc/modules`** (optional `?platform=web\|mobile`) — staff/learner nav enablement |
 | Dashboard | `GET efsc/dashboard`, `GET efsc/learner/dashboard` |
 | Academic | years, areas, section-heads, classes, sections, study-groups, subjects |
 | Students | list, enroll/create |
@@ -499,6 +503,52 @@ All school modules live under `/api/efsc/*` (authenticated Sanctum group unless 
 | Broadcasts / notifications | user broadcasts, approvals, inbox, device tokens |
 | Mobile version | `GET /api/mobile/version` (public) |
 
+### Module catalog (`GET /api/efsc/modules`)
+
+Single source of truth for which nav modules the current user may use on web and mobile. Enablement is computed server-side in `App\Services\ModuleCatalogService` from Spatie roles/permissions (same gates previously hardcoded in web `useRoles` / mobile feature defs). Respects View-as headers (`X-View-As-Role`, `X-View-As-User`).
+
+**Auth:** Sanctum bearer token (same middleware group as other `/api/efsc/*` routes).
+
+**Query:** optional `platform=web` or `platform=mobile` — returns only modules whose `platforms` array includes that value.
+
+**Example:**
+
+```bash
+curl -s -H "Authorization: Bearer $TOKEN" \
+  "https://your-api.example/api/efsc/modules?platform=web"
+```
+
+**Response shape:**
+
+```json
+{
+  "data": [
+    {
+      "id": "attendance",
+      "label": "Attendance",
+      "enabled": true,
+      "coming_soon": false,
+      "platforms": ["web", "mobile"],
+      "route_web": "/attendance",
+      "route_mobile": "attendance"
+    },
+    {
+      "id": "timetable",
+      "label": "Timetable",
+      "enabled": true,
+      "coming_soon": true,
+      "platforms": ["web", "mobile"],
+      "route_web": "/timetable",
+      "route_mobile": "timetable"
+    }
+  ]
+}
+```
+
+Only modules the user is allowed to use are returned (`enabled` is always `true` in the payload). `coming_soon: true` means the product UI is not ready yet on either client (matches web `ComingSoonView` for Timetable / Fees) — mobile greys the tile and shows “Coming soon”. Intentionally web-only or mobile-only modules set `platforms` accordingly in the service.
+
+Prism **web** (`stores/modules.js` + `App.vue`) and **mobile** (`App.js` + `features.js`) both load this catalog after login / View-as changes and drive top-level nav from it.
+
 ---
 
 ## 25. Known UI gaps
@@ -511,6 +561,7 @@ All school modules live under `/api/efsc/*` (authenticated Sanctum group unless 
 | Approve online classes | ✓ | No dedicated approve UI | — |
 | Timetable manage / learner (web) | ✓ | Coming soon (views exist unwired) | Learner read ✓ |
 | Fee manage / learner (web) | ✓ | Coming soon (views exist unwired) | Learner list ✓ |
+| Staff modules beyond Attendance (mobile) | ✓ catalog | ✓ | Coming soon in-tab (`PENDING_MOBILE_SCREENS`) |
 | Push notifications (FCM) | Token stub | — | Not wired |
 | Demo school data seeder | Empty | Manual via Configuration | — |
 | OTA Expo Updates | — | — | Needs EAS URL setup |

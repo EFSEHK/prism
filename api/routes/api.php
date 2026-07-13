@@ -22,6 +22,7 @@ use App\Http\Controllers\Api\Efsc\HomeworkController;
 use App\Http\Controllers\Api\Efsc\LearnerDashboardController;
 use App\Http\Controllers\Api\Efsc\LeaveRequestController;
 use App\Http\Controllers\Api\Efsc\MarkSheetController;
+use App\Http\Controllers\Api\Efsc\ModuleCatalogController;
 use App\Http\Controllers\Api\Efsc\NotificationDispatchController;
 use App\Http\Controllers\Api\Efsc\OnlineClassController;
 use App\Http\Controllers\Api\Efsc\StudentController;
@@ -70,6 +71,7 @@ Route::middleware([LogAllRequests::class, 'auth:sanctum', CheckInactivity::class
     Route::prefix('efsc')->group(function () {
         Route::get('dashboard', [DashboardController::class, 'show']);
         Route::get('learner/dashboard', [LearnerDashboardController::class, 'show']);
+        Route::get('modules', [ModuleCatalogController::class, 'index']);
 
         Route::get('academic/years', [AcademicController::class, 'yearsIndex']);
         Route::post('academic/years', [AcademicController::class, 'storeYear']);

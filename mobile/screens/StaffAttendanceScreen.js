@@ -10,6 +10,7 @@ import {
 } from 'react-native'
 import { apiClient } from '../apiClient'
 import { formatDate, formatError } from '../utils/format'
+import { withTimeout } from '../utils/withTimeout'
 import { Card, EmptyNote, ui } from '../components/ui'
 
 const TABS = [
@@ -331,19 +332,38 @@ export default function StaffAttendanceScreen() {
   const [sections, setSections] = useState([])
   const [areas, setAreas] = useState([])
   const [loading, setLoading] = useState(true)
+  const [err, setErr] = useState('')
 
   useEffect(() => {
-    Promise.all([
-      apiClient.get('/efsc/academic/classes'),
-      apiClient.get('/efsc/academic/sections'),
-      apiClient.get('/efsc/academic/areas'),
-    ])
+    let cancelled = false
+    setLoading(true)
+    setErr('')
+    withTimeout(
+      Promise.all([
+        apiClient.get('/efsc/academic/classes'),
+        apiClient.get('/efsc/academic/sections'),
+        apiClient.get('/efsc/academic/areas'),
+      ]),
+      20000,
+      'Attendance setup',
+    )
       .then(([c, s, a]) => {
+        if (cancelled) return
         setClasses(c.data?.data ?? c.data ?? [])
         setSections(s.data?.data ?? s.data ?? [])
         setAreas(a.data?.data ?? a.data ?? [])
       })
-      .finally(() => setLoading(false))
+      .catch((e) => {
+        if (cancelled) return
+        setErr(formatError(e))
+        setClasses([])
+        setSections([])
+        setAreas([])
+      })
+      .finally(() => {
+        if (!cancelled) setLoading(false)
+      })
+    return () => { cancelled = true }
   }, [])
 
   if (loading) return <ActivityIndicator style={{ marginTop: 24 }} />
@@ -351,6 +371,7 @@ export default function StaffAttendanceScreen() {
   return (
     <ScrollView contentContainerStyle={styles.scroll}>
       <Text style={styles.h1}>Attendance</Text>
+      {err ? <Text style={ui.err}>{err}</Text> : null}
       <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.tabRow}>
         {TABS.map((t) => (
           <Pressable
@@ -370,7 +391,7 @@ export default function StaffAttendanceScreen() {
 }
 
 const styles = StyleSheet.create({
-  scroll: { paddingBottom: 32 },
+  scroll: { padding: 16, paddingBottom: 32 },
   h1: { fontSize: 22, fontWeight: '700', marginBottom: 12, color: '#0f172a' },
   tabRow: { gap: 8, marginBottom: 16 },
   tab: {
