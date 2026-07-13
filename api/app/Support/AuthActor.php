@@ -35,4 +35,11 @@ class AuthActor
 
         return $actor?->hasRole('superadmin') ?? false;
     }
+
+    public static function canManageApps(): bool
+    {
+        $actor = self::user();
+
+        return $actor?->hasAnyRole(['superadmin', 'developer']) ?? false;
+    }
 }

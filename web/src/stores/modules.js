@@ -3,7 +3,7 @@ import { ref, computed } from 'vue'
 import api from '../api/client'
 
 /** Admin shell links hidden while SuperAdmin is impersonating another user. */
-export const ADMIN_SHELL_MODULE_IDS = ['users', 'configuration', 'permissions']
+export const ADMIN_SHELL_MODULE_IDS = ['users', 'configuration', 'permissions', 'apps']
 
 export const useModulesStore = defineStore('modules', () => {
   const items = ref([])

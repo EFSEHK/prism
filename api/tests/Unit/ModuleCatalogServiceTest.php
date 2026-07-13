@@ -2,6 +2,7 @@
 
 namespace Tests\Unit;
 
+use App\Models\ModuleSetting;
 use App\Models\User;
 use App\Services\ModuleCatalogService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -33,6 +34,7 @@ class ModuleCatalogServiceTest extends TestCase
             'users',
             'configuration',
             'permissions',
+            'apps',
             'approvals',
             'attendance',
             'marks',
@@ -43,6 +45,19 @@ class ModuleCatalogServiceTest extends TestCase
             'notifications',
             'leave',
         ], $ids);
+    }
+
+    public function test_developer_receives_apps_module(): void
+    {
+        $user = $this->userWithRoles(['developer']);
+
+        $ids = collect($this->catalog->forUser($user))->pluck('id')->all();
+
+        $this->assertContains('dashboard', $ids);
+        $this->assertContains('apps', $ids);
+        $this->assertContains('configuration', $ids);
+        $this->assertNotContains('permissions', $ids);
+        $this->assertNotContains('attendance', $ids);
     }
 
     public function test_teacher_does_not_receive_admin_or_fees_modules(): void
@@ -56,6 +71,7 @@ class ModuleCatalogServiceTest extends TestCase
         $this->assertContains('timetable', $ids);
         $this->assertNotContains('users', $ids);
         $this->assertNotContains('permissions', $ids);
+        $this->assertNotContains('apps', $ids);
         $this->assertNotContains('fees', $ids);
         $this->assertNotContains('leave', $ids);
     }
@@ -90,15 +106,16 @@ class ModuleCatalogServiceTest extends TestCase
             $this->assertContains('mobile', $module['platforms']);
             $this->assertTrue($module['enabled']);
         }
+        $this->assertNotContains('apps', collect($mobile)->pluck('id')->all());
     }
 
-    public function test_only_admin_shell_modules_are_live(): void
+    public function test_only_admin_shell_modules_are_live_by_default(): void
     {
         $user = $this->userWithRoles(['superadmin']);
 
         $byId = collect($this->catalog->forUser($user))->keyBy('id');
 
-        foreach (['dashboard', 'users', 'configuration', 'permissions', 'approvals'] as $id) {
+        foreach (['dashboard', 'users', 'configuration', 'permissions', 'apps', 'approvals'] as $id) {
             $this->assertFalse($byId->get($id)['coming_soon'], $id);
             $this->assertSame('live', $byId->get($id)['status'], $id);
         }
@@ -107,6 +124,60 @@ class ModuleCatalogServiceTest extends TestCase
             $this->assertTrue($byId->get($id)['coming_soon'], $id);
             $this->assertSame('coming_soon', $byId->get($id)['status'], $id);
         }
+    }
+
+    public function test_persisted_settings_override_status_and_roles(): void
+    {
+        ModuleSetting::query()->create([
+            'module_id' => 'attendance',
+            'status' => 'live',
+            'visible_roles' => ['teacher'],
+        ]);
+
+        $this->catalog = new ModuleCatalogService;
+
+        $teacher = $this->userWithRoles(['teacher']);
+        $admin = $this->userWithRoles(['admin']);
+
+        $teacherById = collect($this->catalog->forUser($teacher))->keyBy('id');
+        $adminIds = collect($this->catalog->forUser($admin))->pluck('id')->all();
+
+        $this->assertSame('live', $teacherById->get('attendance')['status']);
+        $this->assertFalse($teacherById->get('attendance')['coming_soon']);
+        $this->assertNotContains('attendance', $adminIds);
+    }
+
+    public function test_disabled_module_is_hidden_from_catalog(): void
+    {
+        ModuleSetting::query()->create([
+            'module_id' => 'marks',
+            'status' => 'disabled',
+            'visible_roles' => ['teacher', 'parent'],
+        ]);
+
+        $this->catalog = new ModuleCatalogService;
+        $teacher = $this->userWithRoles(['teacher']);
+
+        $this->assertNotContains('marks', collect($this->catalog->forUser($teacher))->pluck('id')->all());
+    }
+
+    public function test_sync_settings_updates_admin_catalog(): void
+    {
+        $updated = $this->catalog->syncSettings([
+            [
+                'id' => 'homework',
+                'status' => 'live',
+                'visible_roles' => ['teacher', 'parent'],
+            ],
+        ]);
+
+        $homework = collect($updated)->firstWhere('id', 'homework');
+        $this->assertSame('live', $homework['status']);
+        $this->assertSame(['teacher', 'parent'], $homework['visible_roles']);
+        $this->assertDatabaseHas('module_settings', [
+            'module_id' => 'homework',
+            'status' => 'live',
+        ]);
     }
 
     private function seedPermissions(): void

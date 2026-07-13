@@ -31,6 +31,10 @@ export function useRoles() {
     roles.value.some((n) => ['superadmin', 'admin', 'computer_operator'].includes(n)),
   )
 
+  const canManageApps = computed(() =>
+    roles.value.some((n) => ['superadmin', 'developer'].includes(n)),
+  )
+
   const canEditUsers = computed(() =>
     roles.value.some((n) => ['superadmin', 'admin'].includes(n)),
   )
@@ -79,6 +83,7 @@ export function useRoles() {
     canImpersonateUsers,
     isActuallySuperadmin,
     canManageUsers,
+    canManageApps,
     canEditUsers,
     isSuperadmin,
     isParent,

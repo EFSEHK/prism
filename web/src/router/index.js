@@ -5,16 +5,33 @@ import { useRoles } from '../composables/useRoles'
 import { usePermissions } from '../composables/usePermissions'
 import { useViewAsStore } from '../stores/viewAs'
 import { roleView } from '../composables/useRoleView'
+import { catalogView } from '../composables/useCatalogView'
 import LandingView from '../views/LandingView.vue'
 import LoginView from '../views/LoginView.vue'
 import DashboardView from '../views/DashboardView.vue'
 import ParentHomeView from '../views/ParentHomeView.vue'
 import ChildDashboardView from '../views/ChildDashboardView.vue'
 import ApprovalsView from '../views/ApprovalsView.vue'
-import ComingSoonView from '../views/ComingSoonView.vue'
+import AttendanceView from '../views/AttendanceView.vue'
+import MarksView from '../views/MarksView.vue'
+import HomeworkView from '../views/HomeworkView.vue'
+import OnlineClassView from '../views/OnlineClassView.vue'
+import LeaveView from '../views/LeaveView.vue'
+import NotificationsView from '../views/NotificationsView.vue'
+import TimetableView from '../views/TimetableView.vue'
+import FeeView from '../views/FeeView.vue'
 import PermissionsAdminView from '../views/admin/PermissionsAdminView.vue'
 import AcademicConfigView from '../views/admin/AcademicConfigView.vue'
 import UsersAdminView from '../views/admin/UsersAdminView.vue'
+import AppsAdminView from '../views/admin/AppsAdminView.vue'
+import ParentHomeworkView from '../views/parent/ParentHomeworkView.vue'
+import ParentMarksView from '../views/parent/ParentMarksView.vue'
+import ParentAttendanceView from '../views/parent/ParentAttendanceView.vue'
+import ParentTimetableView from '../views/parent/ParentTimetableView.vue'
+import ParentNotificationsView from '../views/parent/ParentNotificationsView.vue'
+import ParentFeesView from '../views/parent/ParentFeesView.vue'
+import ParentOnlineClassView from '../views/parent/ParentOnlineClassView.vue'
+import ParentLeaveView from '../views/parent/ParentLeaveView.vue'
 
 const router = createRouter({
   history: createWebHistory(),
@@ -25,55 +42,48 @@ const router = createRouter({
     { path: '/dashboard', component: ChildDashboardView, meta: { auth: true, requiresChild: true } },
     { path: '/admin/users', component: UsersAdminView, meta: { auth: true, usersAccess: true } },
     { path: '/admin/permissions', component: PermissionsAdminView, meta: { auth: true, superadminOnly: true } },
+    { path: '/admin/apps', component: AppsAdminView, meta: { auth: true, appsAccess: true } },
     { path: '/admin/academic', component: AcademicConfigView, meta: { auth: true, configAccess: true } },
     { path: '/approvals', component: ApprovalsView, meta: { auth: true, staffOnly: true } },
     {
       path: '/attendance',
-      component: ComingSoonView,
+      component: catalogView('attendance', roleView(ParentAttendanceView, AttendanceView), { title: 'Attendance' }),
       meta: { auth: true, requiresChild: true },
-      props: { title: 'Attendance' },
     },
     {
       path: '/marks',
-      component: ComingSoonView,
+      component: catalogView('marks', roleView(ParentMarksView, MarksView), { title: 'Marks' }),
       meta: { auth: true, requiresChild: true },
-      props: { title: 'Marks' },
     },
     {
       path: '/homework',
-      component: ComingSoonView,
+      component: catalogView('homework', roleView(ParentHomeworkView, HomeworkView), { title: 'Homework' }),
       meta: { auth: true, requiresChild: true },
-      props: { title: 'Homework' },
     },
     {
       path: '/timetable',
-      component: ComingSoonView,
+      component: catalogView('timetable', roleView(ParentTimetableView, TimetableView), { title: 'Timetable' }),
       meta: { auth: true, requiresChild: true },
-      props: { title: 'Timetable' },
     },
     {
       path: '/online-classes',
-      component: ComingSoonView,
+      component: catalogView('online', roleView(ParentOnlineClassView, OnlineClassView), { title: 'Online' }),
       meta: { auth: true, requiresChild: true },
-      props: { title: 'Online' },
     },
     {
       path: '/fees',
-      component: ComingSoonView,
+      component: catalogView('fees', roleView(ParentFeesView, FeeView), { title: 'Fee vouchers' }),
       meta: { auth: true, requiresChild: true },
-      props: { title: 'Fee vouchers' },
     },
     {
       path: '/notifications',
-      component: ComingSoonView,
+      component: catalogView('notifications', roleView(ParentNotificationsView, NotificationsView), { title: 'Notifications' }),
       meta: { auth: true, requiresChild: true },
-      props: { title: 'Notifications' },
     },
     {
       path: '/leave',
-      component: ComingSoonView,
+      component: catalogView('leave', roleView(ParentLeaveView, LeaveView), { title: 'Leave' }),
       meta: { auth: true, requiresChild: true },
-      props: { title: 'Leave' },
     },
     { path: '/alerts', redirect: '/notifications' },
   ],
@@ -86,11 +96,12 @@ router.beforeEach((to) => {
   if (to.meta.public && auth.token && to.path === '/') return '/home'
 
   const viewAs = useViewAsStore()
-  const { isLearner, isParent, isSuperadmin, canManageUsers } = useRoles()
+  const { isLearner, isParent, isSuperadmin, canManageUsers, canManageApps } = useRoles()
 
   if (viewAs.isImpersonating && to.path.startsWith('/admin')) return '/home'
   if (to.meta.usersAccess && !canManageUsers.value) return '/home'
   if (to.meta.superadminOnly && !isSuperadmin.value) return '/home'
+  if (to.meta.appsAccess && !canManageApps.value) return '/home'
   if (to.meta.configAccess) {
     const { canConfigure } = usePermissions()
     if (!canConfigure.value) return '/home'

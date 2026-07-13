@@ -164,6 +164,7 @@ Effective role and permissions switch for subsequent API requests while View-as 
 | Feature / option | Web | Mobile | API | Roles |
 |------------------|-----|--------|-----|-------|
 | Permissions admin | ✓ `/admin/permissions` | — | Roles/permissions APIs | `superadmin` only (route guard) |
+| Apps admin | ✓ `/admin/apps` | — | `GET|PUT /api/efsc/apps` | `superadmin`, `developer` |
 | Tab: By role (sync role defaults) | ✓ | — | ✓ | `superadmin` |
 | Tab: By user (direct permission grants) | ✓ | — | ✓ | `superadmin` |
 | Roles CRUD | — | — | ✓ `apiResource('roles')` | Authenticated API (UI is SA) |
@@ -505,7 +506,9 @@ All school modules live under `/api/efsc/*` (authenticated Sanctum group unless 
 
 ### Module catalog (`GET /api/efsc/modules`)
 
-Single source of truth for which nav modules the current user may use on web and mobile. Enablement is computed server-side in `App\Services\ModuleCatalogService` from Spatie roles/permissions (same gates previously hardcoded in web `useRoles` / mobile feature defs). Respects View-as headers (`X-View-As-Role`, `X-View-As-User`).
+Single source of truth for which nav modules the current user may use on web and mobile. Enablement is computed server-side in `App\Services\ModuleCatalogService` from Spatie roles (defaults in code) merged with optional `module_settings` overrides. Respects View-as headers (`X-View-As-Role`, `X-View-As-User`).
+
+**Apps admin (superadmin / developer):** `GET|PUT /api/efsc/apps` — configure per-module `status` (`live` | `coming_soon` | `disabled`) and `visible_roles`. Web UI: `/admin/apps`. Greyed / not-ready modules keep the “Coming soon” message on web and mobile.
 
 **Auth:** Sanctum bearer token (same middleware group as other `/api/efsc/*` routes).
 
@@ -527,6 +530,7 @@ curl -s -H "Authorization: Bearer $TOKEN" \
       "id": "attendance",
       "label": "Attendance",
       "enabled": true,
+      "status": "live",
       "coming_soon": false,
       "platforms": ["web", "mobile"],
       "route_web": "/attendance",
@@ -536,6 +540,7 @@ curl -s -H "Authorization: Bearer $TOKEN" \
       "id": "timetable",
       "label": "Timetable",
       "enabled": true,
+      "status": "coming_soon",
       "coming_soon": true,
       "platforms": ["web", "mobile"],
       "route_web": "/timetable",
@@ -545,7 +550,7 @@ curl -s -H "Authorization: Bearer $TOKEN" \
 }
 ```
 
-Only modules the user is allowed to use are returned (`enabled` is always `true` in the payload). `coming_soon: true` means the product UI is not ready yet on either client (matches web `ComingSoonView` for Timetable / Fees) — mobile greys the tile and shows “Coming soon”. Intentionally web-only or mobile-only modules set `platforms` accordingly in the service.
+Only modules the user is allowed to use are returned (`enabled` is always `true` in the payload). `status: "coming_soon"` means the product UI is not ready yet — web shows `ComingSoonView` (“Coming soon”); mobile greys the tile and shows “Coming soon”. `disabled` hides the module from nav. Intentionally web-only or mobile-only modules set `platforms` accordingly in the service.
 
 Prism **web** (`stores/modules.js` + `App.vue`) and **mobile** (`App.js` + `features.js`) both load this catalog after login / View-as changes and drive top-level nav from it.
 

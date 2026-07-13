@@ -37,6 +37,7 @@
               v-for="mod in learnerNavModules"
               :key="mod.id"
               :to="mod.route_web || learnerFallbackRoute(mod.id)"
+              :class="{ 'nav-soon': modules.moduleStatus(mod) === 'coming_soon' }"
             >
               {{ mod.label }}
             </RouterLink>
@@ -48,6 +49,7 @@
             v-for="mod in staffNavModules"
             :key="mod.id"
             :to="mod.route_web || '/home'"
+            :class="{ 'nav-soon': modules.moduleStatus(mod) === 'coming_soon' }"
           >
             {{ staffNavLabel(mod) }}
           </RouterLink>
@@ -258,6 +260,13 @@ async function switchChild() {
 }
 .top a.router-link-active {
   color: #fff;
+}
+.top a.nav-soon {
+  color: #71717a;
+  opacity: 0.75;
+}
+.top a.nav-soon.router-link-active {
+  color: #a1a1aa;
 }
 .brand {
   font-weight: 700;
