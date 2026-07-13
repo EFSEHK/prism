@@ -11,24 +11,10 @@ import DashboardView from '../views/DashboardView.vue'
 import ParentHomeView from '../views/ParentHomeView.vue'
 import ChildDashboardView from '../views/ChildDashboardView.vue'
 import ApprovalsView from '../views/ApprovalsView.vue'
-import AttendanceView from '../views/AttendanceView.vue'
-import MarksView from '../views/MarksView.vue'
-import HomeworkView from '../views/HomeworkView.vue'
-import OnlineClassView from '../views/OnlineClassView.vue'
-import LeaveView from '../views/LeaveView.vue'
-import NotificationsView from '../views/NotificationsView.vue'
 import ComingSoonView from '../views/ComingSoonView.vue'
 import PermissionsAdminView from '../views/admin/PermissionsAdminView.vue'
 import AcademicConfigView from '../views/admin/AcademicConfigView.vue'
 import UsersAdminView from '../views/admin/UsersAdminView.vue'
-import ParentHomeworkView from '../views/parent/ParentHomeworkView.vue'
-import ParentMarksView from '../views/parent/ParentMarksView.vue'
-import ParentAttendanceView from '../views/parent/ParentAttendanceView.vue'
-import ParentTimetableView from '../views/parent/ParentTimetableView.vue'
-import ParentNotificationsView from '../views/parent/ParentNotificationsView.vue'
-import ParentFeesView from '../views/parent/ParentFeesView.vue'
-import ParentOnlineClassView from '../views/parent/ParentOnlineClassView.vue'
-import ParentLeaveView from '../views/parent/ParentLeaveView.vue'
 
 const router = createRouter({
   history: createWebHistory(),
@@ -43,14 +29,21 @@ const router = createRouter({
     { path: '/approvals', component: ApprovalsView, meta: { auth: true, staffOnly: true } },
     {
       path: '/attendance',
-      component: roleView(ParentAttendanceView, AttendanceView),
+      component: ComingSoonView,
       meta: { auth: true, requiresChild: true },
+      props: { title: 'Attendance' },
     },
-    { path: '/marks', component: roleView(ParentMarksView, MarksView), meta: { auth: true, requiresChild: true } },
+    {
+      path: '/marks',
+      component: ComingSoonView,
+      meta: { auth: true, requiresChild: true },
+      props: { title: 'Marks' },
+    },
     {
       path: '/homework',
-      component: roleView(ParentHomeworkView, HomeworkView),
+      component: ComingSoonView,
       meta: { auth: true, requiresChild: true },
+      props: { title: 'Homework' },
     },
     {
       path: '/timetable',
@@ -60,8 +53,9 @@ const router = createRouter({
     },
     {
       path: '/online-classes',
-      component: roleView(ParentOnlineClassView, OnlineClassView),
+      component: ComingSoonView,
       meta: { auth: true, requiresChild: true },
+      props: { title: 'Online' },
     },
     {
       path: '/fees',
@@ -71,10 +65,16 @@ const router = createRouter({
     },
     {
       path: '/notifications',
-      component: roleView(ParentNotificationsView, NotificationsView),
+      component: ComingSoonView,
       meta: { auth: true, requiresChild: true },
+      props: { title: 'Notifications' },
     },
-    { path: '/leave', component: roleView(ParentLeaveView, LeaveView), meta: { auth: true, requiresChild: true } },
+    {
+      path: '/leave',
+      component: ComingSoonView,
+      meta: { auth: true, requiresChild: true },
+      props: { title: 'Leave' },
+    },
     { path: '/alerts', redirect: '/notifications' },
   ],
 })

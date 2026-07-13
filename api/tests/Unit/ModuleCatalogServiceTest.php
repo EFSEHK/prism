@@ -92,20 +92,21 @@ class ModuleCatalogServiceTest extends TestCase
         }
     }
 
-    public function test_timetable_and_fees_are_marked_coming_soon(): void
+    public function test_only_admin_shell_modules_are_live(): void
     {
         $user = $this->userWithRoles(['superadmin']);
 
         $byId = collect($this->catalog->forUser($user))->keyBy('id');
 
-        $this->assertTrue($byId->get('timetable')['coming_soon']);
-        $this->assertTrue($byId->get('fees')['coming_soon']);
-        $this->assertSame('coming_soon', $byId->get('timetable')['status']);
-        $this->assertSame('coming_soon', $byId->get('fees')['status']);
-        $this->assertFalse($byId->get('attendance')['coming_soon']);
-        $this->assertSame('live', $byId->get('attendance')['status']);
-        $this->assertFalse($byId->get('marks')['coming_soon']);
-        $this->assertSame('live', $byId->get('marks')['status']);
+        foreach (['dashboard', 'users', 'configuration', 'permissions', 'approvals'] as $id) {
+            $this->assertFalse($byId->get($id)['coming_soon'], $id);
+            $this->assertSame('live', $byId->get($id)['status'], $id);
+        }
+
+        foreach (['attendance', 'marks', 'homework', 'timetable', 'online', 'fees', 'notifications', 'leave'] as $id) {
+            $this->assertTrue($byId->get($id)['coming_soon'], $id);
+            $this->assertSame('coming_soon', $byId->get($id)['status'], $id);
+        }
     }
 
     private function seedPermissions(): void

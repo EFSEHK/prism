@@ -285,7 +285,7 @@ class ModuleCatalogService
                 'platforms' => ['web', 'mobile'],
                 'route_web' => '/attendance',
                 'route_mobile' => 'attendance',
-                'coming_soon' => false,
+                'coming_soon' => true,
                 'gate' => fn (User $user, array $roles): bool => $this->hasAnyRole($roles, self::STAFF_ROLES),
             ],
             [
@@ -294,7 +294,7 @@ class ModuleCatalogService
                 'platforms' => ['web', 'mobile'],
                 'route_web' => '/marks',
                 'route_mobile' => 'marks',
-                'coming_soon' => false,
+                'coming_soon' => true,
                 'gate' => fn (User $user, array $roles): bool => $this->hasAnyRole($roles, self::STAFF_ROLES),
             ],
             [
@@ -303,7 +303,7 @@ class ModuleCatalogService
                 'platforms' => ['web', 'mobile'],
                 'route_web' => '/homework',
                 'route_mobile' => 'homework',
-                'coming_soon' => false,
+                'coming_soon' => true,
                 'gate' => fn (User $user, array $roles): bool => $this->hasAnyRole($roles, self::STAFF_ROLES),
             ],
             [
@@ -312,7 +312,6 @@ class ModuleCatalogService
                 'platforms' => ['web', 'mobile'],
                 'route_web' => '/timetable',
                 'route_mobile' => 'timetable',
-                // Matches web router ComingSoonView for /timetable
                 'coming_soon' => true,
                 'gate' => fn (User $user, array $roles): bool => $this->hasAnyRole($roles, self::TIMETABLE_ROLES),
             ],
@@ -322,7 +321,7 @@ class ModuleCatalogService
                 'platforms' => ['web', 'mobile'],
                 'route_web' => '/online-classes',
                 'route_mobile' => 'online',
-                'coming_soon' => false,
+                'coming_soon' => true,
                 'gate' => fn (User $user, array $roles): bool => $this->hasAnyRole($roles, self::STAFF_ROLES),
             ],
             [
@@ -331,7 +330,6 @@ class ModuleCatalogService
                 'platforms' => ['web', 'mobile'],
                 'route_web' => '/fees',
                 'route_mobile' => 'fees',
-                // Matches web router ComingSoonView for /fees
                 'coming_soon' => true,
                 'gate' => fn (User $user, array $roles): bool => $this->hasAnyRole($roles, self::FEES_ROLES),
             ],
@@ -341,7 +339,7 @@ class ModuleCatalogService
                 'platforms' => ['web', 'mobile'],
                 'route_web' => '/notifications',
                 'route_mobile' => 'notifications',
-                'coming_soon' => false,
+                'coming_soon' => true,
                 'gate' => fn (User $user, array $roles): bool => $this->hasAnyRole($roles, self::BROADCAST_ROLES),
             ],
             [
@@ -350,7 +348,7 @@ class ModuleCatalogService
                 'platforms' => ['web', 'mobile'],
                 'route_web' => '/leave',
                 'route_mobile' => 'leave',
-                'coming_soon' => false,
+                'coming_soon' => true,
                 'gate' => fn (User $user, array $roles): bool => $this->hasAnyRole($roles, self::LEAVE_ROLES),
             ],
         ];
