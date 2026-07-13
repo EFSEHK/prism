@@ -60,9 +60,11 @@ class AuthController extends Controller
                 ], 401);
             }
 
-            $user->tokens()->delete();
-            $token = $user->createToken('auth_token');
-            
+            // Keep existing tokens so web and mobile sessions can coexist.
+            // Logout only deletes the current access token.
+            $tokenName = $request->input('device_name', 'auth_token');
+            $token = $user->createToken(is_string($tokenName) && $tokenName !== '' ? $tokenName : 'auth_token');
+
             event(new \Illuminate\Auth\Events\Login('web', $user, false));
 
             $user->load(['roles:id,name']);
