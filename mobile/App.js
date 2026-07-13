@@ -48,6 +48,7 @@ import NavigationErrorBoundary from './components/NavigationErrorBoundary'
 import { childName, formatError } from './utils/format'
 import { ui } from './components/ui'
 import { runStartupUpdateChecks } from './services/appUpdates'
+import { loadSession, saveSession, clearSession } from './services/session'
 import { learnerFeatures, staffFeaturesFor, isCatalogComingSoon, isCatalogLive, moduleStatus } from './features'
 
 const DASHBOARD_INCLUDE =
@@ -64,6 +65,7 @@ export default function App() {
   const [tab, setTab] = useState('home')
   const [menuOpen, setMenuOpen] = useState(false)
   const [loading, setLoading] = useState(false)
+  const [booting, setBooting] = useState(true)
   const [err, setErr] = useState('')
   const [viewAsRole, setViewAsRoleState] = useState('')
   const [viewAsOptions, setViewAsOptions] = useState([])
@@ -79,6 +81,58 @@ export default function App() {
   useEffect(() => {
     setAuthToken(token)
   }, [token])
+
+  // Restore persisted session after refresh / app reload.
+  useEffect(() => {
+    let cancelled = false
+    ;(async () => {
+      try {
+        const session = await loadSession()
+        if (cancelled || !session?.token) return
+
+        setAuthToken(session.token)
+        setToken(session.token)
+        setUser(session.user ?? null)
+
+        try {
+          const { data: me } = await apiClient.get('/user')
+          if (cancelled) return
+          setUser(me)
+          await saveSession(session.token, me)
+
+          const roles = (me?.roles || []).map((r) => r.name)
+          if (roles.includes('superadmin')) {
+            try {
+              await Promise.all([loadViewAsOptions(), loadViewAsUsers()])
+            } catch {
+              /* ignore */
+            }
+          }
+          await refreshModulesSafe()
+          if (roles.includes('parent') || roles.includes('student')) {
+            await enterLearnerContext(roles)
+          } else {
+            setTab('dashboard')
+          }
+        } catch {
+          if (cancelled) return
+          await clearSession()
+          setAuthToken('')
+          setToken('')
+          setUser(null)
+          setDashboard(null)
+          setModules([])
+        }
+      } finally {
+        if (!cancelled) setBooting(false)
+      }
+    })()
+    return () => {
+      cancelled = true
+    }
+    // Intentionally once on mount — restore uses setters + stable apiClient.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
 
   useEffect(() => {
     if (impersonateUser?.id) {
@@ -266,6 +320,7 @@ export default function App() {
       setAuthToken(data.access_token)
       setToken(data.access_token)
       setUser(data.user ?? null)
+      await saveSession(data.access_token, data.user ?? null)
       setViewAsRoleState('')
       setViewAsRole('')
       setViewAsUser(null)
@@ -294,6 +349,7 @@ export default function App() {
       setDashboard(null)
       setSelectedChild(null)
       setModules([])
+      await clearSession()
       setErr(formatError(e))
     } finally {
       setLoading(false)
@@ -308,6 +364,7 @@ export default function App() {
     }
     setAuthToken('')
     clearViewAs()
+    await clearSession()
     setToken('')
     setUser(null)
     setDashboard(null)
@@ -550,6 +607,15 @@ export default function App() {
     }
   }
 
+  if (booting) {
+    return (
+      <View style={[styles.root, styles.boot]}>
+        <StatusBar style="dark" />
+        <ActivityIndicator size="large" color="#0f766e" />
+      </View>
+    )
+  }
+
   return (
     <View style={styles.root}>
       <StatusBar style="dark" />
@@ -700,6 +766,7 @@ export default function App() {
 
 const styles = StyleSheet.create({
   root: { flex: 1, backgroundColor: '#f8fafc' },
+  boot: { alignItems: 'center', justifyContent: 'center' },
   login: { padding: 20, paddingTop: 48, paddingBottom: 40 },
   title: { fontSize: 24, fontWeight: '700', marginBottom: 8 },
   hint: { fontSize: 11, color: '#64748b', marginBottom: 4 },
