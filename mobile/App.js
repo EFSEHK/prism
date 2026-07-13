@@ -412,6 +412,11 @@ export default function App() {
     : viewAsRole
       ? [viewAsRole]
       : actualRoleNames
+  const effectivePermissions = impersonateUser
+    ? permissionNamesFrom(impersonateUser)
+    : viewAsRole
+      ? (viewAsOptions.find((o) => o.name === viewAsRole)?.permissions || [])
+      : permissionNamesFrom(user)
   const isParentRole = roleNames.includes('parent')
   const isStudentRole = roleNames.includes('student')
   const isLearnerRole = isParentRole || isStudentRole
@@ -508,7 +513,7 @@ export default function App() {
       }
       switch (tab) {
         case 'attendance':
-          return attendanceEnabled ? <StaffAttendanceScreen /> : null
+          return attendanceEnabled ? <StaffAttendanceScreen permissions={effectivePermissions} /> : null
         case 'approvals':
           return <ApprovalsScreen />
         case 'marks':
