@@ -62,23 +62,33 @@
 
 <script setup>
 import { ref } from 'vue'
-import { useRouter } from 'vue-router'
+import { useRoute, useRouter } from 'vue-router'
 import { useAuthStore } from '../stores/auth'
 
 const auth = useAuthStore()
 const router = useRouter()
+const route = useRoute()
 const email = ref('')
 const password = ref('')
 const showPassword = ref(false)
 const err = ref('')
 const submitting = ref(false)
 
+function safeRedirectTarget() {
+  const raw = route.query.redirect
+  const path = Array.isArray(raw) ? raw[0] : raw
+  if (typeof path === 'string' && path.startsWith('/') && !path.startsWith('//')) {
+    return path
+  }
+  return '/home'
+}
+
 async function submit() {
   err.value = ''
   submitting.value = true
   try {
     await auth.login(email.value.trim(), password.value.trim())
-    router.push('/home')
+    router.push(safeRedirectTarget())
   } catch (e) {
     err.value = e.response?.data?.message || 'Login failed'
   } finally {

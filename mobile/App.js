@@ -41,9 +41,9 @@ import {
 import {
   ApprovalsScreen,
   UsersScreen,
-  ConfigurationScreen,
   PermissionsScreen,
 } from './screens/StaffModuleScreens'
+import ConfigurationScreen from './screens/ConfigurationScreen'
 import NavigationErrorBoundary from './components/NavigationErrorBoundary'
 import { childName, formatError } from './utils/format'
 import { ui } from './components/ui'
@@ -529,7 +529,7 @@ export default function App() {
         case 'users':
           return <UsersScreen />
         case 'configuration':
-          return <ConfigurationScreen />
+          return <ConfigurationScreen permissions={effectivePermissions} roles={roleNames} />
         case 'permissions':
           return <PermissionsScreen />
         default:

@@ -174,26 +174,26 @@ Effective role and permissions switch for subsequent API requests while View-as 
 
 ## 8. Academic structure & enrollment
 
-**Apps:** Web Configuration UI + API. **Not available on Mobile.**
+**Apps:** Web Configuration UI + Mobile Configuration screen + API.
 
 | Feature / option | Web | Mobile | API | Roles |
 |------------------|-----|--------|-----|-------|
-| Configuration page | ✓ `/admin/academic` | — | `/api/efsc/academic/*` | See below |
-| Tab: **Structure** (Year → Area → Class → Section) | ✓ | — | ✓ | `manage_academic_structure` / roles: SA, AD, DV, CO |
-| Create / edit / delete academic year (dates, current flag) | ✓ | — | ✓ | Academic managers |
-| Create / edit / delete area + assign **section head** | ✓ | — | ✓ | Academic managers |
-| Create / edit / delete class | ✓ | — | ✓ | Academic managers |
-| Create / edit / delete section | ✓ | — | ✓ | Academic managers |
-| Tab: **Subjects** (name + code catalog) | ✓ | — | ✓ | Academic managers |
-| Tab: **Assign subjects** (study groups + subject checkboxes) | ✓ | — | ✓ | Academic managers |
-| Create study group | ✓ | — | ✓ | Academic managers |
-| Tab: **Enroll students** | ✓ | — | ✓ | `manage_student_roster` / roles: CO, SH, CI (+ SA/AD via structure) |
-| Enroll filters: class / section / study group / search | ✓ | — | ✓ | Roster managers |
-| Enroll fields: name, admission no., class, section, roll, study group, CNIC, father name/CNIC, guardian (or father-is-guardian) | ✓ | — | ✓ | Roster managers |
+| Configuration page | ✓ `/admin/academic` | ✓ Configuration module | `/api/efsc/academic/*` | See below |
+| Tab: **Structure** (Year → Area → Class → Section) | ✓ | ✓ | ✓ | `manage_academic_structure` / roles: SA, AD, DV, CO |
+| Create / edit / delete academic year (dates, current flag) | ✓ | ✓ | ✓ | Academic managers |
+| Create / edit / delete area + assign **section head** | ✓ | ✓ | ✓ | Academic managers |
+| Create / edit / delete class | ✓ | ✓ | ✓ | Academic managers |
+| Create / edit / delete section | ✓ | ✓ | ✓ | Academic managers |
+| Tab: **Subjects** (name + code catalog) | ✓ | ✓ | ✓ | Academic managers |
+| Tab: **Assign subjects** (study groups + subject checkboxes) | ✓ | ✓ | ✓ | Academic managers |
+| Create study group | ✓ | ✓ | ✓ | Academic managers |
+| Tab: **Enroll students** | ✓ | ✓ | ✓ | `manage_student_roster` / roles: CO, SH, CI (+ SA/AD via structure) |
+| Enroll filters: class / section / study group / search | ✓ | ✓ | ✓ | Roster managers |
+| Enroll fields: name, admission no., class, section, roll, study group, CNIC, father name/CNIC, guardian (or father-is-guardian) | ✓ | ✓ | ✓ | Roster managers |
 | Auto-provision student / parent user accounts on enroll | — | — | ✓ (service) | Via enroll API |
 | Section-heads list for pickers | — | — | ✓ | Staff with academic access |
 
-**Who sees Configuration in web nav:** roles with `canConfigure` — academic structure **or** student roster (SA, AD, DV, CO, SH, CI).
+**Who sees Configuration:** roles with `canConfigure` — academic structure **or** student roster (SA, AD, DV, CO, SH, CI).
 
 ---
 

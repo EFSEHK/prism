@@ -14,7 +14,7 @@ Both Prism web and Prism mobile now consume **`GET /api/efsc/modules`** (`App\Se
 |--------|----------------------|---------------------------|-----------------|
 | Dashboard | Yes | Yes | Catalog |
 | Users | Yes | Yes (Coming soon screen) | Catalog |
-| Configuration | Yes | Yes (Coming soon screen) | Catalog |
+| Configuration | Yes | Yes (**real screen**) | Catalog |
 | Permissions | Yes | Yes (Coming soon screen) | Catalog |
 | Approvals | Yes | Yes (Coming soon screen) | Catalog |
 | Attendance | Yes | Yes (**real screen**) | Catalog |

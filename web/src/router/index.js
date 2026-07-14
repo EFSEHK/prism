@@ -91,7 +91,8 @@ const router = createRouter({
 
 router.beforeEach((to) => {
   const auth = useAuthStore()
-  if (to.meta.auth && !auth.token) return '/login'
+  const isPublic = to.meta.public || to.meta.guest
+  if (!isPublic && !auth.token) return '/login'
   if (to.meta.guest && auth.token) return '/home'
   if (to.meta.public && auth.token && to.path === '/') return '/home'
 
