@@ -62,4 +62,9 @@ class HomeworkPost extends Model
     {
         return $this->status === 'approved';
     }
+
+    public function isPending(): bool
+    {
+        return $this->status === 'pending_approval';
+    }
 }

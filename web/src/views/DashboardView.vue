@@ -11,6 +11,15 @@
       <p v-else-if="!widgets.pending_approvals">No pending items.</p>
       <p v-else>{{ widgets.pending_approvals }} pending — <RouterLink to="/approvals">Review</RouterLink></p>
     </div>
+    <div v-if="widgets.homework_pending_approve != null" class="card">
+      <h2>Pending homework</h2>
+      <p v-if="loading">Loading…</p>
+      <p v-else-if="!widgets.homework_pending_approve">No homework awaiting approval.</p>
+      <p v-else>
+        {{ widgets.homework_pending_approve }} pending —
+        <RouterLink :to="{ path: '/homework', query: { tab: 'pending' } }">Review</RouterLink>
+      </p>
+    </div>
   </div>
 </template>
 

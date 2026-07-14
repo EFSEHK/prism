@@ -128,6 +128,7 @@ Route::middleware([LogAllRequests::class, 'auth:sanctum', CheckInactivity::class
         Route::get('homework', [HomeworkController::class, 'index']);
         Route::post('homework', [HomeworkController::class, 'store']);
         Route::post('homework/{homeworkPost}/approve', [HomeworkController::class, 'approve']);
+        Route::post('homework/{homeworkPost}/reject', [HomeworkController::class, 'reject']);
 
         Route::get('online-classes', [OnlineClassController::class, 'index']);
         Route::post('online-classes', [OnlineClassController::class, 'store']);

@@ -519,7 +519,7 @@ export default function App() {
         case 'marks':
           return <MarksScreen />
         case 'homework':
-          return <HomeworkScreen />
+          return <HomeworkScreen permissions={effectivePermissions} isLearner={false} />
         case 'online':
           return <OnlineClassScreen />
         case 'notifications':
@@ -580,7 +580,7 @@ export default function App() {
             : 'Choose a feature to continue',
         })
       case 'homework':
-        return <HomeworkScreen />
+        return <HomeworkScreen permissions={effectivePermissions} isLearner />
       case 'marks':
         return <MarksScreen />
       case 'attendance':

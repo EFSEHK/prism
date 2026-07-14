@@ -46,6 +46,7 @@ class LearnerDashboardController extends Controller
         }
 
         $studyGroupIds = $scopedStudents->pluck('study_group_id')->unique()->filter();
+        $sectionIds = $scopedStudents->pluck('section_id')->unique()->filter();
         $focusStudentIds = $scopedStudents->pluck('id');
 
         $unread = UserNotification::query()
@@ -72,10 +73,18 @@ class LearnerDashboardController extends Controller
         if (in_array('homework', $include, true)) {
             $payload['homework'] = HomeworkPost::query()
                 ->where('status', 'approved')
-                ->where(function ($qq) use ($studyGroupIds) {
-                    $qq->whereIn('study_group_id', $studyGroupIds);
+                ->where(function ($qq) use ($studyGroupIds, $sectionIds) {
+                    if ($studyGroupIds->isNotEmpty()) {
+                        $qq->whereIn('study_group_id', $studyGroupIds);
+                    }
+                    if ($sectionIds->isNotEmpty()) {
+                        $qq->orWhereIn('section_id', $sectionIds);
+                    }
+                    if ($studyGroupIds->isEmpty() && $sectionIds->isEmpty()) {
+                        $qq->whereRaw('1 = 0');
+                    }
                 })
-                ->with(['subject:id,name', 'studyGroup:id,name'])
+                ->with(['subject:id,name', 'studyGroup:id,name', 'section:id,name'])
                 ->orderByDesc('created_at')
                 ->limit(10)
                 ->get();

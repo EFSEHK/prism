@@ -259,14 +259,18 @@ Effective role and permissions switch for subsequent API requests while View-as 
 
 | Feature / option | Web | Mobile | API | Roles / permission |
 |------------------|-----|--------|-----|-------------------|
-| Post homework | ✓ `/homework` | — | `POST /efsc/homework` | `post_homework` (CI, TE + SA/DV) |
-| Fields: study group, title, body, due date, subject | ✓ | — | ✓ | Posters |
-| Status `pending_approval` until approved | ✓ | — | ✓ | System |
-| Approve homework | — (no dedicated UI; dashboard may count) | — | `POST .../approve` | `approve_homework` (SH + SA/DV) |
-| Learner homework diary (approved only) | ✓ | ✓ | ✓ | `parent`, `student` |
-| Notification: new homework | — | Inbox | Catalog | Via pipeline |
+| Post homework | ✓ `/homework` (Post tab) | ✓ (composer when `post_homework`) | `POST /efsc/homework` | `post_homework` (CI, TE + SA/DV) |
+| Fields: study group, title, body, due date, subject | ✓ | ✓ | ✓ | Posters |
+| Status `pending_approval` until approved | ✓ | ✓ | ✓ | System |
+| Diary / list with status filter | ✓ (Diary tab) | ✓ | `GET /efsc/homework?status=` | `post_homework` or `approve_homework` |
+| Approve homework | ✓ (Pending tab) | ✓ (Pending section) | `POST .../approve` | `approve_homework` (SH + SA/DV) |
+| Reject homework | ✓ | ✓ | `POST .../reject` | `approve_homework` |
+| Staff dashboard pending count | ✓ → `/homework?tab=pending` | — | `homework_pending_approve` widget | Approvers |
+| Learner homework diary (approved only) | ✓ | ✓ | ✓ + `view_own_homework` | `parent`, `student` |
+| Notification: new homework | Via dispatch pipeline | Inbox | Fired on **approve** (`homework.new_post`) | Study group / section audience |
+| Attachments | — | — | Column unused | Deferred |
 
-**Web nav:** `canStaff`.
+**Web nav:** catalog module `homework` (default `coming_soon` until Apps sets `live`).
 
 ---
 
@@ -473,11 +477,11 @@ Home, Dashboard, Homework, Marks, Attendance, Timetable, Notifications, Fees, On
 | View-as user (impersonate) | — | — | ✓ |
 | Module catalog (`GET /efsc/modules`) | ✓ | ✓ | ✓ |
 | Home + child pick | ✓ | If View-as learner | Via View-as |
-| Dashboard, Homework, Marks, Attendance, Timetable, Notifications, Fees, Online Class, Leave | ✓ (screens) | Tiles when catalog enables; only **Attendance** has a full staff screen today — others open in-tab Coming soon | Same |
+| Dashboard, Homework, Marks, Attendance, Timetable, Notifications, Fees, Online Class, Leave | ✓ (screens) | Tiles when catalog `live`; Homework staff/learner screens are real (post / approve / diary). Attendance + Configuration + Approvals also real; other staff modules still thin or pending | Same |
 | Staff Attendance (Mark / View / Summary) | — | When `attendance` enabled | ✓ |
+| Staff Homework (post / pending approve-reject / diary) | — | When `homework` enabled | ✓ |
 
-Nav/tile enablement is **backend-driven** (same endpoint as web). `PENDING_MOBILE_SCREENS` in `mobile/features.js` lists staff module IDs that still need real mobile UIs (not a second permission gate).
-
+Nav/tile enablement is **backend-driven** (same endpoint as web).
 
 ---
 
@@ -497,7 +501,7 @@ All school modules live under `/api/efsc/*` (authenticated Sanctum group unless 
 | Attendance | batches CRUD/submit/verify, summary, monthly/weekly reports |
 | Assessments / marks | assessments, mark-sheets, entries, verify, notify-parents |
 | Timetable | slots, datesheet |
-| Homework | list, create, approve |
+| Homework | list, create, approve, reject (`?status=` filter) |
 | Online classes | list, create, approve |
 | Fees | vouchers create/list/status |
 | Leave | request, list, decide |
@@ -562,11 +566,10 @@ Prism **web** (`stores/modules.js` + `App.vue`) and **mobile** (`App.js` + `feat
 |------------|-----|--------|-----------|
 | Create assessments | ✓ | Missing dedicated UI | — |
 | Verify mark sheets | ✓ | Missing Verify button | — |
-| Approve homework | ✓ | No dedicated approve UI | — |
 | Approve online classes | ✓ | No dedicated approve UI | — |
-| Timetable manage / learner (web) | ✓ | Coming soon (views exist unwired) | Learner read ✓ |
-| Fee manage / learner (web) | ✓ | Coming soon (views exist unwired) | Learner list ✓ |
-| Staff modules beyond Attendance (mobile) | ✓ catalog | ✓ | Coming soon in-tab (`PENDING_MOBILE_SCREENS`) |
+| Timetable manage / learner (web) | ✓ | Catalog-gated (views wired) | Screens exist; App.js not hooked |
+| Fee manage / learner (web) | ✓ | Catalog-gated (views wired) | Screens exist; App.js not hooked |
+| Homework attachments | Column only | — | — |
 | Push notifications (FCM) | Token stub | — | Not wired |
 | Demo school data seeder | Empty | Manual via Configuration | — |
 | OTA Expo Updates | — | — | Needs EAS URL setup |
@@ -578,7 +581,7 @@ Prism **web** (`stores/modules.js` + `App.vue`) and **mobile** (`App.js` + `feat
 ```
 Attendance:     mark → submit → verify → parent/student view
 Marks:          assessment → mark sheet → enter → verify → notify (approval)
-Homework:       create → section_head approve → learner visible
+Homework:       create → section_head approve/reject → notify on approve → learner visible
 Online class:   create → section_head approve → learner visible
 Broadcasts:     create → approval if required → publish
 Leave:          parent request → admin/section_head decide → notify

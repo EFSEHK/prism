@@ -140,8 +140,13 @@ export function HomeScreen(props) {
   return <ParentHomeScreen {...props} onSelectChild={props.onSelectChild} />
 }
 
-export function HomeworkScreen() {
+export function HomeworkScreen({ permissions = [], isLearner = false }) {
+  const perms = (permissions || []).map((p) => (typeof p === 'string' ? p : p?.name)).filter(Boolean)
+  const canPost = !isLearner && perms.includes('post_homework')
+  const canApprove = !isLearner && perms.includes('approve_homework')
+
   const [items, setItems] = useState([])
+  const [pending, setPending] = useState([])
   const [studyGroups, setStudyGroups] = useState([])
   const [subjects, setSubjects] = useState([])
   const [studyGroupId, setStudyGroupId] = useState('')
@@ -151,10 +156,12 @@ export function HomeworkScreen() {
   const [subjectId, setSubjectId] = useState('')
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
+  const [busyId, setBusyId] = useState(null)
   const [err, setErr] = useState('')
   const [ok, setOk] = useState('')
 
   const loadMeta = async () => {
+    if (isLearner) return
     const [sg, sub] = await Promise.all([
       apiClient.get('/efsc/academic/study-groups'),
       apiClient.get('/efsc/academic/subjects'),
@@ -172,7 +179,7 @@ export function HomeworkScreen() {
     setErr('')
     try {
       const params = { per_page: 30 }
-      if (studyGroupId) params.study_group_id = studyGroupId
+      if (!isLearner && studyGroupId) params.study_group_id = studyGroupId
       const { data } = await apiClient.get('/efsc/homework', { params })
       setItems(paginatedItems(data))
     } catch (e) {
@@ -180,6 +187,22 @@ export function HomeworkScreen() {
       setItems([])
     } finally {
       setLoading(false)
+    }
+  }
+
+  const loadPending = async () => {
+    if (!canApprove) {
+      setPending([])
+      return
+    }
+    try {
+      const params = { status: 'pending_approval', per_page: 50 }
+      if (studyGroupId) params.study_group_id = studyGroupId
+      const { data } = await apiClient.get('/efsc/homework', { params })
+      setPending(paginatedItems(data))
+    } catch (e) {
+      setErr(formatError(e))
+      setPending([])
     }
   }
 
@@ -205,10 +228,27 @@ export function HomeworkScreen() {
       setDueDate('')
       setSubjectId('')
       await load()
+      await loadPending()
     } catch (e) {
       setErr(formatError(e))
     } finally {
       setSaving(false)
+    }
+  }
+
+  const act = async (id, action) => {
+    setBusyId(id)
+    setErr('')
+    setOk('')
+    try {
+      await apiClient.post(`/efsc/homework/${id}/${action}`)
+      setOk(action === 'approve' ? 'Homework approved.' : 'Homework rejected.')
+      await loadPending()
+      await load()
+    } catch (e) {
+      setErr(formatError(e))
+    } finally {
+      setBusyId(null)
     }
   }
 
@@ -224,17 +264,22 @@ export function HomeworkScreen() {
     return () => { cancelled = true }
   }, [])
 
-  useEffect(() => { load() }, [studyGroupId])
+  useEffect(() => {
+    load()
+    loadPending()
+  }, [studyGroupId, canApprove, isLearner])
 
-  if (loading && items.length === 0) return <ActivityIndicator style={styles.center} />
+  if (loading && items.length === 0 && pending.length === 0) {
+    return <ActivityIndicator style={styles.center} />
+  }
 
   return (
-    <ScreenWrap refreshing={false} onRefresh={load}>
+    <ScreenWrap refreshing={false} onRefresh={async () => { await load(); await loadPending() }}>
       <Text style={styles.h1}>Homework diary</Text>
       {err ? <Text style={ui.err}>{err}</Text> : null}
       {ok ? <Text style={styles.ok}>{ok}</Text> : null}
 
-      {studyGroups.length > 0 ? (
+      {!isLearner && studyGroups.length > 0 ? (
         <View style={styles.pickerWrap}>
           <Text style={styles.label}>Study group</Text>
           <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.chipRow}>
@@ -253,56 +298,93 @@ export function HomeworkScreen() {
         </View>
       ) : null}
 
-      <Section title="New post">
-        <TextInput style={styles.input} placeholder="Title" value={title} onChangeText={setTitle} />
-        <TextInput
-          style={[styles.input, styles.textarea]}
-          placeholder="Body"
-          value={body}
-          onChangeText={setBody}
-          multiline
-        />
-        <TextInput
-          style={styles.input}
-          placeholder="Due date (YYYY-MM-DD)"
-          value={dueDate}
-          onChangeText={setDueDate}
-        />
-        {subjects.length > 0 ? (
-          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.chipRow}>
-            <Pressable
-              onPress={() => setSubjectId('')}
-              style={[styles.chip, !subjectId && styles.chipActive]}
-            >
-              <Text style={[styles.chipText, !subjectId && styles.chipTextActive]}>—</Text>
-            </Pressable>
-            {subjects.map((s) => (
-              <Pressable
-                key={s.id}
-                onPress={() => setSubjectId(String(s.id))}
-                style={[styles.chip, subjectId === String(s.id) && styles.chipActive]}
-              >
-                <Text style={[styles.chipText, subjectId === String(s.id) && styles.chipTextActive]}>
-                  {s.name}
-                </Text>
-              </Pressable>
-            ))}
-          </ScrollView>
-        ) : null}
-        <Pressable style={[styles.btn, saving && styles.btnDisabled]} onPress={create} disabled={saving}>
-          <Text style={styles.btnText}>{saving ? 'Posting…' : 'Post homework'}</Text>
-        </Pressable>
-      </Section>
+      {canApprove ? (
+        <Section title="Pending approval" badge={pending.length || null}>
+          {pending.length === 0 ? <EmptyNote text="No homework awaiting approval." /> : null}
+          {pending.map((h) => (
+            <View key={`p-${h.id}`} style={styles.actionCard}>
+              <Card
+                title={h.title}
+                meta={`${h.subject?.name || 'No subject'} · ${h.created_by?.name || 'Staff'}`.trim()}
+                body={h.body}
+                sub={h.due_date ? `Due ${formatDate(h.due_date)}` : null}
+              />
+              <View style={styles.rowActions}>
+                <Pressable
+                  style={[styles.btn, styles.btnOk, busyId === h.id && styles.btnDisabled]}
+                  disabled={busyId === h.id}
+                  onPress={() => act(h.id, 'approve')}
+                >
+                  <Text style={styles.btnText}>Approve</Text>
+                </Pressable>
+                <Pressable
+                  style={[styles.btn, styles.btnDanger, busyId === h.id && styles.btnDisabled]}
+                  disabled={busyId === h.id}
+                  onPress={() => act(h.id, 'reject')}
+                >
+                  <Text style={styles.btnText}>Reject</Text>
+                </Pressable>
+              </View>
+            </View>
+          ))}
+        </Section>
+      ) : null}
 
-      <Section title="Recent">
+      {canPost ? (
+        <Section title="New post">
+          <TextInput style={styles.input} placeholder="Title" value={title} onChangeText={setTitle} />
+          <TextInput
+            style={[styles.input, styles.textarea]}
+            placeholder="Body"
+            value={body}
+            onChangeText={setBody}
+            multiline
+          />
+          <TextInput
+            style={styles.input}
+            placeholder="Due date (YYYY-MM-DD)"
+            value={dueDate}
+            onChangeText={setDueDate}
+          />
+          {subjects.length > 0 ? (
+            <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.chipRow}>
+              <Pressable
+                onPress={() => setSubjectId('')}
+                style={[styles.chip, !subjectId && styles.chipActive]}
+              >
+                <Text style={[styles.chipText, !subjectId && styles.chipTextActive]}>—</Text>
+              </Pressable>
+              {subjects.map((s) => (
+                <Pressable
+                  key={s.id}
+                  onPress={() => setSubjectId(String(s.id))}
+                  style={[styles.chip, subjectId === String(s.id) && styles.chipActive]}
+                >
+                  <Text style={[styles.chipText, subjectId === String(s.id) && styles.chipTextActive]}>
+                    {s.name}
+                  </Text>
+                </Pressable>
+              ))}
+            </ScrollView>
+          ) : null}
+          <Pressable style={[styles.btn, saving && styles.btnDisabled]} onPress={create} disabled={saving}>
+            <Text style={styles.btnText}>{saving ? 'Posting…' : 'Post homework'}</Text>
+          </Pressable>
+        </Section>
+      ) : null}
+
+      <Section title={isLearner ? 'Homework' : 'Recent'}>
         {items.length === 0 ? <EmptyNote text="No homework posts." /> : null}
         {items.map((h) => (
           <Card
             key={h.id}
             title={h.title}
-            meta={`${h.subject?.name || ''} · ${h.status || ''}`.trim()}
+            meta={[
+              h.subject?.name,
+              isLearner ? h.study_group?.name : h.status,
+              h.due_date ? `Due ${formatDate(h.due_date)}` : null,
+            ].filter(Boolean).join(' · ')}
             body={h.body}
-            sub={h.due_date ? `Due ${formatDate(h.due_date)}` : null}
           />
         ))}
       </Section>
@@ -743,6 +825,10 @@ const styles = StyleSheet.create({
   },
   btnDisabled: { opacity: 0.6 },
   btnText: { color: '#fff', fontWeight: '600' },
+  btnOk: { backgroundColor: '#15803d', flex: 1 },
+  btnDanger: { backgroundColor: '#b91c1c', flex: 1 },
+  rowActions: { flexDirection: 'row', gap: 8, marginBottom: 12, marginTop: -4 },
+  actionCard: { marginBottom: 4 },
   ok: { color: '#15803d', marginBottom: 8 },
   textarea: { minHeight: 80, textAlignVertical: 'top' },
   pickerWrap: { marginBottom: 12 },
