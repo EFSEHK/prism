@@ -36,3 +36,18 @@ export function paginatedItems(body) {
   if (Array.isArray(body)) return body
   return body?.data ?? []
 }
+
+function compareRollNo(rollA, rollB, nameA = '', nameB = '') {
+  const a = String(rollA ?? '').trim()
+  const b = String(rollB ?? '').trim()
+  if (!a && !b) return String(nameA).localeCompare(String(nameB))
+  if (!a) return 1
+  if (!b) return -1
+  return a.localeCompare(b, undefined, { numeric: true, sensitivity: 'base' })
+}
+
+export function sortByRollNo(students) {
+  return [...students].sort((a, b) =>
+    compareRollNo(a.roll_no, b.roll_no, a.first_name, b.first_name),
+  )
+}

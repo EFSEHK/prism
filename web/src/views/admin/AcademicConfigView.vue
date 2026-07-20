@@ -321,9 +321,8 @@
           <SearchableSelect
             v-model="enrollFilterGroupId"
             :options="enrollFilterGroupOptions"
-            placeholder="Select study group…"
+            placeholder="All study groups"
             search-placeholder="Search groups…"
-            :allow-empty="false"
             @change="onEnrollFilterGroupChange"
           />
         </div>
@@ -334,7 +333,7 @@
         </div>
       </div>
 
-      <div v-if="enrollFilterGroupId && filteredStudents.length" class="table-wrap">
+      <div v-if="hasEnrollScope && filteredStudents.length" class="table-wrap">
         <table class="data-table">
           <thead>
             <tr>
@@ -358,9 +357,9 @@
           </tbody>
         </table>
       </div>
-      <p v-else-if="enrollFilterGroupId && students.length" class="empty">No students match your search or filters.</p>
-      <p v-else-if="enrollFilterGroupId" class="empty">No students in this group yet.</p>
-      <p v-else class="empty">Select a study group to view enrolled students, or click Add new to enroll.</p>
+      <p v-else-if="hasEnrollScope && students.length" class="empty">No students match your search or filters.</p>
+      <p v-else-if="hasEnrollScope" class="empty">No students enrolled in this class and section yet.</p>
+      <p v-else class="empty">Select a class and section to view enrolled students, or click Add new to enroll.</p>
 
       <div v-if="enrollModalOpen" class="modal-backdrop" @click.self="closeEnrollModal">
         <div class="modal modal-enroll" role="dialog" aria-modal="true">
@@ -657,6 +656,9 @@ const enrollFilterSectionOptions = computed(() =>
 )
 const enrollFilterGroupOptions = computed(() =>
   allStudyGroups.value.map((g) => ({ value: String(g.id), label: g.name }))
+)
+const hasEnrollScope = computed(
+  () => !!enrollFilterClassId.value && !!enrollFilterSectionId.value
 )
 const filteredStudents = computed(() => {
   const q = enrollSearchQuery.value.trim().toLowerCase()
@@ -1181,9 +1183,7 @@ async function onEnrollFilterClassChange() {
 
 async function onEnrollFilterSectionChange() {
   enrollSearchQuery.value = ''
-  if (enrollFilterGroupId.value) {
-    await loadStudents()
-  }
+  await loadStudents()
 }
 
 async function onEnrollFilterGroupChange() {
@@ -1192,15 +1192,16 @@ async function onEnrollFilterGroupChange() {
 }
 
 async function loadStudents() {
-  if (!enrollFilterGroupId.value) return
-  if (!enrollFilterSections.value.length && enrollFilterClassId.value) {
+  if (!hasEnrollScope.value) {
+    students.value = []
+    return
+  }
+  if (!enrollFilterSections.value.length) {
     await loadEnrollFilterSections()
   }
-  const params = { study_group_id: enrollFilterGroupId.value }
-  if (enrollFilterSectionId.value) {
-    params.section_id = enrollFilterSectionId.value
-  } else if (enrollFilterClassId.value) {
-    params.school_class_id = enrollFilterClassId.value
+  const params = { section_id: enrollFilterSectionId.value }
+  if (enrollFilterGroupId.value) {
+    params.study_group_id = enrollFilterGroupId.value
   }
   const { data } = await api.get('/efsc/students', { params })
   students.value = data?.data ?? data ?? []

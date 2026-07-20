@@ -371,7 +371,7 @@ import { ref, reactive, computed, onMounted, watch } from 'vue'
 import api from '../api/client'
 import SearchableSelect from '../components/SearchableSelect.vue'
 import { usePermissions } from '../composables/usePermissions'
-import { formatDate, todayInputDate, monthStartInputDate } from '../composables/format'
+import { formatDate, todayInputDate, monthStartInputDate, sortByRollNo } from '../composables/format'
 
 const { can } = usePermissions()
 const canMark = computed(() => can('mark_attendance'))
@@ -632,7 +632,7 @@ async function loadMarkStudents() {
         params: { section_id: sectionId.value, date: markDate.value, per_page: 1 },
       }),
     ])
-    markStudents.value = studentsRes.data?.data ?? studentsRes.data ?? []
+    markStudents.value = sortByRollNo(studentsRes.data?.data ?? studentsRes.data ?? [])
     for (const s of markStudents.value) {
       statuses[s.id] = 'present'
     }

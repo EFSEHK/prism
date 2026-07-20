@@ -9,7 +9,7 @@ import {
   StyleSheet,
 } from 'react-native'
 import { apiClient } from '../apiClient'
-import { formatDate, formatError } from '../utils/format'
+import { formatDate, formatError, sortByRollNo } from '../utils/format'
 import { withTimeout } from '../utils/withTimeout'
 import { Card, EmptyNote, ui } from '../components/ui'
 
@@ -130,7 +130,7 @@ function MarkTab({ classes, sections }) {
           params: { section_id: sectionId, date, per_page: 1 },
         }),
       ])
-      const list = studentsRes.data?.data ?? studentsRes.data ?? []
+      const list = sortByRollNo(studentsRes.data?.data ?? studentsRes.data ?? [])
       const next = {}
       for (const s of list) next[s.id] = 'present'
       const existing = (batchRes.data?.data ?? [])[0] ?? null

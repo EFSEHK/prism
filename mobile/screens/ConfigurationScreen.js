@@ -945,13 +945,12 @@ function EnrollTab({ flashOk, flashErr }) {
   }
 
   async function loadStudents(groupId, sectionId, classId) {
-    if (!groupId) {
+    if (!classId || !sectionId) {
       setStudents([])
       return
     }
-    const params = { study_group_id: groupId }
-    if (sectionId) params.section_id = sectionId
-    else if (classId) params.school_class_id = classId
+    const params = { section_id: sectionId }
+    if (groupId) params.study_group_id = groupId
     const { data } = await apiClient.get('/efsc/students', { params })
     setStudents(data?.data ?? data ?? [])
   }
@@ -968,7 +967,7 @@ function EnrollTab({ flashOk, flashErr }) {
   async function onFilterSection(id) {
     setFilterSectionId(id)
     setSearch('')
-    if (filterGroupId) await loadStudents(filterGroupId, id, filterClassId)
+    await loadStudents(filterGroupId, id, filterClassId)
   }
 
   async function onFilterGroup(id) {
@@ -1206,8 +1205,8 @@ function EnrollTab({ flashOk, flashErr }) {
         </View>
       ) : null}
 
-      {!filterGroupId ? (
-        <EmptyNote text="Select a study group to view enrolled students, or tap Add new to enroll." />
+      {!filterClassId || !filterSectionId ? (
+        <EmptyNote text="Select a class and section to view enrolled students, or tap Add new to enroll." />
       ) : filtered.length ? (
         filtered.map((st) => (
           <Card
@@ -1228,7 +1227,7 @@ function EnrollTab({ flashOk, flashErr }) {
           text={
             students.length
               ? 'No students match your search or filters.'
-              : 'No students in this group yet.'
+              : 'No students enrolled in this class and section yet.'
           }
         />
       )}
