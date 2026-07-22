@@ -1,5 +1,6 @@
 <template>
   <div>
+    <AdminBackNav />
     <h1>Apps</h1>
     <p class="muted">
       Choose which apps each role can see, and whether they are accessible or greyed out as “Coming soon”.
@@ -57,6 +58,7 @@
 <script setup>
 import { onMounted, ref } from 'vue'
 import api from '../../api/client'
+import AdminBackNav from '../../components/AdminBackNav.vue'
 import { useModulesStore } from '../../stores/modules'
 
 const modulesStore = useModulesStore()

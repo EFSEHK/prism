@@ -1,5 +1,6 @@
 <template>
   <div>
+    <AdminBackNav />
     <h1>Permissions</h1>
     <p class="muted">Superadmin only — configure role defaults and per-user extras.</p>
 
@@ -59,6 +60,7 @@
 import { computed, onMounted, ref } from 'vue'
 import api from '../../api/client'
 import SearchableSelect from '../../components/SearchableSelect.vue'
+import AdminBackNav from '../../components/AdminBackNav.vue'
 
 const tab = ref('role')
 const roles = ref([])

@@ -1,5 +1,6 @@
 <template>
   <div>
+    <AdminBackNav />
     <h1>Academic configuration</h1>
     <p class="muted">Set up school structure, subjects, and student enrollment.</p>
 
@@ -465,6 +466,7 @@ import { computed, onMounted, reactive, ref, watch } from 'vue'
 import api from '../../api/client'
 import { usePermissions } from '../../composables/usePermissions'
 import SearchableSelect from '../../components/SearchableSelect.vue'
+import AdminBackNav from '../../components/AdminBackNav.vue'
 
 const { canManageAcademic, canManageRoster } = usePermissions()
 

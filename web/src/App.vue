@@ -207,7 +207,7 @@ async function exitImpersonation() {
   viewAs.stopImpersonation()
   await parent.clearChild()
   await ensureModules()
-  router.push('/admin/users')
+  router.push('/admin')
 }
 
 async function logout() {

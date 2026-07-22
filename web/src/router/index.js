@@ -6,6 +6,7 @@ import { usePermissions } from '../composables/usePermissions'
 import { useViewAsStore } from '../stores/viewAs'
 import { roleView } from '../composables/useRoleView'
 import { catalogView } from '../composables/useCatalogView'
+import { useAdminPortal } from '../composables/useAdminPortal'
 import LandingView from '../views/LandingView.vue'
 import LoginView from '../views/LoginView.vue'
 import DashboardView from '../views/DashboardView.vue'
@@ -20,6 +21,7 @@ import LeaveView from '../views/LeaveView.vue'
 import NotificationsView from '../views/NotificationsView.vue'
 import TimetableView from '../views/TimetableView.vue'
 import FeeView from '../views/FeeView.vue'
+import AdminPortalView from '../views/admin/AdminPortalView.vue'
 import PermissionsAdminView from '../views/admin/PermissionsAdminView.vue'
 import AcademicConfigView from '../views/admin/AcademicConfigView.vue'
 import UsersAdminView from '../views/admin/UsersAdminView.vue'
@@ -41,6 +43,7 @@ const router = createRouter({
     { path: '/login', component: LoginView, meta: { guest: true } },
     { path: '/home', component: roleView(ParentHomeView, DashboardView), meta: { auth: true } },
     { path: '/dashboard', component: ChildDashboardView, meta: { auth: true, requiresChild: true } },
+    { path: '/admin', component: AdminPortalView, meta: { auth: true, adminPortalAccess: true } },
     { path: '/admin/users', component: UsersAdminView, meta: { auth: true, usersAccess: true } },
     { path: '/admin/permissions', component: PermissionsAdminView, meta: { auth: true, superadminOnly: true } },
     { path: '/admin/apps', component: AppsAdminView, meta: { auth: true, appsAccess: true } },
@@ -102,6 +105,10 @@ router.beforeEach((to) => {
   const { isLearner, isParent, isSuperadmin, canManageUsers, canManageApps } = useRoles()
 
   if (viewAs.isImpersonating && to.path.startsWith('/admin')) return '/home'
+  if (to.meta.adminPortalAccess) {
+    const { canAccessAdminPortal } = useAdminPortal()
+    if (!canAccessAdminPortal.value) return '/home'
+  }
   if (to.meta.usersAccess && !canManageUsers.value) return '/home'
   if (to.meta.superadminOnly && !isSuperadmin.value) return '/home'
   if (to.meta.appsAccess && !canManageApps.value) return '/home'

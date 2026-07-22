@@ -5,6 +5,11 @@
       <p><strong>{{ user?.name }}</strong></p>
       <p class="muted">Roles: {{ roleNames }}</p>
     </div>
+    <div v-if="canAccessAdminPortal" class="card admin-portal-card">
+      <h2>Admin portal</h2>
+      <p class="muted">Apps, imports, users, academic setup, and more.</p>
+      <RouterLink to="/admin" class="portal-cta">Open admin portal →</RouterLink>
+    </div>
     <div v-if="widgets.pending_approvals != null" class="card">
       <h2>Pending notification approvals</h2>
       <p v-if="loading">Loading…</p>
@@ -53,9 +58,11 @@
 <script setup>
 import { ref, computed, onMounted } from 'vue'
 import { useAuthStore } from '../stores/auth'
+import { useAdminPortal } from '../composables/useAdminPortal'
 import api from '../api/client'
 
 const auth = useAuthStore()
+const { canAccessAdminPortal } = useAdminPortal()
 const user = computed(() => auth.user)
 const roleNames = computed(() => (user.value?.roles || []).map((r) => r.name).join(', '))
 
@@ -76,4 +83,23 @@ onMounted(async () => {
 
 <style scoped>
 .muted { color: #71717a; font-size: 0.9rem; }
+.admin-portal-card {
+  border-left: 4px solid #2563eb;
+  background: linear-gradient(135deg, #fff 0%, #f8fafc 100%);
+}
+.admin-portal-card h2 {
+  margin: 0 0 0.35rem;
+  font-size: 1.05rem;
+}
+.portal-cta {
+  display: inline-block;
+  margin-top: 0.5rem;
+  color: #2563eb;
+  font-weight: 600;
+  text-decoration: none;
+  font-size: 0.9rem;
+}
+.portal-cta:hover {
+  text-decoration: underline;
+}
 </style>

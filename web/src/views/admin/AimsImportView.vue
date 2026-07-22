@@ -1,12 +1,8 @@
 <template>
   <div>
+    <AdminBackNav />
     <h1>AIMS Import</h1>
     <p class="muted">Upload CSV files exported from AIMS for import into EFSC-YA. Each data type can be imported independently.</p>
-
-    <div class="admin-links">
-      <RouterLink to="/admin/academic">Academic config</RouterLink>
-      <RouterLink to="/admin/users">Users</RouterLink>
-    </div>
 
     <div v-if="err" class="error">{{ err }}</div>
 
@@ -83,6 +79,7 @@
 <script setup>
 import { onMounted, reactive, ref } from 'vue'
 import api from '../../api/client'
+import AdminBackNav from '../../components/AdminBackNav.vue'
 
 const importCards = [
   { type: 'students', title: 'Students', description: 'Student roster CSV from AIMS (EFSC-YA export)', endpoint: 'students' },
@@ -156,15 +153,8 @@ onMounted(loadLogs)
 </script>
 
 <style scoped>
-.admin-links {
-  display: flex;
-  gap: 1rem;
+.admin-back {
   margin-bottom: 1rem;
-}
-.admin-links a {
-  color: #2563eb;
-  text-decoration: none;
-  font-size: 0.9rem;
 }
 .import-grid {
   display: grid;

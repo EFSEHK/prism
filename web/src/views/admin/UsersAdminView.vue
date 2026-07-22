@@ -1,12 +1,10 @@
 <template>
   <div>
+    <AdminBackNav />
     <div class="head">
       <div>
         <h1>Users</h1>
         <p class="muted">Manage accounts and role assignments.</p>
-        <p v-if="canShowAimsImportLink" class="muted small">
-          <RouterLink to="/admin/aims-import">AIMS CSV import</RouterLink>
-        </p>
       </div>
       <button type="button" class="primary" @click="openCreate">Add user</button>
     </div>
@@ -118,8 +116,8 @@ import { computed, onMounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import api from '../../api/client'
 import SearchableSelect from '../../components/SearchableSelect.vue'
+import AdminBackNav from '../../components/AdminBackNav.vue'
 import { useRoles } from '../../composables/useRoles'
-import { usePermissions } from '../../composables/usePermissions'
 import { useViewAsStore } from '../../stores/viewAs'
 import { useParentStore } from '../../stores/parent'
 
@@ -127,8 +125,6 @@ const router = useRouter()
 const viewAs = useViewAsStore()
 const parent = useParentStore()
 const { isActuallySuperadmin, canEditUsers, canImpersonateUsers } = useRoles()
-const { can, canImportAims } = usePermissions()
-const canShowAimsImportLink = computed(() => canImportAims.value)
 
 const users = ref([])
 const roles = ref([])
