@@ -24,6 +24,7 @@ import PermissionsAdminView from '../views/admin/PermissionsAdminView.vue'
 import AcademicConfigView from '../views/admin/AcademicConfigView.vue'
 import UsersAdminView from '../views/admin/UsersAdminView.vue'
 import AppsAdminView from '../views/admin/AppsAdminView.vue'
+import AimsImportView from '../views/admin/AimsImportView.vue'
 import ParentHomeworkView from '../views/parent/ParentHomeworkView.vue'
 import ParentMarksView from '../views/parent/ParentMarksView.vue'
 import ParentAttendanceView from '../views/parent/ParentAttendanceView.vue'
@@ -44,6 +45,7 @@ const router = createRouter({
     { path: '/admin/permissions', component: PermissionsAdminView, meta: { auth: true, superadminOnly: true } },
     { path: '/admin/apps', component: AppsAdminView, meta: { auth: true, appsAccess: true } },
     { path: '/admin/academic', component: AcademicConfigView, meta: { auth: true, configAccess: true } },
+    { path: '/admin/aims-import', component: AimsImportView, meta: { auth: true, aimsImportAccess: true } },
     { path: '/approvals', component: ApprovalsView, meta: { auth: true, staffOnly: true } },
     {
       path: '/attendance',
@@ -106,6 +108,10 @@ router.beforeEach((to) => {
   if (to.meta.configAccess) {
     const { canConfigure } = usePermissions()
     if (!canConfigure.value) return '/home'
+  }
+  if (to.meta.aimsImportAccess) {
+    const { can } = usePermissions()
+    if (!can('import_aims_data')) return '/home'
   }
   if (to.meta.staffOnly && isLearner.value) return '/home'
   if (to.meta.parentOnly && !isParent.value) return '/home'

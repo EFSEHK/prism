@@ -275,6 +275,7 @@ Same package name + same signing key = Android replaces the app without manual u
 - **Marks:** operator creates assessments; teachers enter; section head verifies.
 - **Homework / online classes:** section head approves before visibility.
 - **Timetable / fee vouchers:** Coming soon in UI.
+- **AIMS import:** Admin web page at `/admin/aims-import` imports CSV exports from AIMS (students, attendance, fees, results). See [`docs/aims-prism-csv-contract.md`](docs/aims-prism-csv-contract.md).
 - **Notifications:** user broadcasts (`/notifications` menu); system inbox separate.
 
 ---

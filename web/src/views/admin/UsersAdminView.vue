@@ -4,6 +4,9 @@
       <div>
         <h1>Users</h1>
         <p class="muted">Manage accounts and role assignments.</p>
+        <p v-if="canImportAims" class="muted small">
+          <RouterLink to="/admin/aims-import">AIMS CSV import</RouterLink>
+        </p>
       </div>
       <button type="button" class="primary" @click="openCreate">Add user</button>
     </div>
@@ -116,6 +119,7 @@ import { useRouter } from 'vue-router'
 import api from '../../api/client'
 import SearchableSelect from '../../components/SearchableSelect.vue'
 import { useRoles } from '../../composables/useRoles'
+import { usePermissions } from '../../composables/usePermissions'
 import { useViewAsStore } from '../../stores/viewAs'
 import { useParentStore } from '../../stores/parent'
 
@@ -123,6 +127,8 @@ const router = useRouter()
 const viewAs = useViewAsStore()
 const parent = useParentStore()
 const { isActuallySuperadmin, canEditUsers, canImpersonateUsers } = useRoles()
+const { can } = usePermissions()
+const canImportAims = computed(() => can('import_aims_data'))
 
 const users = ref([])
 const roles = ref([])

@@ -13,6 +13,7 @@ use App\Http\Controllers\Api\RoleController;
 use App\Http\Controllers\Api\PermissionController;
 use App\Http\Controllers\Api\NavigationController;
 use App\Http\Controllers\Api\Efsc\AcademicController;
+use App\Http\Controllers\Api\Efsc\AimsImportController;
 use App\Http\Controllers\Api\Efsc\AssessmentController;
 use App\Http\Controllers\Api\Efsc\AttendanceController;
 use App\Http\Controllers\Api\Efsc\DashboardController;
@@ -110,6 +111,14 @@ Route::middleware([LogAllRequests::class, 'auth:sanctum', CheckInactivity::class
         Route::get('attendance/summary', [AttendanceController::class, 'summary']);
         Route::get('attendance/reports/monthly', [AttendanceController::class, 'reportMonthly']);
         Route::get('attendance/reports/weekly', [AttendanceController::class, 'reportWeekly']);
+
+        Route::get('import/aims/logs', [AimsImportController::class, 'logs']);
+        Route::post('import/aims/students', [AimsImportController::class, 'importStudents']);
+        Route::post('import/aims/attendance', [AimsImportController::class, 'importAttendance']);
+        Route::post('import/aims/fee-vouchers', [AimsImportController::class, 'importFeeVouchers']);
+        Route::post('import/aims/fee-deposits', [AimsImportController::class, 'importFeeDeposits']);
+        Route::post('import/aims/test-results', [AimsImportController::class, 'importTestResults']);
+        Route::post('import/aims/exam-results', [AimsImportController::class, 'importExamResults']);
 
         Route::get('assessments', [AssessmentController::class, 'index']);
         Route::post('assessments', [AssessmentController::class, 'store']);

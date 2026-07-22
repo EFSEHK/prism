@@ -165,6 +165,7 @@ Effective role and permissions switch for subsequent API requests while View-as 
 |------------------|-----|--------|-----|-------|
 | Permissions admin | ✓ `/admin/permissions` | — | Roles/permissions APIs | `superadmin` only (route guard) |
 | Apps admin | ✓ `/admin/apps` | — | `GET|PUT /api/efsc/apps` | `superadmin`, `developer` |
+| AIMS CSV import | ✓ `/admin/aims-import` | — | `POST /api/efsc/import/aims/*` | `import_aims_data` (SA, AD, VP, CO, accountant) |
 | Tab: By role (sync role defaults) | ✓ | — | ✓ | `superadmin` |
 | Tab: By user (direct permission grants) | ✓ | — | ✓ | `superadmin` |
 | Roles CRUD | — | — | ✓ `apiResource('roles')` | Authenticated API (UI is SA) |
@@ -194,6 +195,21 @@ Effective role and permissions switch for subsequent API requests while View-as 
 | Section-heads list for pickers | — | — | ✓ | Staff with academic access |
 
 **Who sees Configuration:** roles with `canConfigure` — academic structure **or** student roster (SA, AD, DV, CO, SH, CI).
+
+### AIMS CSV import
+
+One-directional sync from AIMS export page (`/export-for-sap`) into PRISM. Admin uploads CSV per data type at **`/admin/aims-import`** (web only; not in mobile app).
+
+| Data type | AIMS export | PRISM import endpoint |
+|-----------|-------------|------------------------|
+| Students | Export Students for PRISM | `POST /api/efsc/import/aims/students` |
+| Attendance | Export Daily Attendance | `POST /api/efsc/import/aims/attendance` |
+| Fee vouchers | Export Fee Vouchers for PRISM | `POST /api/efsc/import/aims/fee-vouchers` |
+| Fee deposits | Export Fee Deposits for PRISM | `POST /api/efsc/import/aims/fee-deposits` |
+| Test results | Export Student Tests | `POST /api/efsc/import/aims/test-results` |
+| Exam results | Export Student Exams | `POST /api/efsc/import/aims/exam-results` |
+
+Field-by-field format: [`docs/aims-prism-csv-contract.md`](aims-prism-csv-contract.md). Permission: `import_aims_data`. Imports are logged in `data_import_logs` and Spatie activity log.
 
 ---
 

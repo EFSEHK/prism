@@ -43,6 +43,7 @@ class RolesAndPermissionsSeeder extends Seeder
             'view_parent_dashboard',
             'view_student_dashboard',
             'approve_notification_dispatches',
+            'import_aims_data',
         ];
 
         foreach ($permissions as $p) {
@@ -65,7 +66,7 @@ class RolesAndPermissionsSeeder extends Seeder
         Role::findByName('admin', 'web')->syncPermissions([
             'view_dashboard', 'manage_users', 'manage_roles', 'manage_academic_structure',
             'manage_student_roster', 'verify_attendance', 'view_attendance_reports', 'view_marks_reports',
-            'publish_user_broadcasts', 'manage_leave_requests',
+            'publish_user_broadcasts', 'manage_leave_requests', 'import_aims_data',
         ]);
 
         Role::findByName('principal', 'web')->syncPermissions([
@@ -75,7 +76,7 @@ class RolesAndPermissionsSeeder extends Seeder
 
         Role::findByName('vice_principal', 'web')->syncPermissions([
             'view_dashboard', 'verify_attendance', 'view_attendance_reports', 'view_marks_reports',
-            'publish_user_broadcasts', 'approve_notification_dispatches',
+            'publish_user_broadcasts', 'approve_notification_dispatches', 'import_aims_data',
         ]);
 
         Role::findByName('section_head', 'web')->syncPermissions([
@@ -110,10 +111,11 @@ class RolesAndPermissionsSeeder extends Seeder
             'view_dashboard', 'manage_users', 'manage_academic_structure', 'manage_student_roster',
             'mark_attendance', 'view_attendance_reports',
             'manage_assessments', 'manage_timetable', 'manage_fee_vouchers', 'publish_user_broadcasts',
+            'import_aims_data',
         ]);
 
         Role::findByName('accountant', 'web')->syncPermissions([
-            'view_dashboard', 'view_fee_accounting', 'manage_fee_vouchers',
+            'view_dashboard', 'view_fee_accounting', 'manage_fee_vouchers', 'import_aims_data',
         ]);
 
         $map = [

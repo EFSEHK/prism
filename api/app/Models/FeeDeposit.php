@@ -5,28 +5,29 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
-class MarkEntry extends Model
+class FeeDeposit extends Model
 {
     protected $fillable = [
-        'mark_sheet_id',
+        'fee_voucher_id',
         'student_id',
-        'marks_obtained',
-        'max_marks',
-        'grade',
-        'is_pass',
+        'external_voucher',
+        'amount',
+        'fee_date',
+        'imported_at',
     ];
 
     protected function casts(): array
     {
         return [
-            'marks_obtained' => 'decimal:2',
-            'max_marks' => 'decimal:2',
+            'amount' => 'decimal:2',
+            'fee_date' => 'date',
+            'imported_at' => 'datetime',
         ];
     }
 
-    public function markSheet(): BelongsTo
+    public function feeVoucher(): BelongsTo
     {
-        return $this->belongsTo(MarkSheet::class);
+        return $this->belongsTo(FeeVoucher::class);
     }
 
     public function student(): BelongsTo
