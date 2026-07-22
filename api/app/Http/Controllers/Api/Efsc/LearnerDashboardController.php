@@ -3,7 +3,7 @@
 namespace App\Http\Controllers\Api\Efsc;
 
 use App\Http\Controllers\Controller;
-use App\Models\AttendanceBatch;
+use App\Models\DatesheetEntry;
 use App\Models\FeeVoucher;
 use App\Models\HomeworkPost;
 use App\Models\LeaveRequest;
@@ -100,6 +100,28 @@ class LearnerDashboardController extends Controller
                 ->get();
         }
 
+        if (in_array('datesheet', $include, true)) {
+            $classIds = $scopedStudents
+                ->map(fn ($s) => $s->section?->school_class_id)
+                ->filter()
+                ->unique()
+                ->values();
+
+            $payload['datesheet'] = DatesheetEntry::query()
+                ->when(
+                    $classIds->isNotEmpty(),
+                    fn ($q) => $q->where(function ($qq) use ($classIds) {
+                        $qq->whereIn('school_class_id', $classIds)->orWhereNull('school_class_id');
+                    }),
+                    fn ($q) => $q->whereNull('school_class_id')
+                )
+                ->where('exam_date', '>=', now()->toDateString())
+                ->with(['schoolClass:id,name', 'subject:id,name'])
+                ->orderBy('exam_date')
+                ->limit(20)
+                ->get();
+        }
+
         if (in_array('marks', $include, true) && $user->can('view_own_marks')) {
             $payload['mark_sheets'] = MarkSheet::query()
                 ->where('status', 'verified')
@@ -174,6 +196,7 @@ class LearnerDashboardController extends Controller
             'unread_notifications' => 0,
             'homework' => [],
             'timetable_today' => [],
+            'datesheet' => [],
             'mark_sheets' => [],
             'broadcasts' => [],
             'fee_vouchers' => [],

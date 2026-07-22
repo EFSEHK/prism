@@ -109,20 +109,18 @@ class ModuleCatalogServiceTest extends TestCase
         $this->assertNotContains('apps', collect($mobile)->pluck('id')->all());
     }
 
-    public function test_only_admin_shell_modules_are_live_by_default(): void
+    public function test_feature_modules_are_live_by_default(): void
     {
         $user = $this->userWithRoles(['superadmin']);
 
         $byId = collect($this->catalog->forUser($user))->keyBy('id');
 
-        foreach (['dashboard', 'users', 'configuration', 'permissions', 'apps', 'approvals'] as $id) {
+        foreach ([
+            'dashboard', 'users', 'configuration', 'permissions', 'apps', 'approvals',
+            'attendance', 'marks', 'homework', 'timetable', 'online', 'fees', 'notifications', 'leave',
+        ] as $id) {
             $this->assertFalse($byId->get($id)['coming_soon'], $id);
             $this->assertSame('live', $byId->get($id)['status'], $id);
-        }
-
-        foreach (['attendance', 'marks', 'homework', 'timetable', 'online', 'fees', 'notifications', 'leave'] as $id) {
-            $this->assertTrue($byId->get($id)['coming_soon'], $id);
-            $this->assertSame('coming_soon', $byId->get($id)['status'], $id);
         }
     }
 
@@ -130,7 +128,7 @@ class ModuleCatalogServiceTest extends TestCase
     {
         ModuleSetting::query()->create([
             'module_id' => 'attendance',
-            'status' => 'live',
+            'status' => 'coming_soon',
             'visible_roles' => ['teacher'],
         ]);
 
@@ -142,8 +140,8 @@ class ModuleCatalogServiceTest extends TestCase
         $teacherById = collect($this->catalog->forUser($teacher))->keyBy('id');
         $adminIds = collect($this->catalog->forUser($admin))->pluck('id')->all();
 
-        $this->assertSame('live', $teacherById->get('attendance')['status']);
-        $this->assertFalse($teacherById->get('attendance')['coming_soon']);
+        $this->assertSame('coming_soon', $teacherById->get('attendance')['status']);
+        $this->assertTrue($teacherById->get('attendance')['coming_soon']);
         $this->assertNotContains('attendance', $adminIds);
     }
 

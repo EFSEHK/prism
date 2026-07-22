@@ -56,6 +56,10 @@ class MarkSheetController extends Controller
             $q->where('study_group_id', $request->query('study_group_id'));
         }
 
+        if ($request->filled('status')) {
+            $q->where('status', $request->query('status'));
+        }
+
         return response()->json($q->orderByDesc('updated_at')->paginate(min((int) $request->query('per_page', 20), 50)));
     }
 

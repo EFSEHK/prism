@@ -392,11 +392,16 @@ export function HomeworkScreen({ permissions = [], isLearner = false }) {
   )
 }
 
-export function MarksScreen() {
+export function MarksScreen({ permissions = [] } = {}) {
+  const perms = (permissions || []).map((p) => (typeof p === 'string' ? p : p?.name)).filter(Boolean)
+  const canVerify = perms.includes('verify_marks')
+  const canEnter = perms.includes('enter_marks')
   const [items, setItems] = useState([])
   const [detail, setDetail] = useState(null)
   const [loading, setLoading] = useState(true)
+  const [busyId, setBusyId] = useState(null)
   const [err, setErr] = useState('')
+  const [ok, setOk] = useState('')
   const load = async () => {
     setErr('')
     try {
@@ -416,6 +421,21 @@ export function MarksScreen() {
       setErr(formatError(e))
     }
   }
+  const verify = async (id) => {
+    setBusyId(id)
+    setErr('')
+    setOk('')
+    try {
+      await apiClient.post(`/efsc/mark-sheets/${id}/verify`)
+      setOk('Mark sheet verified.')
+      setDetail(null)
+      await load()
+    } catch (e) {
+      setErr(formatError(e))
+    } finally {
+      setBusyId(null)
+    }
+  }
   useEffect(() => { load() }, [])
   if (loading) return <ActivityIndicator style={styles.center} />
   if (detail) {
@@ -427,6 +447,7 @@ export function MarksScreen() {
         <Text style={styles.h1}>
           {detail.subject?.name} — {detail.assessment?.name}
         </Text>
+        <Text style={styles.label}>Status: {detail.status}</Text>
         {(detail.entries || []).map((e) => (
           <Card
             key={e.id}
@@ -434,22 +455,50 @@ export function MarksScreen() {
             meta={`${e.marks_obtained ?? '—'} / ${e.max_marks ?? '—'}${e.grade ? ` · ${e.grade}` : ''}`}
           />
         ))}
+        {canVerify && detail.status === 'submitted' ? (
+          <Pressable
+            style={[styles.btn, busyId === detail.id && { opacity: 0.6 }]}
+            disabled={busyId === detail.id}
+            onPress={() => verify(detail.id)}
+          >
+            <Text style={styles.btnText}>Verify sheet</Text>
+          </Pressable>
+        ) : null}
+        {ok ? <Text style={styles.ok}>{ok}</Text> : null}
+        {err ? <Text style={ui.err}>{err}</Text> : null}
       </ScreenWrap>
     )
   }
+  const pending = canVerify ? items.filter((m) => m.status === 'submitted') : []
   return (
     <ScreenWrap refreshing={false} onRefresh={load}>
       <Text style={styles.h1}>Marks</Text>
       {err ? <Text style={ui.err}>{err}</Text> : null}
-      {items.map((m) => (
-        <Card
-          key={m.id}
-          title={`${m.subject?.name} — ${m.assessment?.name || m.assessment?.type}`}
-          meta={`${m.school_class?.name} · Section ${m.section?.name}`}
-          onPress={() => open(m.id)}
-          sub="Tap for details"
-        />
-      ))}
+      {ok ? <Text style={styles.ok}>{ok}</Text> : null}
+      {canVerify && pending.length > 0 ? (
+        <Section title="Pending verification" badge={pending.length}>
+          {pending.map((m) => (
+            <Card
+              key={`v-${m.id}`}
+              title={`${m.subject?.name} — ${m.assessment?.name || m.assessment?.type}`}
+              meta={m.study_group?.name || 'Study group'}
+              sub="Tap to review & verify"
+              onPress={() => open(m.id)}
+            />
+          ))}
+        </Section>
+      ) : null}
+      <Section title={canEnter || canVerify ? 'Mark sheets' : 'Results'}>
+        {items.map((m) => (
+          <Card
+            key={m.id}
+            title={`${m.subject?.name} — ${m.assessment?.name || m.assessment?.type}`}
+            meta={`${m.study_group?.name || ''} · ${m.status}`.trim()}
+            onPress={() => open(m.id)}
+            sub="Tap for details"
+          />
+        ))}
+      </Section>
     </ScreenWrap>
   )
 }
@@ -611,7 +660,9 @@ export function FeedScreen() {
 export function FeesScreen() {
   const [items, setItems] = useState([])
   const [loading, setLoading] = useState(true)
+  const [busyId, setBusyId] = useState(null)
   const [err, setErr] = useState('')
+  const [ok, setOk] = useState('')
   const load = async () => {
     try {
       const { data } = await apiClient.get('/efsc/fee-vouchers')
@@ -622,58 +673,139 @@ export function FeesScreen() {
       setLoading(false)
     }
   }
-  useEffect(() => { load() }, [])
-  if (loading) return <ActivityIndicator style={styles.center} />
-  return (
-    <ScreenWrap refreshing={false} onRefresh={load}>
-      <Text style={styles.h1}>Fee vouchers</Text>
-      {err ? <Text style={ui.err}>{err}</Text> : null}
-      {items.map((v) => (
-        <Card
-          key={v.id}
-          title={v.title}
-          meta={childName(v.student)}
-          sub={`Status: ${v.submission_status}`}
-        />
-      ))}
-    </ScreenWrap>
-  )
-}
-
-export function OnlineClassScreen() {
-  const [items, setItems] = useState([])
-  const [loading, setLoading] = useState(true)
-  const [err, setErr] = useState('')
-  const load = async () => {
+  const markSubmitted = async (id) => {
+    setBusyId(id)
+    setErr('')
+    setOk('')
     try {
-      const { data } = await apiClient.get('/efsc/online-classes')
-      setItems(paginatedItems(data))
+      await apiClient.patch(`/efsc/fee-vouchers/${id}/status`, { submission_status: 'submitted' })
+      setOk('Marked as submitted.')
+      await load()
     } catch (e) {
       setErr(formatError(e))
     } finally {
-      setLoading(false)
+      setBusyId(null)
     }
   }
   useEffect(() => { load() }, [])
   if (loading) return <ActivityIndicator style={styles.center} />
   return (
     <ScreenWrap refreshing={false} onRefresh={load}>
-      <Text style={styles.h1}>Online classes</Text>
+      <Text style={styles.h1}>Fee vouchers</Text>
       {err ? <Text style={ui.err}>{err}</Text> : null}
-      {items.map((l) => (
+      {ok ? <Text style={styles.ok}>{ok}</Text> : null}
+      {items.map((v) => (
         <Card
-          key={l.id}
-          title={l.label}
-          meta={l.subject?.name}
-          sub={l.url}
-          onPress={() => Linking.openURL(l.url)}
+          key={v.id}
+          title={v.title}
+          meta={childName(v.student)}
+          sub={`Status: ${v.submission_status}`}
+          onPress={v.submission_status === 'pending' ? () => markSubmitted(v.id) : undefined}
         />
       ))}
+      {items.some((v) => v.submission_status === 'pending') ? (
+        <EmptyNote text="Tap a pending voucher to mark it as submitted." />
+      ) : null}
     </ScreenWrap>
   )
 }
 
-export function LeaveScreen({ children = [], selectedChildId }) {
+export function OnlineClassScreen({ permissions = [] } = {}) {
+  const perms = (permissions || []).map((p) => (typeof p === 'string' ? p : p?.name)).filter(Boolean)
+  const canApprove = perms.includes('approve_online_classes')
+  const [items, setItems] = useState([])
+  const [pending, setPending] = useState([])
+  const [loading, setLoading] = useState(true)
+  const [busyId, setBusyId] = useState(null)
+  const [err, setErr] = useState('')
+  const [ok, setOk] = useState('')
+  const load = async () => {
+    try {
+      const { data } = await apiClient.get('/efsc/online-classes')
+      setItems(paginatedItems(data))
+      if (canApprove) {
+        const pendingRes = await apiClient.get('/efsc/online-classes', {
+          params: { status: 'pending_approval', per_page: 50 },
+        })
+        setPending(paginatedItems(pendingRes.data))
+      }
+    } catch (e) {
+      setErr(formatError(e))
+    } finally {
+      setLoading(false)
+    }
+  }
+  const act = async (id, action) => {
+    setBusyId(id)
+    setErr('')
+    setOk('')
+    try {
+      await apiClient.post(`/efsc/online-classes/${id}/${action}`)
+      setOk(action === 'approve' ? 'Link approved.' : 'Link rejected.')
+      await load()
+    } catch (e) {
+      setErr(formatError(e))
+    } finally {
+      setBusyId(null)
+    }
+  }
+  useEffect(() => { load() }, [canApprove])
+  if (loading) return <ActivityIndicator style={styles.center} />
+  return (
+    <ScreenWrap refreshing={false} onRefresh={load}>
+      <Text style={styles.h1}>Online classes</Text>
+      {err ? <Text style={ui.err}>{err}</Text> : null}
+      {ok ? <Text style={styles.ok}>{ok}</Text> : null}
+      {canApprove ? (
+        <Section title="Pending approval" badge={pending.length || null}>
+          {pending.length === 0 ? <EmptyNote text="No links awaiting approval." /> : null}
+          {pending.map((l) => (
+            <View key={`p-${l.id}`}>
+              <Card
+                title={l.label}
+                meta={l.subject?.name}
+                sub={l.url}
+              />
+              <View style={{ flexDirection: 'row', gap: 8, marginBottom: 12 }}>
+                <Pressable
+                  style={[styles.btn, { flex: 1, opacity: busyId === l.id ? 0.6 : 1 }]}
+                  disabled={busyId === l.id}
+                  onPress={() => act(l.id, 'approve')}
+                >
+                  <Text style={styles.btnText}>Approve</Text>
+                </Pressable>
+                <Pressable
+                  style={[styles.btn, { flex: 1, backgroundColor: '#b91c1c', opacity: busyId === l.id ? 0.6 : 1 }]}
+                  disabled={busyId === l.id}
+                  onPress={() => act(l.id, 'reject')}
+                >
+                  <Text style={styles.btnText}>Reject</Text>
+                </Pressable>
+              </View>
+            </View>
+          ))}
+        </Section>
+      ) : null}
+      <Section title="Links">
+        {items.map((l) => (
+          <Card
+            key={l.id}
+            title={l.label}
+            meta={l.subject?.name}
+            sub={l.url}
+            onPress={() => Linking.openURL(l.url)}
+          />
+        ))}
+      </Section>
+    </ScreenWrap>
+  )
+}
+
+export function LeaveScreen({ children = [], selectedChildId, permissions = [] }) {
+  const perms = (permissions || []).map((p) => (typeof p === 'string' ? p : p?.name)).filter(Boolean)
+  const canManage = perms.includes('manage_leave_requests')
+  const isParentSubmit = Array.isArray(children) && children.length > 0 && !canManage
+
   const [items, setItems] = useState([])
   const [studentId, setStudentId] = useState(selectedChildId ?? children[0]?.id)
   useEffect(() => {
@@ -682,12 +814,16 @@ export function LeaveScreen({ children = [], selectedChildId }) {
   const [startDate, setStartDate] = useState('')
   const [endDate, setEndDate] = useState('')
   const [reason, setReason] = useState('')
+  const [statusFilter, setStatusFilter] = useState(canManage ? 'pending' : '')
   const [loading, setLoading] = useState(true)
+  const [busyId, setBusyId] = useState(null)
   const [err, setErr] = useState('')
   const [ok, setOk] = useState('')
   const load = async () => {
     try {
-      const { data } = await apiClient.get('/efsc/leave-requests')
+      const params = {}
+      if (statusFilter) params.status = statusFilter
+      const { data } = await apiClient.get('/efsc/leave-requests', { params })
       setItems(paginatedItems(data))
     } catch (e) {
       setErr(formatError(e))
@@ -714,33 +850,81 @@ export function LeaveScreen({ children = [], selectedChildId }) {
       setErr(formatError(e))
     }
   }
-  useEffect(() => { load() }, [])
+  const decide = async (id, status) => {
+    setBusyId(id)
+    setErr('')
+    setOk('')
+    try {
+      await apiClient.post(`/efsc/leave-requests/${id}/decide`, { status })
+      setOk(`Leave ${status}.`)
+      await load()
+    } catch (e) {
+      setErr(formatError(e))
+    } finally {
+      setBusyId(null)
+    }
+  }
+  useEffect(() => { load() }, [statusFilter])
   return (
     <ScreenWrap refreshing={false} onRefresh={load}>
       <Text style={styles.h1}>Leave requests</Text>
-      <Text style={styles.label}>New request</Text>
-      {studentId ? (
-        <Text style={styles.childLockText}>
-          Submitting leave for {childName(children.find((c) => c.id === studentId))}
-        </Text>
+      {isParentSubmit ? (
+        <>
+          <Text style={styles.label}>New request</Text>
+          {studentId ? (
+            <Text style={styles.childLockText}>
+              Submitting leave for {childName(children.find((c) => c.id === studentId))}
+            </Text>
+          ) : null}
+          <TextInput style={styles.input} placeholder="Start date YYYY-MM-DD" value={startDate} onChangeText={setStartDate} />
+          <TextInput style={styles.input} placeholder="End date YYYY-MM-DD" value={endDate} onChangeText={setEndDate} />
+          <TextInput style={styles.input} placeholder="Reason" value={reason} onChangeText={setReason} />
+          <Pressable style={styles.btn} onPress={submit}>
+            <Text style={styles.btnText}>Submit</Text>
+          </Pressable>
+        </>
       ) : null}
-      <TextInput style={styles.input} placeholder="Start date YYYY-MM-DD" value={startDate} onChangeText={setStartDate} />
-      <TextInput style={styles.input} placeholder="End date YYYY-MM-DD" value={endDate} onChangeText={setEndDate} />
-      <TextInput style={styles.input} placeholder="Reason" value={reason} onChangeText={setReason} />
-      <Pressable style={styles.btn} onPress={submit}>
-        <Text style={styles.btnText}>Submit</Text>
-      </Pressable>
+      {canManage ? (
+        <>
+          <Text style={styles.label}>Status filter</Text>
+          <TextInput
+            style={styles.input}
+            placeholder="pending / approved / rejected / blank=all"
+            value={statusFilter}
+            onChangeText={setStatusFilter}
+          />
+        </>
+      ) : null}
       {ok ? <Text style={styles.ok}>{ok}</Text> : null}
       {err ? <Text style={ui.err}>{err}</Text> : null}
       {loading ? <ActivityIndicator /> : null}
-      <Section title="Your requests">
+      <Section title={canManage ? 'Requests' : 'Your requests'}>
         {items.map((l) => (
-          <Card
-            key={l.id}
-            title={childName(l.student)}
-            meta={`${formatDate(l.start_date)} – ${formatDate(l.end_date)}`}
-            sub={`Status: ${l.status}`}
-          />
+          <View key={l.id}>
+            <Card
+              title={childName(l.student)}
+              meta={`${formatDate(l.start_date)} – ${formatDate(l.end_date)}`}
+              sub={`Status: ${l.status}`}
+            />
+            {canManage && l.status === 'pending' ? (
+              <View style={{ flexDirection: 'row', gap: 8, marginBottom: 12 }}>
+                <Pressable
+                  style={[styles.btn, { flex: 1, opacity: busyId === l.id ? 0.6 : 1 }]}
+                  disabled={busyId === l.id}
+                  onPress={() => decide(l.id, 'approved')}
+                >
+                  <Text style={styles.btnText}>Approve</Text>
+                </Pressable>
+                <Pressable
+                  style={[styles.btn, { flex: 1, backgroundColor: '#b91c1c', opacity: busyId === l.id ? 0.6 : 1 }]}
+                  disabled={busyId === l.id}
+                  onPress={() => decide(l.id, 'rejected')}
+                >
+                  <Text style={styles.btnText}>Reject</Text>
+                </Pressable>
+              </View>
+            ) : null}
+          </View>
         ))}
       </Section>
     </ScreenWrap>

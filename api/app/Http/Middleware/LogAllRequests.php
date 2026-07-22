@@ -46,12 +46,23 @@ class LogAllRequests
         // Let the request proceed (this triggers DB queries)
         $response = $next($request);
 
+        $input = $request->except(['password', 'token', 'file']);
+        foreach ($input as $key => $value) {
+            if ($value instanceof \Illuminate\Http\UploadedFile) {
+                $input[$key] = [
+                    'name' => $value->getClientOriginalName(),
+                    'size' => $value->getSize(),
+                    'mime' => $value->getMimeType(),
+                ];
+            }
+        }
+
         activity('Frontend Request')
             ->causedBy(Auth::check() ? Auth::user() : null)
             ->withProperties([
                 'method' => $request->method(),
                 'url' => $request->fullUrl(),
-                'input' => $request->except(['password', 'token']),
+                'input' => $input,
                 'status' => $response->getStatusCode(),
                 'ip_address' => $request->ip(),
                 'user_agent' => $request->userAgent(),

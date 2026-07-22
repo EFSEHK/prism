@@ -17,9 +17,11 @@ class FeeVoucherController extends Controller
         if ($request->user()->hasRole('parent')) {
             $ids = $request->user()->children()->pluck('students.id');
             $q->whereIn('student_id', $ids);
+        } elseif (! $request->user()->can('manage_fee_vouchers') && ! $request->user()->can('view_fee_accounting')) {
+            abort(403);
         }
 
-        if ($request->user()->can('view_fee_accounting') && $request->filled('submission_status')) {
+        if ($request->filled('submission_status')) {
             $q->where('submission_status', $request->query('submission_status'));
         }
 
@@ -33,10 +35,22 @@ class FeeVoucherController extends Controller
         $data = $request->validate([
             'student_id' => 'required|exists:students,id',
             'title' => 'required|string|max:255',
+            'file' => 'nullable|file|max:10240|mimes:pdf,jpg,jpeg,png',
             'file_path' => 'nullable|string|max:2048',
         ]);
 
-        $v = FeeVoucher::create($data + ['updated_by_user_id' => $request->user()->id]);
+        $filePath = $data['file_path'] ?? null;
+        if ($request->hasFile('file')) {
+            $filePath = $request->file('file')->store('fee-vouchers', 'public');
+        }
+
+        $v = FeeVoucher::create([
+            'student_id' => $data['student_id'],
+            'title' => $data['title'],
+            'file_path' => $filePath,
+            'submission_status' => 'pending',
+            'updated_by_user_id' => $request->user()->id,
+        ]);
 
         $dispatchService->create(
             NotificationFeatureKeys::FEE_VOUCHER_AVAILABLE,
@@ -49,9 +63,7 @@ class FeeVoucherController extends Controller
                 'body' => $v->title,
                 'data' => ['type' => 'fee_voucher', 'fee_voucher_id' => $v->id],
             ],
-            null,
-            null,
-            $request->user()->id,
+            createdByUserId: $request->user()->id,
         );
 
         return response()->json($v->load('student'), 201);
@@ -59,15 +71,40 @@ class FeeVoucherController extends Controller
 
     public function updateStatus(Request $request, FeeVoucher $feeVoucher, NotificationDispatchService $dispatchService)
     {
-        abort_unless($request->user()->can('manage_fee_vouchers') || $request->user()->can('view_fee_accounting'), 403);
+        $user = $request->user();
+        $isParent = $user->hasRole('parent');
+        $isStaff = $user->can('manage_fee_vouchers') || $user->can('view_fee_accounting');
+
+        abort_unless($isParent || $isStaff, 403);
 
         $data = $request->validate([
             'submission_status' => 'required|in:pending,submitted,verified',
         ]);
 
+        if ($isParent && ! $isStaff) {
+            abort_unless(
+                $user->children()->where('students.id', $feeVoucher->student_id)->exists(),
+                403
+            );
+            abort_unless(
+                in_array($data['submission_status'], ['submitted'], true),
+                422,
+                'Parents may only mark vouchers as submitted.'
+            );
+            abort_unless(
+                in_array($feeVoucher->submission_status, ['pending', 'submitted'], true),
+                422,
+                'This voucher can no longer be updated.'
+            );
+        }
+
+        if ($isStaff && $data['submission_status'] === 'verified') {
+            abort_unless($user->can('view_fee_accounting') || $user->can('manage_fee_vouchers'), 403);
+        }
+
         $feeVoucher->update([
             'submission_status' => $data['submission_status'],
-            'updated_by_user_id' => $request->user()->id,
+            'updated_by_user_id' => $user->id,
         ]);
 
         $dispatchService->create(
@@ -81,11 +118,9 @@ class FeeVoucherController extends Controller
                 'body' => 'Status: '.$feeVoucher->submission_status,
                 'data' => ['type' => 'fee_status', 'fee_voucher_id' => $feeVoucher->id],
             ],
-            null,
-            null,
-            $request->user()->id,
+            createdByUserId: $user->id,
         );
 
-        return response()->json($feeVoucher);
+        return response()->json($feeVoucher->fresh(['student:id,first_name,last_name,admission_no']));
     }
 }

@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\AttendanceBatch;
 use App\Models\HomeworkPost;
 use App\Models\LeaveRequest;
+use App\Models\MarkSheet;
 use App\Models\NotificationDispatchRequest;
 use App\Models\UserBroadcast;
 use Illuminate\Http\Request;
@@ -48,6 +49,12 @@ class DashboardController extends Controller
         if ($user->can('approve_homework')) {
             $payload['widgets']['homework_pending_approve'] = HomeworkPost::query()
                 ->where('status', 'pending_approval')
+                ->count();
+        }
+
+        if ($user->can('verify_marks')) {
+            $payload['widgets']['marks_pending_verify'] = MarkSheet::query()
+                ->where('status', 'submitted')
                 ->count();
         }
 

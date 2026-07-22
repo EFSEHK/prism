@@ -4,6 +4,8 @@ namespace App\Http\Controllers\Api\Efsc;
 
 use App\Http\Controllers\Controller;
 use App\Models\LeaveRequest;
+use App\Services\Notifications\NotificationDispatchService;
+use App\Support\NotificationFeatureKeys;
 use Illuminate\Http\Request;
 
 class LeaveRequestController extends Controller
@@ -18,7 +20,13 @@ class LeaveRequestController extends Controller
             abort(403);
         }
 
-        return response()->json($q->with('student:id,first_name,last_name')->orderByDesc('created_at')->paginate(20));
+        if ($request->filled('status')) {
+            $q->where('status', $request->query('status'));
+        }
+
+        return response()->json(
+            $q->with('student:id,first_name,last_name')->orderByDesc('created_at')->paginate(20)
+        );
     }
 
     public function store(Request $request)
@@ -43,13 +51,13 @@ class LeaveRequestController extends Controller
         return response()->json($leave, 201);
     }
 
-    public function decide(Request $request, LeaveRequest $leaveRequest)
+    public function decide(Request $request, LeaveRequest $leaveRequest, NotificationDispatchService $dispatchService)
     {
         abort_unless($request->user()->can('manage_leave_requests'), 403);
+        abort_unless($leaveRequest->status === 'pending', 422, 'Only pending leave can be decided.');
 
         $data = $request->validate([
             'status' => 'required|in:approved,rejected',
-            'comment' => 'nullable|string',
         ]);
 
         $leaveRequest->update([
@@ -58,6 +66,24 @@ class LeaveRequestController extends Controller
             'decided_at' => now(),
         ]);
 
-        return response()->json($leaveRequest);
+        $student = $leaveRequest->student;
+        $name = trim(($student?->first_name ?? '').' '.($student?->last_name ?? ''));
+        $decision = $data['status'] === 'approved' ? 'approved' : 'rejected';
+
+        $dispatchService->create(
+            NotificationFeatureKeys::LEAVE_DECISION_PARENT,
+            'LeaveRequest',
+            $leaveRequest->id,
+            'student',
+            ['student_ids' => [$leaveRequest->student_id]],
+            [
+                'title' => 'Leave request '.$decision,
+                'body' => trim($name.' leave '.$decision.' for '.$leaveRequest->start_date->format('M j').'–'.$leaveRequest->end_date->format('M j, Y')),
+                'data' => ['leave_request_id' => $leaveRequest->id, 'status' => $data['status']],
+            ],
+            createdByUserId: $request->user()->id,
+        );
+
+        return response()->json($leaveRequest->fresh(['student:id,first_name,last_name']));
     }
 }

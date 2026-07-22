@@ -37,6 +37,8 @@ import {
   FeedScreen,
   OnlineClassScreen,
   LeaveScreen,
+  TimetableScreen,
+  FeesScreen,
 } from './screens/ParentScreens'
 import {
   ApprovalsScreen,
@@ -517,15 +519,19 @@ export default function App() {
         case 'approvals':
           return <ApprovalsScreen />
         case 'marks':
-          return <MarksScreen />
+          return <MarksScreen permissions={effectivePermissions} />
         case 'homework':
           return <HomeworkScreen permissions={effectivePermissions} isLearner={false} />
         case 'online':
-          return <OnlineClassScreen />
+          return <OnlineClassScreen permissions={effectivePermissions} />
+        case 'timetable':
+          return <TimetableScreen />
+        case 'fees':
+          return <FeesScreen />
         case 'notifications':
           return <FeedScreen />
         case 'leave':
-          return <LeaveScreen />
+          return <LeaveScreen permissions={effectivePermissions} />
         case 'users':
           return <UsersScreen />
         case 'configuration':
@@ -586,15 +592,9 @@ export default function App() {
       case 'attendance':
         return <AttendanceScreen children={children} selectedChildId={childId} />
       case 'timetable':
+        return <TimetableScreen />
       case 'fees':
-        // Catalog status coming_soon — dashboard + alert only (no navigation into a void).
-        return renderFeatureDashboard({
-          child: learnerChild,
-          features: learnerFeatureList,
-          subtitle: unread > 0
-            ? `${unread} unread notification${unread === 1 ? '' : 's'}`
-            : 'Choose a feature to continue',
-        })
+        return <FeesScreen />
       case 'notifications':
         return <FeedScreen />
       case 'online':

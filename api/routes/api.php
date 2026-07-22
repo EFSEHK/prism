@@ -133,6 +133,7 @@ Route::middleware([LogAllRequests::class, 'auth:sanctum', CheckInactivity::class
         Route::get('online-classes', [OnlineClassController::class, 'index']);
         Route::post('online-classes', [OnlineClassController::class, 'store']);
         Route::post('online-classes/{onlineClassLink}/approve', [OnlineClassController::class, 'approve']);
+        Route::post('online-classes/{onlineClassLink}/reject', [OnlineClassController::class, 'reject']);
 
         Route::get('fee-vouchers', [FeeVoucherController::class, 'index']);
         Route::post('fee-vouchers', [FeeVoucherController::class, 'store']);
