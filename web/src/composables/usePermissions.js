@@ -4,6 +4,7 @@ import { useViewAsStore } from '../stores/viewAs'
 
 const ACADEMIC_ROLES = ['superadmin', 'admin', 'developer', 'computer_operator']
 const ROSTER_ROLES = ['computer_operator', 'section_head', 'class_incharge']
+const AIMS_IMPORT_ROLES = ['superadmin', 'developer', 'admin', 'vice_principal', 'computer_operator', 'accountant']
 
 export function usePermissions() {
   const auth = useAuthStore()
@@ -38,6 +39,9 @@ export function usePermissions() {
     () => can('manage_student_roster') || hasRole(...ROSTER_ROLES),
   )
   const canConfigure = computed(() => canManageAcademic.value || canManageRoster.value)
+  const canImportAims = computed(
+    () => can('import_aims_data') || hasRole(...AIMS_IMPORT_ROLES),
+  )
 
   return {
     permissionNames,
@@ -47,5 +51,6 @@ export function usePermissions() {
     canManageAcademic,
     canManageRoster,
     canConfigure,
+    canImportAims,
   }
 }

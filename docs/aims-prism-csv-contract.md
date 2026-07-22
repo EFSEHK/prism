@@ -1,6 +1,6 @@
-# AIMS → PRISM CSV Format Contract
+# AIMS → EFSC-YA CSV Format Contract
 
-One-directional sync: AIMS exports CSV files from `/export-for-sap`; PRISM imports them at `/admin/aims-import`.
+One-directional sync: AIMS exports CSV files from `/export-for-sap`; EFSC-YA imports them at `/admin/aims-import`.
 
 - **Encoding:** UTF-8 with BOM (AIMS export); PRISM accepts UTF-8 CSV
 - **Delimiter:** comma (RFC 4180 via `fputcsv`)

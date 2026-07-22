@@ -1,7 +1,7 @@
 <template>
   <div>
     <h1>AIMS Import</h1>
-    <p class="muted">Upload CSV files exported from AIMS. Each data type can be imported independently.</p>
+    <p class="muted">Upload CSV files exported from AIMS for import into EFSC-YA. Each data type can be imported independently.</p>
 
     <div class="admin-links">
       <RouterLink to="/admin/academic">Academic config</RouterLink>
@@ -85,10 +85,10 @@ import { onMounted, reactive, ref } from 'vue'
 import api from '../../api/client'
 
 const importCards = [
-  { type: 'students', title: 'Students', description: 'students_prism_*.csv from AIMS', endpoint: 'students' },
-  { type: 'attendance', title: 'Attendance', description: 'daily_attendance_prism_*.csv', endpoint: 'attendance' },
-  { type: 'fee_vouchers', title: 'Fee vouchers', description: 'fee_vouchers_prism_*.csv', endpoint: 'fee-vouchers' },
-  { type: 'fee_deposits', title: 'Fee deposits', description: 'fee_deposits_prism_*.csv', endpoint: 'fee-deposits' },
+  { type: 'students', title: 'Students', description: 'Student roster CSV from AIMS (EFSC-YA export)', endpoint: 'students' },
+  { type: 'attendance', title: 'Attendance', description: 'Daily attendance CSV from AIMS', endpoint: 'attendance' },
+  { type: 'fee_vouchers', title: 'Fee vouchers', description: 'Fee voucher CSV from AIMS', endpoint: 'fee-vouchers' },
+  { type: 'fee_deposits', title: 'Fee deposits', description: 'Fee deposit CSV from AIMS', endpoint: 'fee-deposits' },
   { type: 'test_results', title: 'Test results', description: 'student_tests_export_*.csv', endpoint: 'test-results' },
   { type: 'exam_results', title: 'Exam results', description: 'student_exams_export_*.csv', endpoint: 'exam-results' },
 ]

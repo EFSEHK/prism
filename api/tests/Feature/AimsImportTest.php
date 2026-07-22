@@ -28,6 +28,7 @@ class AimsImportTest extends TestCase
         Permission::findOrCreate('import_aims_data', 'web');
         Role::findOrCreate('student', 'web');
         Role::findOrCreate('parent', 'web');
+        Role::findOrCreate('superadmin', 'web');
     }
 
     public function test_students_csv_import_via_api(): void
@@ -111,5 +112,32 @@ class AimsImportTest extends TestCase
         $this->assertDatabaseHas('attendance_records', ['status' => 'present']);
 
         @unlink($path);
+    }
+
+    public function test_superadmin_can_import_without_explicit_permission_in_token(): void
+    {
+        $year = AcademicYear::query()->create([
+            'name' => '2026-27',
+            'starts_on' => '2026-04-01',
+            'ends_on' => '2027-03-31',
+            'is_current' => true,
+        ]);
+        $area = Area::query()->create(['academic_year_id' => $year->id, 'name' => 'Boys']);
+        $schoolClass = SchoolClass::query()->create(['area_id' => $area->id, 'name' => '6TH', 'grade_level' => '6TH']);
+        $section = Section::query()->create(['school_class_id' => $schoolClass->id, 'name' => 'GREEN']);
+        StudyGroup::query()->create(['name' => '6TH GREEN BOYS']);
+
+        $user = User::factory()->create();
+        $user->assignRole('superadmin');
+
+        $csv = "admission_no,cnic,full_name,class_label,roll_no,status\n";
+        $csv .= "10002,3520212345672,Sara Khan,6TH GREEN BOYS,13,ADMITTED\n";
+
+        $file = UploadedFile::fake()->createWithContent('students_efsc_ya.csv', $csv);
+
+        $this->actingAs($user)
+            ->postJson('/api/efsc/import/aims/students', ['file' => $file])
+            ->assertOk()
+            ->assertJsonPath('stats.succeeded', 1);
     }
 }

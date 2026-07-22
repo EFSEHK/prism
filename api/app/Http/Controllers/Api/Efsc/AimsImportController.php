@@ -11,9 +11,18 @@ use Illuminate\Support\Facades\Storage;
 
 class AimsImportController extends Controller
 {
+    private const IMPORT_ROLES = [
+        'superadmin',
+        'developer',
+        'admin',
+        'vice_principal',
+        'computer_operator',
+        'accountant',
+    ];
+
     public function logs(Request $request)
     {
-        abort_unless($request->user()->can('import_aims_data'), 403);
+        $this->authorizeImport($request);
 
         $logs = DataImportLog::query()
             ->with('user:id,name')
@@ -59,7 +68,7 @@ class AimsImportController extends Controller
         string $dataType,
         ?NotificationDispatchService $dispatchService = null,
     ) {
-        abort_unless($request->user()->can('import_aims_data'), 403);
+        $this->authorizeImport($request);
 
         $data = $request->validate([
             'file' => 'required|file|mimes:csv,txt|max:10240',
@@ -89,5 +98,15 @@ class AimsImportController extends Controller
         } finally {
             Storage::delete($stored);
         }
+    }
+
+    private function authorizeImport(Request $request): void
+    {
+        $user = $request->user();
+
+        abort_unless(
+            $user->can('import_aims_data') || $user->hasAnyRole(self::IMPORT_ROLES),
+            403
+        );
     }
 }

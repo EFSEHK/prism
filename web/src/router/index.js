@@ -110,8 +110,8 @@ router.beforeEach((to) => {
     if (!canConfigure.value) return '/home'
   }
   if (to.meta.aimsImportAccess) {
-    const { can } = usePermissions()
-    if (!can('import_aims_data')) return '/home'
+    const { canImportAims } = usePermissions()
+    if (!canImportAims.value) return '/home'
   }
   if (to.meta.staffOnly && isLearner.value) return '/home'
   if (to.meta.parentOnly && !isParent.value) return '/home'

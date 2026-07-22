@@ -4,7 +4,7 @@
       <div>
         <h1>Users</h1>
         <p class="muted">Manage accounts and role assignments.</p>
-        <p v-if="canImportAims" class="muted small">
+        <p v-if="canShowAimsImportLink" class="muted small">
           <RouterLink to="/admin/aims-import">AIMS CSV import</RouterLink>
         </p>
       </div>
@@ -127,8 +127,8 @@ const router = useRouter()
 const viewAs = useViewAsStore()
 const parent = useParentStore()
 const { isActuallySuperadmin, canEditUsers, canImpersonateUsers } = useRoles()
-const { can } = usePermissions()
-const canImportAims = computed(() => can('import_aims_data'))
+const { can, canImportAims } = usePermissions()
+const canShowAimsImportLink = computed(() => canImportAims.value)
 
 const users = ref([])
 const roles = ref([])
