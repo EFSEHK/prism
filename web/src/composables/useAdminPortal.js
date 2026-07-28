@@ -1,10 +1,20 @@
 import { computed } from 'vue'
 import { useRoles } from './useRoles'
 import { usePermissions } from './usePermissions'
+import { useModulesStore } from '../stores/modules'
+
+/** Admin portal card id → module catalog id */
+const PORTAL_MODULE_IDS = {
+  apps: 'apps',
+  'aims-import': 'aims-import',
+  users: 'users',
+  academic: 'configuration',
+  permissions: 'permissions',
+}
 
 /**
  * Central registry for admin portal links.
- * Add new entries here when introducing admin-only pages.
+ * Visibility follows the Apps page module catalog when loaded.
  */
 export function useAdminPortal() {
   const {
@@ -13,6 +23,20 @@ export function useAdminPortal() {
     isSuperadmin,
   } = useRoles()
   const { canConfigure, canImportAims } = usePermissions()
+  const modules = useModulesStore()
+
+  const portalFallbacks = computed(() => ({
+    apps: canManageApps.value,
+    'aims-import': canImportAims.value,
+    users: canManageUsers.value,
+    academic: canConfigure.value,
+    permissions: isSuperadmin.value,
+  }))
+
+  function linkVisible(linkId) {
+    const moduleId = PORTAL_MODULE_IDS[linkId]
+    return modules.canAccessModule(moduleId, portalFallbacks.value[linkId] ?? false)
+  }
 
   const links = computed(() => [
     {
@@ -22,7 +46,7 @@ export function useAdminPortal() {
       path: '/admin/apps',
       accent: '#7c3aed',
       icon: '◫',
-      visible: canManageApps.value,
+      visible: linkVisible('apps'),
     },
     {
       id: 'aims-import',
@@ -31,7 +55,7 @@ export function useAdminPortal() {
       path: '/admin/aims-import',
       accent: '#2563eb',
       icon: '⇪',
-      visible: canImportAims.value,
+      visible: linkVisible('aims-import'),
     },
     {
       id: 'users',
@@ -40,7 +64,7 @@ export function useAdminPortal() {
       path: '/admin/users',
       accent: '#0891b2',
       icon: '◎',
-      visible: canManageUsers.value,
+      visible: linkVisible('users'),
     },
     {
       id: 'academic',
@@ -49,7 +73,7 @@ export function useAdminPortal() {
       path: '/admin/academic',
       accent: '#059669',
       icon: '▦',
-      visible: canConfigure.value,
+      visible: linkVisible('academic'),
     },
     {
       id: 'permissions',
@@ -58,7 +82,7 @@ export function useAdminPortal() {
       path: '/admin/permissions',
       accent: '#d97706',
       icon: '⚿',
-      visible: isSuperadmin.value,
+      visible: linkVisible('permissions'),
     },
   ])
 

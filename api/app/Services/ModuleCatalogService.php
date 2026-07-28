@@ -72,6 +72,15 @@ class ModuleCatalogService
         'computer_operator',
     ];
 
+    private const AIMS_IMPORT_ROLES = [
+        'superadmin',
+        'developer',
+        'admin',
+        'vice_principal',
+        'computer_operator',
+        'accountant',
+    ];
+
     private const ACADEMIC_ROLES = [
         'superadmin',
         'admin',
@@ -150,6 +159,17 @@ class ModuleCatalogService
         }
 
         return $modules;
+    }
+
+    public function userCanAccessModule(User $user, string $moduleId, ?string $platform = null): bool
+    {
+        foreach ($this->forUser($user, $platform) as $module) {
+            if ($module['id'] === $moduleId) {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     /**
@@ -354,11 +374,15 @@ class ModuleCatalogService
      */
     private function isAllowed(User $user, array $roles, array $resolved): bool
     {
+        if (! $this->hasAnyRole($roles, $resolved['visible_roles'])) {
+            return false;
+        }
+
         if (isset($resolved['gate']) && is_callable($resolved['gate'])) {
             return (bool) ($resolved['gate'])($user, $roles, $resolved['visible_roles']);
         }
 
-        return $this->hasAnyRole($roles, $resolved['visible_roles']);
+        return true;
     }
 
     /**
@@ -492,6 +516,20 @@ class ModuleCatalogService
                 'visible_roles' => ['superadmin', 'developer'],
                 'locked_roles' => ['superadmin', 'developer'],
                 'editable' => false,
+            ],
+            [
+                'id' => 'aims-import',
+                'label' => 'AIMS Import',
+                'platforms' => ['web'],
+                'route_web' => '/admin/aims-import',
+                'route_mobile' => null,
+                'coming_soon' => false,
+                'visible_roles' => self::AIMS_IMPORT_ROLES,
+                'locked_roles' => ['superadmin'],
+                'gate' => function (User $user, array $roles, array $allowed): bool {
+                    return $user->can('import_aims_data')
+                        || $this->hasAnyRole($roles, $allowed);
+                },
             ],
             [
                 'id' => 'approvals',

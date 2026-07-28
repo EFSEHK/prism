@@ -3,7 +3,7 @@ import { ref, computed } from 'vue'
 import api from '../api/client'
 
 /** Admin shell links hidden while SuperAdmin is impersonating another user. */
-export const ADMIN_SHELL_MODULE_IDS = ['users', 'configuration', 'permissions', 'apps']
+export const ADMIN_SHELL_MODULE_IDS = ['users', 'configuration', 'permissions', 'apps', 'aims-import']
 
 export const useModulesStore = defineStore('modules', () => {
   const items = ref([])
@@ -27,6 +27,19 @@ export const useModulesStore = defineStore('modules', () => {
 
   function moduleById(id) {
     return items.value.find((m) => m.id === id) || null
+  }
+
+  function hasModule(id) {
+    return items.value.some((m) => m.id === id)
+  }
+
+  /**
+   * Module catalog is the source of truth for nav/portal visibility once loaded.
+   * Pass a fallback for the brief window before /efsc/modules returns.
+   */
+  function canAccessModule(id, fallback = false) {
+    if (!loaded.value) return fallback
+    return hasModule(id)
   }
 
   function moduleStatus(idOrModule) {
@@ -72,6 +85,8 @@ export const useModulesStore = defineStore('modules', () => {
     enabledIds,
     isEnabled,
     moduleById,
+    hasModule,
+    canAccessModule,
     moduleStatus,
     clear,
     fetchModules,

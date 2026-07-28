@@ -53,6 +53,14 @@
           >
             {{ staffNavLabel(mod) }}
           </RouterLink>
+          <RouterLink
+            v-if="showAdminNav"
+            to="/admin"
+            class="nav-admin"
+            :class="{ 'router-link-active': isAdminRoute }"
+          >
+            Portal
+          </RouterLink>
         </template>
       </nav>
     </header>
@@ -70,6 +78,7 @@ import { useParentStore } from './stores/parent'
 import { useViewAsStore } from './stores/viewAs'
 import { useModulesStore, ADMIN_SHELL_MODULE_IDS } from './stores/modules'
 import { useRoles } from './composables/useRoles'
+import { useAdminPortal } from './composables/useAdminPortal'
 
 const auth = useAuthStore()
 const parent = useParentStore()
@@ -81,6 +90,7 @@ const router = useRouter()
 const {
   isLearner, isParent, isStudent, canViewAs,
 } = useRoles()
+const { canAccessAdminPortal } = useAdminPortal()
 
 const displayName = computed(() => {
   if (viewAs.isImpersonating) return viewAs.impersonateUser?.name ?? ''
@@ -91,15 +101,29 @@ const viewAsRole = computed(() => viewAs.role)
 const viewAsOptions = computed(() => viewAs.options)
 const isImpersonating = computed(() => viewAs.isImpersonating)
 const isFlushLayout = computed(() => Boolean(route.meta.public || route.meta.guest))
+const isAdminRoute = computed(() => route.path.startsWith('/admin'))
+const showAdminNav = computed(() => canAccessAdminPortal.value && !isImpersonating.value)
 
 const staffNavModules = computed(() => {
-  return modules.items.filter((m) => {
+  const filtered = modules.items.filter((m) => {
     if (m.enabled === false) return false
     const platforms = m.platforms || ['web', 'mobile']
     if (!platforms.includes('web')) return false
     if (isImpersonating.value && ADMIN_SHELL_MODULE_IDS.includes(m.id)) return false
     return true
   })
+
+  const isAdminShell = (m) => ADMIN_SHELL_MODULE_IDS.includes(m.id)
+  const regular = filtered.filter((m) => !isAdminShell(m))
+  const adminShell = filtered.filter((m) => isAdminShell(m))
+
+  // Admins use the Admin portal hub — drop duplicate shell links from the main nav.
+  if (canAccessAdminPortal.value && !isImpersonating.value) {
+    return regular
+  }
+
+  // Non-admins who still have shell modules (e.g. configuration only) keep them at the end.
+  return [...regular, ...adminShell]
 })
 
 const learnerNavModules = computed(() => {
@@ -267,6 +291,11 @@ async function switchChild() {
 }
 .top a.nav-soon.router-link-active {
   color: #a1a1aa;
+}
+.top a.nav-admin {
+  margin-left: 0.25rem;
+  padding-left: 0.85rem;
+  border-left: 1px solid #3f3f46;
 }
 .brand {
   font-weight: 700;

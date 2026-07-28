@@ -5,20 +5,16 @@ namespace App\Http\Controllers\Api\Efsc;
 use App\Http\Controllers\Controller;
 use App\Models\DataImportLog;
 use App\Services\Aims\AimsCsvImportService;
+use App\Services\ModuleCatalogService;
 use App\Services\Notifications\NotificationDispatchService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
 
 class AimsImportController extends Controller
 {
-    private const IMPORT_ROLES = [
-        'superadmin',
-        'developer',
-        'admin',
-        'vice_principal',
-        'computer_operator',
-        'accountant',
-    ];
+    public function __construct(
+        private readonly ModuleCatalogService $catalog,
+    ) {}
 
     public function logs(Request $request)
     {
@@ -102,10 +98,8 @@ class AimsImportController extends Controller
 
     private function authorizeImport(Request $request): void
     {
-        $user = $request->user();
-
         abort_unless(
-            $user->can('import_aims_data') || $user->hasAnyRole(self::IMPORT_ROLES),
+            $this->catalog->userCanAccessModule($request->user(), 'aims-import', 'web'),
             403
         );
     }

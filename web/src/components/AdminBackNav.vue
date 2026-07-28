@@ -1,6 +1,6 @@
 <template>
   <nav class="admin-back" aria-label="Admin navigation">
-    <RouterLink to="/admin">← Admin portal</RouterLink>
+    <RouterLink to="/admin">← Portal</RouterLink>
   </nav>
 </template>
 

@@ -2,7 +2,7 @@
   <div class="admin-portal">
     <header class="portal-hero">
       <p class="portal-kicker">EFSC-YA</p>
-      <h1>Admin portal</h1>
+      <h1>Administration portal</h1>
       <p class="portal-lead">
         Configuration, imports, and system tools — everything that keeps the platform running.
       </p>

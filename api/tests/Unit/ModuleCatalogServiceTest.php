@@ -35,6 +35,7 @@ class ModuleCatalogServiceTest extends TestCase
             'configuration',
             'permissions',
             'apps',
+            'aims-import',
             'approvals',
             'attendance',
             'marks',
@@ -55,6 +56,7 @@ class ModuleCatalogServiceTest extends TestCase
 
         $this->assertContains('dashboard', $ids);
         $this->assertContains('apps', $ids);
+        $this->assertContains('aims-import', $ids);
         $this->assertContains('configuration', $ids);
         $this->assertNotContains('permissions', $ids);
         $this->assertNotContains('attendance', $ids);
@@ -116,12 +118,50 @@ class ModuleCatalogServiceTest extends TestCase
         $byId = collect($this->catalog->forUser($user))->keyBy('id');
 
         foreach ([
-            'dashboard', 'users', 'configuration', 'permissions', 'apps', 'approvals',
+            'dashboard', 'users', 'configuration', 'permissions', 'apps', 'aims-import', 'approvals',
             'attendance', 'marks', 'homework', 'timetable', 'online', 'fees', 'notifications', 'leave',
         ] as $id) {
             $this->assertFalse($byId->get($id)['coming_soon'], $id);
             $this->assertSame('live', $byId->get($id)['status'], $id);
         }
+    }
+
+    public function test_accountant_receives_aims_import_module(): void
+    {
+        $user = $this->userWithRoles(['accountant']);
+
+        $ids = collect($this->catalog->forUser($user))->pluck('id')->all();
+
+        $this->assertContains('aims-import', $ids);
+        $this->assertNotContains('users', $ids);
+    }
+
+    public function test_gate_modules_respect_visible_roles_over_permissions(): void
+    {
+        ModuleSetting::query()->create([
+            'module_id' => 'aims-import',
+            'status' => 'live',
+            'visible_roles' => ['superadmin', 'developer', 'admin', 'computer_operator', 'accountant'],
+        ]);
+        ModuleSetting::query()->create([
+            'module_id' => 'configuration',
+            'status' => 'live',
+            'visible_roles' => ['superadmin', 'admin', 'developer', 'computer_operator', 'section_head'],
+        ]);
+
+        $this->catalog = new ModuleCatalogService;
+
+        $vicePrincipal = $this->userWithRoles(['vice_principal']);
+        $vicePrincipal->givePermissionTo('import_aims_data');
+
+        $classIncharge = $this->userWithRoles(['class_incharge']);
+        $classIncharge->givePermissionTo('manage_student_roster');
+
+        $vpIds = collect($this->catalog->forUser($vicePrincipal))->pluck('id')->all();
+        $ciIds = collect($this->catalog->forUser($classIncharge))->pluck('id')->all();
+
+        $this->assertNotContains('aims-import', $vpIds);
+        $this->assertNotContains('configuration', $ciIds);
     }
 
     public function test_persisted_settings_override_status_and_roles(): void
@@ -185,6 +225,7 @@ class ModuleCatalogServiceTest extends TestCase
             'manage_student_roster',
             'mark_attendance',
             'view_dashboard',
+            'import_aims_data',
         ] as $name) {
             Permission::findOrCreate($name, 'web');
         }

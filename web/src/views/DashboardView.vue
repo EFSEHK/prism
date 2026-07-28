@@ -6,9 +6,9 @@
       <p class="muted">Roles: {{ roleNames }}</p>
     </div>
     <div v-if="canAccessAdminPortal" class="card admin-portal-card">
-      <h2>Admin portal</h2>
+      <h2>Administration portal</h2>
       <p class="muted">Apps, imports, users, academic setup, and more.</p>
-      <RouterLink to="/admin" class="portal-cta">Open admin portal →</RouterLink>
+      <RouterLink to="/admin" class="portal-cta">Open portal →</RouterLink>
     </div>
     <div v-if="widgets.pending_approvals != null" class="card">
       <h2>Pending notification approvals</h2>

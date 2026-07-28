@@ -29,6 +29,8 @@ class AimsImportTest extends TestCase
         Role::findOrCreate('student', 'web');
         Role::findOrCreate('parent', 'web');
         Role::findOrCreate('superadmin', 'web');
+        Role::findOrCreate('accountant', 'web');
+        Role::findOrCreate('vice_principal', 'web');
     }
 
     public function test_students_csv_import_via_api(): void
@@ -45,6 +47,7 @@ class AimsImportTest extends TestCase
         StudyGroup::query()->create(['name' => '6TH GREEN BOYS']);
 
         $user = User::factory()->create();
+        $user->assignRole('accountant');
         $user->givePermissionTo('import_aims_data');
 
         $csv = "admission_no,cnic,full_name,class_label,roll_no,status\n";
@@ -72,6 +75,25 @@ class AimsImportTest extends TestCase
     public function test_import_requires_permission(): void
     {
         $user = User::factory()->create();
+        $file = UploadedFile::fake()->createWithContent('students.csv', "admission_no\n");
+
+        $this->actingAs($user)
+            ->postJson('/api/efsc/import/aims/students', ['file' => $file])
+            ->assertForbidden();
+    }
+
+    public function test_import_respects_apps_visible_roles(): void
+    {
+        \App\Models\ModuleSetting::query()->create([
+            'module_id' => 'aims-import',
+            'status' => 'live',
+            'visible_roles' => ['superadmin', 'admin', 'accountant'],
+        ]);
+
+        $user = User::factory()->create();
+        $user->assignRole('vice_principal');
+        $user->givePermissionTo('import_aims_data');
+
         $file = UploadedFile::fake()->createWithContent('students.csv', "admission_no\n");
 
         $this->actingAs($user)

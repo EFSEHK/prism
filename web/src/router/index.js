@@ -7,6 +7,7 @@ import { useViewAsStore } from '../stores/viewAs'
 import { roleView } from '../composables/useRoleView'
 import { catalogView } from '../composables/useCatalogView'
 import { useAdminPortal } from '../composables/useAdminPortal'
+import { useModulesStore } from '../stores/modules'
 import LandingView from '../views/LandingView.vue'
 import LoginView from '../views/LoginView.vue'
 import DashboardView from '../views/DashboardView.vue'
@@ -109,16 +110,27 @@ router.beforeEach((to) => {
     const { canAccessAdminPortal } = useAdminPortal()
     if (!canAccessAdminPortal.value) return '/home'
   }
-  if (to.meta.usersAccess && !canManageUsers.value) return '/home'
-  if (to.meta.superadminOnly && !isSuperadmin.value) return '/home'
-  if (to.meta.appsAccess && !canManageApps.value) return '/home'
+  if (to.meta.usersAccess) {
+    const modules = useModulesStore()
+    if (!modules.canAccessModule('users', canManageUsers.value)) return '/home'
+  }
+  if (to.meta.superadminOnly) {
+    const modules = useModulesStore()
+    if (!modules.canAccessModule('permissions', isSuperadmin.value)) return '/home'
+  }
+  if (to.meta.appsAccess) {
+    const modules = useModulesStore()
+    if (!modules.canAccessModule('apps', canManageApps.value)) return '/home'
+  }
   if (to.meta.configAccess) {
+    const modules = useModulesStore()
     const { canConfigure } = usePermissions()
-    if (!canConfigure.value) return '/home'
+    if (!modules.canAccessModule('configuration', canConfigure.value)) return '/home'
   }
   if (to.meta.aimsImportAccess) {
+    const modules = useModulesStore()
     const { canImportAims } = usePermissions()
-    if (!canImportAims.value) return '/home'
+    if (!modules.canAccessModule('aims-import', canImportAims.value)) return '/home'
   }
   if (to.meta.staffOnly && isLearner.value) return '/home'
   if (to.meta.parentOnly && !isParent.value) return '/home'
