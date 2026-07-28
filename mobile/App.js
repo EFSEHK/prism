@@ -20,6 +20,7 @@ import {
   clearViewAs,
 } from './apiClient'
 import SideMenu, {
+  BellIcon,
   HamburgerIcon,
   HomeIcon,
   navItemsForContext,
@@ -409,6 +410,11 @@ export default function App() {
     selectFeatureSafe(id)
   }
 
+  function openNotificationsFromHeader() {
+    setMenuOpen(false)
+    selectFeatureSafe('notifications')
+  }
+
   const roleNames = impersonateUser
     ? (impersonateUser.roles || []).map((r) => r.name)
     : viewAsRole
@@ -733,6 +739,22 @@ export default function App() {
               ) : null}
               <View style={styles.headerSeparator} />
               <Pressable
+                onPress={openNotificationsFromHeader}
+                style={styles.headerIconBtn}
+                hitSlop={8}
+                accessibilityLabel={`Open notifications${unread > 0 ? ` (${unread} unread)` : ''}`}
+              >
+                <BellIcon />
+                {unread > 0 ? (
+                  <View style={styles.notificationBadge}>
+                    <Text style={styles.notificationBadgeText}>
+                      {unread > 99 ? '99+' : String(unread)}
+                    </Text>
+                  </View>
+                ) : null}
+              </Pressable>
+              <View style={styles.headerSeparator} />
+              <Pressable
                 onPress={() => setMenuOpen(true)}
                 style={styles.headerMenuBtn}
                 hitSlop={8}
@@ -846,19 +868,22 @@ const styles = StyleSheet.create({
   headerRight: {
     flexDirection: 'row',
     alignItems: 'center',
-    maxWidth: '48%',
+    maxWidth: '56%',
+    flexShrink: 1,
+    minWidth: 0,
   },
   headerRightName: {
     color: '#334155',
     fontWeight: '600',
     fontSize: 13,
-    maxWidth: 140,
+    maxWidth: 96,
+    flexShrink: 1,
   },
   headerSeparator: {
     width: 1,
     height: 18,
     backgroundColor: '#cbd5e1',
-    marginHorizontal: 10,
+    marginHorizontal: 6,
   },
   exitViewBtn: {
     borderWidth: 1,
@@ -878,6 +903,31 @@ const styles = StyleSheet.create({
     height: 28,
     alignItems: 'center',
     justifyContent: 'center',
+  },
+  headerIconBtn: {
+    width: 28,
+    height: 28,
+    alignItems: 'center',
+    justifyContent: 'center',
+    position: 'relative',
+  },
+  notificationBadge: {
+    position: 'absolute',
+    top: -3,
+    right: -8,
+    minWidth: 14,
+    height: 14,
+    paddingHorizontal: 3,
+    borderRadius: 999,
+    backgroundColor: '#dc2626',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  notificationBadgeText: {
+    color: '#fff',
+    fontSize: 9,
+    fontWeight: '700',
+    lineHeight: 11,
   },
   body: { flex: 1 },
   loadingOverlay: {

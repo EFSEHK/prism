@@ -26,6 +26,26 @@
             </label>
           </template>
           <span class="user-sep" aria-hidden="true" />
+          <button type="button" class="link notif-btn" aria-label="Open notifications" @click="openNotifications">
+            <svg
+              width="16"
+              height="16"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              aria-hidden="true"
+            >
+              <path d="M15 17h5l-1.4-1.4a2 2 0 0 1-.6-1.4V11a6 6 0 1 0-12 0v3.2a2 2 0 0 1-.6 1.4L4 17h5" />
+              <path d="M9 17a3 3 0 0 0 6 0" />
+            </svg>
+            <span v-if="unreadNotifications > 0" class="notif-badge">
+              {{ unreadNotifications > 99 ? '99+' : unreadNotifications }}
+            </span>
+          </button>
+          <span class="user-sep" aria-hidden="true" />
           <button type="button" class="link" @click="logout">Logout</button>
         </div>
       </div>
@@ -103,6 +123,7 @@ const isImpersonating = computed(() => viewAs.isImpersonating)
 const isFlushLayout = computed(() => Boolean(route.meta.public || route.meta.guest))
 const isAdminRoute = computed(() => route.path.startsWith('/admin'))
 const showAdminNav = computed(() => canAccessAdminPortal.value && !isImpersonating.value)
+const unreadNotifications = computed(() => parent.dashboard?.unread_notifications ?? 0)
 
 const staffNavModules = computed(() => {
   const filtered = modules.items.filter((m) => {
@@ -239,6 +260,10 @@ async function logout() {
   router.push('/login')
 }
 
+function openNotifications() {
+  router.push('/notifications')
+}
+
 async function switchChild() {
   await parent.clearChild()
   router.push('/home')
@@ -307,6 +332,28 @@ async function switchChild() {
 }
 .user-actions .link {
   margin-left: 0;
+}
+.notif-btn {
+  position: relative;
+  width: 1.75rem;
+  height: 1.75rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+.notif-badge {
+  position: absolute;
+  top: -0.2rem;
+  right: -0.35rem;
+  min-width: 0.9rem;
+  height: 0.9rem;
+  padding: 0 0.2rem;
+  border-radius: 999px;
+  background: #dc2626;
+  color: #fff;
+  font-size: 0.62rem;
+  line-height: 0.9rem;
+  font-weight: 700;
 }
 .user-name {
   font-size: 0.85rem;

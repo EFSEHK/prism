@@ -96,6 +96,26 @@ export function HamburgerIcon({ color = '#0f172a' }) {
   )
 }
 
+export function BellIcon({ size = 18, color = '#0f172a' }) {
+  return (
+    <Svg
+      width={size}
+      height={size}
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke={color}
+      strokeWidth={2}
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      accessibilityElementsHidden
+      importantForAccessibility="no-hide-descendants"
+    >
+      <Path d="M15 17h5l-1.4-1.4a2 2 0 0 1-.6-1.4V11a6 6 0 1 0-12 0v3.2a2 2 0 0 1-.6 1.4L4 17h5" />
+      <Path d="M9 17a3 3 0 0 0 6 0" />
+    </Svg>
+  )
+}
+
 export function HomeIcon({ size = 22, color = '#0f172a' }) {
   return (
     <Svg
