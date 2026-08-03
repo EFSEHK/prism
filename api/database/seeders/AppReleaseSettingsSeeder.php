@@ -10,7 +10,7 @@ class AppReleaseSettingsSeeder extends Seeder
 {
     public function run(): void
     {
-        $apkPath = 'releases/EFSC-YA-android-1-0-0.apk';
+        $apkPath = 'releases/EFSC-YA-android-0-0-0.apk';
         if (! Storage::disk('public')->exists($apkPath)) {
             $apkPath = null;
         }
@@ -18,7 +18,7 @@ class AppReleaseSettingsSeeder extends Seeder
         AppReleaseSetting::query()->updateOrCreate(['id' => 1], [
             'web_app_url' => config('releases.default_web_app_url'),
             'android_apk_path' => $apkPath,
-            'android_version' => '1.0.0',
+            'android_version' => '0.0.0',
             'android_version_code' => 1,
             'release_notes' => 'Initial release of the EFSC-YA school portal mobile app.',
         ]);
