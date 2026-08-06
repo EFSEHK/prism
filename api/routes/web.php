@@ -12,6 +12,16 @@ use Illuminate\Support\Facades\Auth;
 $devPortal = trim(config('releases.dev_portal_path', 'sys/portal-access'), '/');
 
 $webAppUrl = static function (): string {
+    // Local/dev: never send browsers to the production SPA host.
+    if (! app()->environment('production')) {
+        $local = config('releases.default_web_app_url');
+        if (is_string($local) && $local !== '' && ! str_contains($local, 'innovisiq.com')) {
+            return rtrim($local, '/');
+        }
+
+        return 'http://localhost:5173';
+    }
+
     $url = AppReleaseSetting::current()->web_app_url
         ?: config('releases.default_web_app_url');
 
@@ -19,7 +29,18 @@ $webAppUrl = static function (): string {
 };
 
 Route::get('/', function () use ($webAppUrl) {
-    return redirect()->away($webAppUrl());
+    // Production: send users to the live web app.
+    if (app()->environment('production')) {
+        return redirect()->away($webAppUrl());
+    }
+
+    $settings = AppReleaseSetting::current();
+
+    return view('welcome', [
+        'webAppUrl' => $webAppUrl(),
+        'settings' => $settings,
+        'apkUrl' => $settings->androidApkUrl(),
+    ]);
 })->name('welcome');
 
 Route::get('/login', function () use ($webAppUrl) {
