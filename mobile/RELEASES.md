@@ -43,7 +43,7 @@ Gradle still writes `android/app/build/outputs/apk/release/app-release.apk`; the
 3. Open **Release settings** → upload APK (or confirm file is already in `api/storage/app/public/releases/`).
 4. Set **version name** (`1.0.0`) and **version code** (`1`, must increase for each new APK).
 5. Set **web app URL** (e.g. production Vue URL).
-6. Save — the public welcome page at `https://sap-api.innovisiq.com/` shows **Download Android app**.
+6. Save — the public welcome page at `https://sap.innovisiq.com/` shows **Download Android app** (`/download/android` on the API host).
 
 ### For parents / staff (first install)
 

@@ -142,7 +142,7 @@ DEFAULT_WEB_APP_URL=https://sap.innovisiq.com
 DEV_PORTAL_PATH=sys/portal-access
 ```
 
-APK files are stored at `api/storage/app/public/releases/` and served at `/storage/releases/...` after `php artisan storage:link`.
+APK files are stored at `api/storage/app/public/releases/` and served by Laravel at `/download/android` (do not use `/storage/releases/...` on Hostinger — that path returns 403).
 
 ---
 

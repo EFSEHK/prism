@@ -3,7 +3,6 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
-use Illuminate\Support\Facades\Storage;
 
 class AppReleaseSetting extends Model
 {
@@ -41,7 +40,7 @@ class AppReleaseSetting extends Model
             return null;
         }
 
-        return Storage::disk('public')->url($this->android_apk_path);
+        return url('/download/android').'?v='.$this->android_version_code;
     }
 
     public function iosIpaUrl(): ?string
@@ -50,6 +49,6 @@ class AppReleaseSetting extends Model
             return null;
         }
 
-        return Storage::disk('public')->url($this->ios_ipa_path);
+        return url('/download/ios').'?v='.($this->ios_build_number ?: '0');
     }
 }

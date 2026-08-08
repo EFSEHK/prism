@@ -4,6 +4,7 @@ use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\DevPortalController;
 use App\Http\Controllers\HealthController;
 use App\Http\Controllers\HealthMetricsController;
+use App\Http\Controllers\ReleaseDownloadController;
 use App\Http\Middleware\EnsureDeveloperOrSuperadmin;
 use App\Models\AppReleaseSetting;
 use App\Models\User;
@@ -47,6 +48,11 @@ Route::get('/', function () use ($webAppUrl) {
 Route::get('/login', function () use ($webAppUrl) {
     return redirect()->away($webAppUrl().'/login');
 })->name('login');
+
+Route::get('/download/android', [ReleaseDownloadController::class, 'android'])
+    ->name('releases.download.android');
+Route::get('/download/ios', [ReleaseDownloadController::class, 'ios'])
+    ->name('releases.download.ios');
 
 Route::prefix($devPortal)->name('dev-portal.')->group(function () {
     Route::middleware('guest')->group(function () {
