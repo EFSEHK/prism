@@ -9,7 +9,10 @@ export function formatError(e) {
     return 'Request timed out. Check Laragon and network.'
   }
   if (e.message === 'Network Error' || e.code === 'ERR_NETWORK') {
-    return 'Cannot reach the API. Check mobile/.env and Wi‑Fi.'
+    const target = e.config?.baseURL
+    return target
+      ? `Cannot reach ${target}. Same Wi‑Fi as the PC? Check mobile/.env and rebuild the APK after changing it.`
+      : 'Cannot reach the API. Check mobile/.env and Wi‑Fi.'
   }
   return e.message || 'Request failed'
 }

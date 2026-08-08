@@ -27,8 +27,11 @@ function resolveApi() {
   try {
     const { hostname } = new URL(configured)
     if (DEV_VHOSTS.includes(hostname) && Platform.OS !== 'web') {
-      const targetIp =
-        lanIp || (Platform.OS === 'android' ? '10.0.2.2' : '')
+      // 10.0.2.2 is the Android emulator → host loopback only. Physical phones
+      // must use EXPO_PUBLIC_API_LAN_IP (same Wi‑Fi as the PC).
+      const emulatorFallback =
+        Platform.OS === 'android' && Constants.isDevice === false ? '10.0.2.2' : ''
+      const targetIp = lanIp || emulatorFallback
       if (targetIp) {
         baseURL = configured.replace(hostname, targetIp)
         headers.Host = hostname
@@ -42,6 +45,7 @@ function resolveApi() {
   return {
     displayUrl: configured,
     bridgeHost,
+    baseURL,
     client: axios.create({ baseURL, timeout: 20000, headers }),
   }
 }
@@ -50,8 +54,9 @@ const api = resolveApi()
 
 export const API_DISPLAY = api.displayUrl
 export const API_BRIDGE_HOST = api.bridgeHost
+export const API_BASE = api.baseURL
 export const apiClient = api.client
-export const USES_EMULATOR_API = api.displayUrl.includes('10.0.2.2')
+export const USES_EMULATOR_API = api.baseURL.includes('10.0.2.2')
 
 /** Set Bearer token immediately (use before async calls right after login). */
 export function setAuthToken(token) {

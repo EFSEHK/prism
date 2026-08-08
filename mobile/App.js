@@ -12,6 +12,7 @@ import {
 import { StatusBar } from 'expo-status-bar'
 import {
   apiClient,
+  API_DISPLAY,
   API_BRIDGE_HOST,
   USES_EMULATOR_API,
   setAuthToken,
@@ -633,11 +634,14 @@ export default function App() {
       {!showApp ? (
         <ScrollView contentContainerStyle={styles.login} keyboardShouldPersistTaps="handled">
           <Text style={styles.title}>EFSC-YA</Text>
+          <Text style={styles.hint}>API: {API_DISPLAY}</Text>
           {API_BRIDGE_HOST ? (
             <Text style={styles.hint}>LAN: {API_BRIDGE_HOST}</Text>
           ) : null}
           {USES_EMULATOR_API ? (
-            <Text style={styles.warn}>Dev: set mobile/.env (prism.test). Prod: sap-api.innovisiq.com</Text>
+            <Text style={styles.warn}>
+              Emulator fallback (10.0.2.2). On a real phone set EXPO_PUBLIC_API_LAN_IP and rebuild the APK.
+            </Text>
           ) : null}
           {!token ? (
             <>
