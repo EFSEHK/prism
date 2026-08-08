@@ -2,7 +2,7 @@
   <div>
     <AdminBackNav />
     <h1>AIMS Import</h1>
-    <p class="muted">Upload CSV files exported from AIMS for import into EFSC-YA. Each data type can be imported independently.</p>
+    <p class="muted">Upload CSV files exported from AIMS for SAP import. Each data type can be imported independently.</p>
 
     <div v-if="err" class="error">{{ err }}</div>
 
@@ -82,10 +82,10 @@ import api from '../../api/client'
 import AdminBackNav from '../../components/AdminBackNav.vue'
 
 const importCards = [
-  { type: 'students', title: 'Students', description: 'Student roster CSV from AIMS (EFSC-YA export)', endpoint: 'students' },
-  { type: 'attendance', title: 'Attendance', description: 'Daily attendance CSV from AIMS', endpoint: 'attendance' },
-  { type: 'fee_vouchers', title: 'Fee vouchers', description: 'Fee voucher CSV from AIMS', endpoint: 'fee-vouchers' },
-  { type: 'fee_deposits', title: 'Fee deposits', description: 'Fee deposit CSV from AIMS', endpoint: 'fee-deposits' },
+  { type: 'students', title: 'Students', description: 'SAP export: admission_no, cnic, full_name, class_label, roll_no, status', endpoint: 'students' },
+  { type: 'attendance', title: 'Attendance', description: 'Daily attendance CSV from AIMS (SAP export)', endpoint: 'attendance' },
+  { type: 'fee_vouchers', title: 'Fee vouchers', description: 'Fee voucher CSV from AIMS (SAP export)', endpoint: 'fee-vouchers' },
+  { type: 'fee_deposits', title: 'Fee deposits', description: 'Fee deposit CSV from AIMS (SAP export)', endpoint: 'fee-deposits' },
   { type: 'test_results', title: 'Test results', description: 'student_tests_export_*.csv', endpoint: 'test-results' },
   { type: 'exam_results', title: 'Exam results', description: 'student_exams_export_*.csv', endpoint: 'exam-results' },
 ]
