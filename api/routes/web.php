@@ -4,6 +4,7 @@ use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\DevPortalController;
 use App\Http\Controllers\HealthController;
 use App\Http\Controllers\HealthMetricsController;
+use App\Http\Middleware\EnsureDeveloperOrSuperadmin;
 use App\Models\AppReleaseSetting;
 use App\Models\User;
 use Illuminate\Support\Facades\Route;
@@ -53,7 +54,7 @@ Route::prefix($devPortal)->name('dev-portal.')->group(function () {
         Route::post('/', [DevPortalController::class, 'login'])->name('login.store');
     });
 
-    Route::middleware(['auth', 'dev.portal'])->group(function () {
+    Route::middleware(['auth', EnsureDeveloperOrSuperadmin::class])->group(function () {
         Route::get('/releases', [DevPortalController::class, 'showSettings'])->name('settings');
         Route::post('/releases', [DevPortalController::class, 'updateSettings'])->name('settings.update');
         Route::post('/logout', [DevPortalController::class, 'logout'])->name('logout');
