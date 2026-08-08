@@ -196,10 +196,7 @@ Production distribution uses a **standalone signed APK**, not Expo Go.
 cd mobile
 npm install
 npx expo prebuild --platform android
-cd android
-$env:JAVA_HOME = "C:\Program Files\Android\Android Studio\jbr"
-$env:ANDROID_HOME = "$env:LOCALAPPDATA\Android\Sdk"
-.\gradlew.bat assembleRelease
+npm run build:apk
 ```
 
 **Output:**
@@ -207,7 +204,7 @@ $env:ANDROID_HOME = "$env:LOCALAPPDATA\Android\Sdk"
 | Path | Description |
 |------|-------------|
 | `mobile/android/app/build/outputs/apk/release/app-release.apk` | Gradle output |
-| `mobile/dist/EFSC-YA-1.0.0.apk` | Copy for manual sharing |
+| `mobile/dist/sap-efsc-1.0.0.apk` | Single production APK for sharing |
 | `api/storage/app/public/releases/` | Upload via developer portal (served on welcome page) |
 
 To regenerate the keystore (first time only): `mobile/scripts/setup-android-signing.ps1`
@@ -230,7 +227,7 @@ To regenerate the keystore (first time only): `mobile/scripts/setup-android-sign
 3. Allow download → open file → **Install**.
 4. If blocked: Settings → allow installs from the browser (one-time).
 
-**Other channels:** USB, WhatsApp, or school LAN — share `mobile/dist/EFSC-YA-*.apk` or the welcome-page link.
+**Other channels:** USB, WhatsApp, or school LAN — share `mobile/dist/sap-efsc-*.apk` or the welcome-page link.
 
 ---
 

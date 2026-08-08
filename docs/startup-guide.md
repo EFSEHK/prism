@@ -117,10 +117,10 @@ Output:
 mobile/android/app/build/outputs/apk/release/app-release.apk
 ```
 
-Optional copy for sharing:
+Copy for sharing (single production APK):
 
 ```
-mobile/dist/EFSC-YA-1.0.0.apk
+mobile/dist/sap-efsc-1.0.0.apk
 ```
 
 Upload the APK through the **developer release portal** so the public welcome page and `GET /api/mobile/version` point at it:

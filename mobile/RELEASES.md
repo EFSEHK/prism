@@ -21,19 +21,15 @@
 
 - `npx expo prebuild --platform android`
 - Release signing via `mobile/keystore.properties`
-- `cd android && gradlew.bat assembleRelease`
+- `npm run build:apk` (copies the single production APK to `mobile/dist/`)
 
 Output APK:
 
 ```
-mobile/android/app/build/outputs/apk/release/app-release.apk
+mobile/dist/sap-efsc-1.0.0.apk
 ```
 
-Copy for distribution:
-
-```
-mobile/dist/EFSC-YA-1.0.0.apk
-```
+Gradle still writes `android/app/build/outputs/apk/release/app-release.apk`; the script copies it as `sap-efsc-{version}.apk` from `app.json`.
 
 ---
 
@@ -41,7 +37,7 @@ mobile/dist/EFSC-YA-1.0.0.apk
 
 ### For developers
 
-1. Build (or reuse) the APK at `mobile/dist/EFSC-YA-1.0.0.apk`.
+1. Build (or reuse) the APK at `mobile/dist/sap-efsc-1.0.0.apk`.
 2. Sign in to the hidden portal: `https://sap-api.innovisiq.com/sys/portal-access`
    - Accounts: `developer@efsc-ya.com` or `superadmin@efsc-ya.com`
 3. Open **Release settings** → upload APK (or confirm file is already in `api/storage/app/public/releases/`).
@@ -59,7 +55,7 @@ mobile/dist/EFSC-YA-1.0.0.apk
 
 ### Share via USB / WhatsApp / school LAN
 
-- Copy `EFSC-YA-1.0.0.apk` to a USB drive, or
+- Copy `sap-efsc-1.0.0.apk` to a USB drive, or
 - Share the public link from the welcome page, or
 - Upload through the developer portal (recommended — single source of truth).
 
@@ -88,11 +84,7 @@ When you change `android.versionCode`, native modules, permissions, or Expo SDK:
 2. Rebuild:
    ```powershell
    cd mobile
-   npx expo prebuild --platform android
-   cd android
-   $env:JAVA_HOME = "C:\Program Files\Android\Android Studio\jbr"
-   $env:ANDROID_HOME = "$env:LOCALAPPDATA\Android\Sdk"
-   .\gradlew.bat assembleRelease
+   npm run build:apk
    ```
 3. Upload APK via developer portal; bump version code in the form.
 4. Users with the app installed see **Update available** on launch → tap → Android install screen.

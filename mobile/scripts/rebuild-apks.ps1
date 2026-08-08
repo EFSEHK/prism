@@ -1,15 +1,19 @@
-# Build release APKs for production and/or local Laragon.
-# Usage: .\rebuild-apks.ps1 [-Target production|local|both]
-param(
-    [ValidateSet('production', 'local', 'both')]
-    [string]$Target = 'both'
-)
+# Build the single production release APK.
+# Output: mobile/dist/sap-efsc-{version}.apk  (version from app.json)
+# Usage:  .\rebuild-apks.ps1
+#     or: npm run build:apk
 
 $ErrorActionPreference = 'Stop'
 $mobile = Split-Path -Parent $PSScriptRoot
 $android = Join-Path $mobile 'android'
 $dist = Join-Path $mobile 'dist'
 $apkSrc = Join-Path $android 'app\build\outputs\apk\release\app-release.apk'
+$appJson = Get-Content (Join-Path $mobile 'app.json') -Raw | ConvertFrom-Json
+$version = [string]$appJson.expo.version
+if (-not $version) { throw 'app.json expo.version is missing' }
+
+$apkName = "sap-efsc-$version.apk"
+$prodUrl = 'https://sap-api.innovisiq.com/api'
 
 $env:JAVA_HOME = 'C:\Program Files\Android\Android Studio\jbr'
 $env:ANDROID_HOME = Join-Path $env:LOCALAPPDATA 'Android\Sdk'
@@ -18,22 +22,16 @@ $env:ANDROID_SDK_ROOT = $env:ANDROID_HOME
 New-Item -ItemType Directory -Force -Path $dist | Out-Null
 
 $envDev = Join-Path $mobile '.env'
-$envProd = Join-Path $mobile '.env.production'
 $envDevBak = Join-Path $mobile '.env.dev.bak'
-$envProdBak = Join-Path $mobile '.env.production.bak'
 
 function Restore-EnvFiles {
     if ((Test-Path $envDevBak) -and -not (Test-Path $envDev)) {
         Move-Item $envDevBak $envDev -Force
     }
-    if ((Test-Path $envProdBak) -and -not (Test-Path $envProd)) {
-        Move-Item $envProdBak $envProd -Force
-    }
 }
 
 function Clear-JsBundleCache {
     # Avoid `gradlew clean` — new-arch CMake clean fails if codegen dirs are missing.
-    # Still drop JS/Hermes outputs so EXPO_PUBLIC_* is re-inlined for each variant.
     $paths = @(
         (Join-Path $android 'app\build\generated\assets'),
         (Join-Path $android 'app\build\intermediates\sourcemaps'),
@@ -52,14 +50,14 @@ function Clear-JsBundleCache {
     if (Test-Path $metroCache) { Remove-Item -Recurse -Force $metroCache }
 }
 
-function Build-Apk([string]$label, [string]$url, [string]$lanIp, [string]$destName) {
-    Write-Host ""
-    Write-Host "======== Building $label ========"
-    Write-Host "EXPO_PUBLIC_API_URL=$url"
-    Write-Host "EXPO_PUBLIC_API_LAN_IP=$lanIp"
+try {
+    Write-Host "======== Building $apkName ========"
+    Write-Host "EXPO_PUBLIC_API_URL=$prodUrl"
+    Write-Host "version=$version"
 
-    $env:EXPO_PUBLIC_API_URL = $url
-    $env:EXPO_PUBLIC_API_LAN_IP = $lanIp
+    if (Test-Path $envDev) { Move-Item $envDev $envDevBak -Force }
+    $env:EXPO_PUBLIC_API_URL = $prodUrl
+    $env:EXPO_PUBLIC_API_LAN_IP = ''
 
     Clear-JsBundleCache
 
@@ -68,7 +66,7 @@ function Build-Apk([string]$label, [string]$url, [string]$lanIp, [string]$destNa
         & .\gradlew.bat --stop | Out-Host
         & .\gradlew.bat assembleRelease --no-daemon
         if ($LASTEXITCODE -ne 0) {
-            throw "gradlew failed for $label (exit $LASTEXITCODE)"
+            throw "gradlew failed (exit $LASTEXITCODE)"
         }
     }
     finally {
@@ -76,33 +74,21 @@ function Build-Apk([string]$label, [string]$url, [string]$lanIp, [string]$destNa
     }
 
     if (-not (Test-Path $apkSrc)) {
-        throw "APK missing after $label build: $apkSrc"
+        throw "APK missing after build: $apkSrc"
     }
 
-    $dest = Join-Path $dist $destName
+    Get-ChildItem $dist -Filter '*.apk' -ErrorAction SilentlyContinue |
+        Remove-Item -Force
+
+    $dest = Join-Path $dist $apkName
     Copy-Item $apkSrc $dest -Force
     $size = (Get-Item $dest).Length
-    Write-Host "Copied $label APK -> $dest ($size bytes)"
-}
-
-try {
-    if ($Target -in @('production', 'both')) {
-        if (Test-Path $envDev) { Move-Item $envDev $envDevBak -Force }
-        Build-Apk 'production' 'https://sap-api.innovisiq.com/api' '' 'EFSC-YA-production.apk'
-        Copy-Item (Join-Path $dist 'EFSC-YA-production.apk') (Join-Path $dist 'EFSC-YA-1.0.0.apk') -Force
-        if (Test-Path $envDevBak) { Move-Item $envDevBak $envDev -Force }
-    }
-
-    if ($Target -in @('local', 'both')) {
-        if (Test-Path $envProd) { Move-Item $envProd $envProdBak -Force }
-        Build-Apk 'local' 'http://prism.test/api' '192.168.18.15' 'EFSC-YA-local.apk'
-        if (Test-Path $envProdBak) { Move-Item $envProdBak $envProd -Force }
-    }
+    Write-Host "Copied -> $dest ($size bytes)"
 }
 finally {
     Restore-EnvFiles
 }
 
 Write-Host ""
-Write-Host "Done. APKs in $dist"
+Write-Host "Done. Single APK in $dist"
 Get-ChildItem $dist -Filter '*.apk' | Select-Object Name, Length, LastWriteTime | Format-Table -AutoSize

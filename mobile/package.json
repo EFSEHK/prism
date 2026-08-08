@@ -1,6 +1,6 @@
 {
   "name": "EFSC-YA-mobile",
-  "version": "0.0.0",
+  "version": "1.0.0",
   "main": "node_modules/expo/AppEntry.js",
   "scripts": {
     "start": "expo start",
@@ -8,7 +8,7 @@
     "android": "expo run:android",
     "ios": "expo run:ios",
     "prebuild": "expo prebuild --platform android",
-    "build:apk": "cd android && gradlew.bat assembleRelease"
+    "build:apk": "powershell -NoProfile -ExecutionPolicy Bypass -File ./scripts/rebuild-apks.ps1"
   },
   "dependencies": {
     "@expo/metro-runtime": "~6.1.2",

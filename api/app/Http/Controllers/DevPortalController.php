@@ -80,10 +80,9 @@ class DevPortalController extends Controller
                 Storage::disk('public')->delete($settings->android_apk_path);
             }
 
-            $versionSlug = str_replace('.', '-', $validated['android_version']);
             $path = $request->file('android_apk')->storeAs(
                 'releases',
-                'EFSC-YA-android-'.$versionSlug.'.apk',
+                'sap-efsc-'.$validated['android_version'].'.apk',
                 'public'
             );
             $settings->android_apk_path = $path;
