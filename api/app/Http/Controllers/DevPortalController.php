@@ -69,8 +69,9 @@ class DevPortalController extends Controller
             'ios_version' => ['nullable', 'string', 'max:32'],
             'ios_build_number' => ['nullable', 'integer', 'min:1'],
             'release_notes' => ['nullable', 'string', 'max:5000'],
-            'android_apk' => ['nullable', 'file', 'mimes:apk', 'max:204800'],
-            'ios_ipa' => ['nullable', 'file', 'mimes:ipa', 'max:512000'],
+            // APK/IPA are ZIP-based; PHP reports zip/octet-stream, so mimes:apk/ipa fails.
+            'android_apk' => ['nullable', 'file', 'extensions:apk', 'max:204800'],
+            'ios_ipa' => ['nullable', 'file', 'extensions:ipa', 'max:512000'],
         ]);
 
         $settings = AppReleaseSetting::current();
