@@ -71,6 +71,7 @@
         <table v-if="areas.length" class="data-table structure-table">
           <thead>
             <tr>
+              <th class="col-sequence">Seq</th>
               <th>Name</th>
               <th>Section head</th>
               <th class="col-actions">Actions</th>
@@ -78,6 +79,7 @@
           </thead>
           <tbody>
             <tr v-for="a in areas" :key="a.id" class="row-clickable" @click="selectArea(a)">
+              <td class="col-sequence">{{ a.sequence }}</td>
               <td>{{ a.name }}</td>
               <td>{{ a.section_head?.name ?? a.sectionHead?.name ?? '—' }}</td>
               <td class="col-actions" @click.stop>
@@ -164,6 +166,10 @@
           </form>
 
           <form v-else-if="structureModal === 'area'" class="modal-form" @submit.prevent="submitStructureModal">
+            <div class="field">
+              <span class="field-label">Sequence</span>
+              <input v-model.number="areaForm.sequence" type="number" min="0" step="1" placeholder="1" />
+            </div>
             <div class="field">
               <span class="field-label">Area name</span>
               <input v-model="areaForm.name" required placeholder="Primary" autofocus />
@@ -601,7 +607,7 @@ const structureModalSubmitLabel = computed(() => {
 })
 
 const yearForm = reactive({ name: '', starts_on: '', ends_on: '', is_current: false })
-const areaForm = reactive({ name: '', sectionHeadUserId: '' })
+const areaForm = reactive({ name: '', sequence: null, sectionHeadUserId: '' })
 const classForm = reactive({ name: '', sequence: null })
 const sectionForm = reactive({ name: '', sequence: null })
 const groupForm = reactive({ name: '' })
@@ -846,6 +852,7 @@ function resetStructureForms() {
   yearForm.ends_on = ''
   yearForm.is_current = false
   areaForm.name = ''
+  areaForm.sequence = null
   areaForm.sectionHeadUserId = ''
   classForm.name = ''
   classForm.sequence = null
@@ -877,6 +884,7 @@ function openEditArea(a) {
   resetStructureForms()
   editingAreaId.value = a.id
   areaForm.name = a.name
+  areaForm.sequence = a.sequence ?? null
   areaForm.sectionHeadUserId = a.section_head_user_id ? String(a.section_head_user_id) : ''
   structureModal.value = 'area'
   loadSectionHeads().catch(() => {})
@@ -972,6 +980,7 @@ async function deleteYear(y) {
 function areaPayload() {
   return {
     name: areaForm.name,
+    ...(areaForm.sequence != null && areaForm.sequence !== '' ? { sequence: Number(areaForm.sequence) } : {}),
     section_head_user_id: areaForm.sectionHeadUserId ? Number(areaForm.sectionHeadUserId) : null,
   }
 }

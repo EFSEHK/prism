@@ -29,6 +29,11 @@ class SchoolDataSeederTest extends TestCase
 
         $year = AcademicYear::query()->where('name', '2026-27')->firstOrFail();
 
+        $this->assertEquals(
+            ['Middle Boys', 'Middle Girls', 'Matric Boys', 'Matric Girls', 'College Boys', 'College Girls'],
+            Area::query()->where('academic_year_id', $year->id)->orderBy('sequence')->pluck('name')->all()
+        );
+
         $middleBoys = Area::query()
             ->where('academic_year_id', $year->id)
             ->where('name', 'Middle Boys')

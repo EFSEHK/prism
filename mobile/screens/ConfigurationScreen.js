@@ -148,8 +148,9 @@ function StructureTab({ flashOk, flashErr }) {
   const [formOpen, setFormOpen] = useState(null)
   const [editingId, setEditingId] = useState(null)
   const [yearForm, setYearForm] = useState({ name: '', starts_on: '', ends_on: '', is_current: false })
-  const [areaForm, setAreaForm] = useState({ name: '', sectionHeadUserId: '' })
+  const [areaForm, setAreaForm] = useState({ name: '', sequence: '', sectionHeadUserId: '' })
   const [nameForm, setNameForm] = useState('')
+  const [sequenceForm, setSequenceForm] = useState('')
 
   const level = !yearId ? 'year' : !areaId ? 'area' : !classId ? 'class' : 'section'
   const levelSingular = { year: 'session year', area: 'area', class: 'class', section: 'section' }[level]
@@ -228,8 +229,9 @@ function StructureTab({ flashOk, flashErr }) {
     setFormOpen(null)
     setEditingId(null)
     setYearForm({ name: '', starts_on: '', ends_on: '', is_current: false })
-    setAreaForm({ name: '', sectionHeadUserId: '' })
+    setAreaForm({ name: '', sequence: '', sectionHeadUserId: '' })
     setNameForm('')
+    setSequenceForm('')
   }
 
   function openAdd() {
@@ -255,6 +257,7 @@ function StructureTab({ flashOk, flashErr }) {
     setEditingId(a.id)
     setAreaForm({
       name: a.name || '',
+      sequence: a.sequence != null ? String(a.sequence) : '',
       sectionHeadUserId: a.section_head_user_id ? String(a.section_head_user_id) : '',
     })
     setFormOpen('area')
@@ -265,6 +268,7 @@ function StructureTab({ flashOk, flashErr }) {
     closeForm()
     setEditingId(c.id)
     setNameForm(c.name || '')
+    setSequenceForm(c.sequence != null ? String(c.sequence) : '')
     setFormOpen('class')
   }
 
@@ -272,7 +276,13 @@ function StructureTab({ flashOk, flashErr }) {
     closeForm()
     setEditingId(s.id)
     setNameForm(s.name || '')
+    setSequenceForm(s.sequence != null ? String(s.sequence) : '')
     setFormOpen('section')
+  }
+
+  function sequencePayload() {
+    const trimmed = sequenceForm.trim()
+    return trimmed !== '' ? { sequence: Number(trimmed) } : {}
   }
 
   function selectYear(y) {
@@ -345,6 +355,8 @@ function StructureTab({ flashOk, flashErr }) {
             ? Number(areaForm.sectionHeadUserId)
             : null,
         }
+        const seq = areaForm.sequence.trim()
+        if (seq !== '') payload.sequence = Number(seq)
         if (editingId) {
           await apiClient.put(`/efsc/academic/areas/${editingId}`, payload)
           flashOk('Area updated.')
@@ -357,25 +369,27 @@ function StructureTab({ flashOk, flashErr }) {
         }
         await loadAreas(yearId)
       } else if (formOpen === 'class') {
+        const payload = { name: nameForm, ...sequencePayload() }
         if (editingId) {
-          await apiClient.put(`/efsc/academic/classes/${editingId}`, { name: nameForm })
+          await apiClient.put(`/efsc/academic/classes/${editingId}`, payload)
           flashOk('Class updated.')
         } else {
           await apiClient.post('/efsc/academic/classes', {
             area_id: Number(areaId),
-            name: nameForm,
+            ...payload,
           })
           flashOk('Class created.')
         }
         await loadClasses(areaId)
       } else if (formOpen === 'section') {
+        const payload = { name: nameForm, ...sequencePayload() }
         if (editingId) {
-          await apiClient.put(`/efsc/academic/sections/${editingId}`, { name: nameForm })
+          await apiClient.put(`/efsc/academic/sections/${editingId}`, payload)
           flashOk('Section updated.')
         } else {
           await apiClient.post('/efsc/academic/sections', {
             school_class_id: Number(classId),
-            name: nameForm,
+            ...payload,
           })
           flashOk('Section created.')
         }
@@ -534,6 +548,14 @@ function StructureTab({ flashOk, flashErr }) {
           ) : null}
           {formOpen === 'area' ? (
             <>
+              <Text style={styles.label}>Sequence</Text>
+              <TextInput
+                style={styles.input}
+                value={areaForm.sequence}
+                onChangeText={(v) => setAreaForm((f) => ({ ...f, sequence: v }))}
+                placeholder="1"
+                keyboardType="number-pad"
+              />
               <Text style={styles.label}>Area name</Text>
               <TextInput
                 style={styles.input}
@@ -560,6 +582,14 @@ function StructureTab({ flashOk, flashErr }) {
           ) : null}
           {formOpen === 'class' || formOpen === 'section' ? (
             <>
+              <Text style={styles.label}>Sequence</Text>
+              <TextInput
+                style={styles.input}
+                value={sequenceForm}
+                onChangeText={setSequenceForm}
+                placeholder="1"
+                keyboardType="number-pad"
+              />
               <Text style={styles.label}>{formOpen === 'class' ? 'Class name' : 'Section name'}</Text>
               <TextInput
                 style={styles.input}
@@ -604,22 +634,30 @@ function StructureTab({ flashOk, flashErr }) {
         : null}
 
       {level === 'area'
-        ? areas.map((a) => (
+        ? areas.map((a) => {
+            const head = a.section_head?.name || a.sectionHead?.name || 'No section head'
+            const meta = [a.sequence != null ? `Seq ${a.sequence}` : null, head].filter(Boolean).join(' · ')
+            return (
             <View key={a.id}>
               <Card
                 title={a.name}
-                meta={a.section_head?.name || a.sectionHead?.name || 'No section head'}
+                meta={meta}
                 onPress={() => selectArea(a)}
               />
               <RowActions onEdit={() => openEditArea(a)} onDelete={() => deleteArea(a)} />
             </View>
-          ))
+            )
+          })
         : null}
 
       {level === 'class'
         ? classes.map((c) => (
             <View key={c.id}>
-              <Card title={c.name} onPress={() => selectClass(c)} />
+              <Card
+                title={c.name}
+                meta={c.sequence != null ? `Seq ${c.sequence}` : undefined}
+                onPress={() => selectClass(c)}
+              />
               <RowActions onEdit={() => openEditClass(c)} onDelete={() => deleteClass(c)} />
             </View>
           ))
@@ -628,7 +666,7 @@ function StructureTab({ flashOk, flashErr }) {
       {level === 'section'
         ? sections.map((s) => (
             <View key={s.id}>
-              <Card title={s.name} />
+              <Card title={s.name} meta={s.sequence != null ? `Seq ${s.sequence}` : undefined} />
               <RowActions onEdit={() => openEditSection(s)} onDelete={() => deleteSection(s)} />
             </View>
           ))

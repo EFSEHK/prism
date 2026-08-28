@@ -11,7 +11,11 @@ class Area extends Model
 {
     use SoftDeletes;
 
-    protected $fillable = ['academic_year_id', 'name', 'section_head_user_id'];
+    protected $fillable = ['academic_year_id', 'name', 'sequence', 'section_head_user_id'];
+
+    protected $casts = [
+        'sequence' => 'integer',
+    ];
 
     public function academicYear(): BelongsTo
     {

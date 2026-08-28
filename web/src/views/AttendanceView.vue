@@ -127,14 +127,13 @@
             @change="onPendingClassChange"
           />
         </div>
-        <div class="field picker-field">
+        <div v-if="pendingClassId" class="field picker-field">
           <span class="field-label">Section</span>
           <SearchableSelect
             v-model="pendingSectionId"
             :options="pendingSectionOptions"
             placeholder="All sections"
             search-placeholder="Search sections…"
-            :disabled="!pendingClassId"
           />
         </div>
       </div>
@@ -244,14 +243,13 @@
             @change="onSummaryClassChange"
           />
         </div>
-        <div class="field picker-field">
+        <div v-if="summaryClassId" class="field picker-field">
           <span class="field-label">Section</span>
           <SearchableSelect
             v-model="summarySectionId"
             :options="summarySectionOptions"
             placeholder="All sections"
             search-placeholder="Search sections…"
-            :disabled="!summaryClassId"
           />
         </div>
       </div>
@@ -386,6 +384,7 @@ const attendanceStatuses = [
 ]
 const activeTab = ref('mark')
 
+const allAreas = ref([])
 const allClasses = ref([])
 const allSections = ref([])
 
@@ -443,6 +442,36 @@ const canLoadSummary = computed(
   () => Boolean(summarySectionId.value || summaryClassId.value),
 )
 
+function sortSections(items) {
+  return [...items].sort((a, b) => {
+    const seqCmp = (a.sequence ?? 0) - (b.sequence ?? 0)
+    if (seqCmp !== 0) return seqCmp
+    return (a.name || '').localeCompare(b.name || '')
+  })
+}
+
+function sortClassesByAreaThenClass(classes) {
+  const areaSeq = new Map(allAreas.value.map((a) => [a.id, a.sequence ?? 0]))
+  return [...classes].sort((a, b) => {
+    const areaCmp = (areaSeq.get(a.area_id) ?? 0) - (areaSeq.get(b.area_id) ?? 0)
+    if (areaCmp !== 0) return areaCmp
+    const seqCmp = (a.sequence ?? 0) - (b.sequence ?? 0)
+    if (seqCmp !== 0) return seqCmp
+    return (a.name || '').localeCompare(b.name || '')
+  })
+}
+
+function classesForPicker() {
+  return sortClassesByAreaThenClass(allClasses.value)
+}
+
+function sectionsForClass(classIdValue) {
+  const list = classIdValue
+    ? allSections.value.filter((s) => String(s.school_class_id) === classIdValue)
+    : allSections.value
+  return sortSections(list)
+}
+
 function toOptions(items) {
   return items.map((i) => ({ value: String(i.id), label: i.name }))
 }
@@ -462,36 +491,20 @@ function breakdownClassLabel(row) {
 }
 
 const classOptions = computed(() =>
-  allClasses.value.map((c) => ({ value: String(c.id), label: classLabel(c) }))
+  classesForPicker().map((c) => ({ value: String(c.id), label: classLabel(c) })),
 )
 
-const markSections = computed(() =>
-  classId.value
-    ? allSections.value.filter((s) => String(s.school_class_id) === classId.value)
-    : []
-)
+const markSections = computed(() => sectionsForClass(classId.value))
 
-const pendingSections = computed(() =>
-  pendingClassId.value
-    ? allSections.value.filter((s) => String(s.school_class_id) === pendingClassId.value)
-    : allSections.value
-)
+const pendingSections = computed(() => sectionsForClass(pendingClassId.value))
 
-const statusSections = computed(() =>
-  statusClassId.value
-    ? allSections.value.filter((s) => String(s.school_class_id) === statusClassId.value)
-    : []
-)
+const statusSections = computed(() => sectionsForClass(statusClassId.value))
 
 const markSectionOptions = computed(() => toOptions(markSections.value))
 const pendingSectionOptions = computed(() => toOptions(pendingSections.value))
 const statusSectionOptions = computed(() => toOptions(statusSections.value))
 
-const summarySections = computed(() =>
-  summaryClassId.value
-    ? allSections.value.filter((s) => String(s.school_class_id) === summaryClassId.value)
-    : allSections.value
-)
+const summarySections = computed(() => sectionsForClass(summaryClassId.value))
 
 const summarySectionOptions = computed(() => toOptions(summarySections.value))
 
@@ -524,15 +537,18 @@ onMounted(async () => {
 })
 
 async function loadAcademic() {
-  const [classRes, secRes] = await Promise.all([
+  const [areaRes, classRes, secRes] = await Promise.all([
+    api.get('/efsc/academic/areas').catch(() => ({ data: [] })),
     api.get('/efsc/academic/classes').catch(() => ({ data: [] })),
     api.get('/efsc/academic/sections').catch(() => ({ data: [] })),
   ])
+  allAreas.value = areaRes.data?.data ?? areaRes.data ?? []
   allClasses.value = classRes.data?.data ?? classRes.data ?? []
   allSections.value = secRes.data?.data ?? secRes.data ?? []
-  if (allClasses.value.length) {
-    classId.value = String(allClasses.value[0].id)
-    statusClassId.value = String(allClasses.value[0].id)
+  const sorted = classesForPicker()
+  if (sorted.length) {
+    classId.value = String(sorted[0].id)
+    statusClassId.value = String(sorted[0].id)
     onMarkClassChange()
     onStatusClassChange()
   }

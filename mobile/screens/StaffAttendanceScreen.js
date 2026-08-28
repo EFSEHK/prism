@@ -44,22 +44,37 @@ function batchClassSection(batch) {
   return cls || sec || '—'
 }
 
-function classGender(areaName) {
-  return areaName?.toLowerCase().includes('boy') ? 'Boys' : 'Girls'
+function sortSections(items) {
+  return [...items].sort((a, b) => {
+    const seqCmp = (a.sequence ?? 0) - (b.sequence ?? 0)
+    if (seqCmp !== 0) return seqCmp
+    return (a.name || '').localeCompare(b.name || '')
+  })
 }
 
-function classLabel(c) {
-  if (!c?.name) return '—'
-  return `${c.name} (${classGender(c.area?.name)})`
+function sortClassesByAreaThenClass(areas, classes) {
+  const areaSeq = new Map(areas.map((a) => [a.id, a.sequence ?? 0]))
+  return [...classes].sort((a, b) => {
+    const areaCmp = (areaSeq.get(a.area_id) ?? 0) - (areaSeq.get(b.area_id) ?? 0)
+    if (areaCmp !== 0) return areaCmp
+    const seqCmp = (a.sequence ?? 0) - (b.sequence ?? 0)
+    if (seqCmp !== 0) return seqCmp
+    return (a.name || '').localeCompare(b.name || '')
+  })
 }
 
-function breakdownClassLabel(row) {
-  if (!row?.class_name) return '—'
-  return `${row.class_name} (${classGender(row.area_name)})`
+function classesForPicker(areas, classes) {
+  return sortClassesByAreaThenClass(areas, classes).map((c) => ({
+    id: c.id,
+    name: classLabel(c),
+  }))
 }
 
-function classesForPicker(classes) {
-  return classes.map((c) => ({ id: c.id, name: classLabel(c) }))
+function sectionsForClass(sections, classId) {
+  const list = classId
+    ? sections.filter((s) => String(s.school_class_id) === String(classId))
+    : sections
+  return sortSections(list)
 }
 
 function permissionNames(list) {
@@ -87,6 +102,20 @@ function defaultTabId(tabs, perms) {
   return ids[0] || 'mark'
 }
 
+function classGender(areaName) {
+  return areaName?.toLowerCase().includes('boy') ? 'Boys' : 'Girls'
+}
+
+function classLabel(c) {
+  if (!c?.name) return '—'
+  return `${c.name} (${classGender(c.area?.name)})`
+}
+
+function breakdownClassLabel(row) {
+  if (!row?.class_name) return '—'
+  return `${row.class_name} (${classGender(row.area_name)})`
+}
+
 function Picker({ label, value, options, onChange, disabled }) {
   return (
     <View style={[styles.pickerWrap, disabled && styles.disabled]}>
@@ -109,7 +138,7 @@ function Picker({ label, value, options, onChange, disabled }) {
   )
 }
 
-function MarkTab({ classes, sections }) {
+function MarkTab({ areas, classes, sections }) {
   const [classId, setClassId] = useState('')
   const [sectionId, setSectionId] = useState('')
   const [date, setDate] = useState(todayInputDate())
@@ -122,13 +151,13 @@ function MarkTab({ classes, sections }) {
   const [msg, setMsg] = useState('')
   const [err, setErr] = useState('')
 
-  const classOptions = classesForPicker(classes)
-  const classSections = sections.filter((s) => String(s.school_class_id) === classId)
+  const classOptions = useMemo(() => classesForPicker(areas, classes), [areas, classes])
+  const classSections = useMemo(() => sectionsForClass(sections, classId), [sections, classId])
   const markLocked = Boolean(batch && ['submitted', 'verified'].includes(batch.status))
 
   useEffect(() => {
-    if (classes.length && !classId) setClassId(String(classes[0].id))
-  }, [classes])
+    if (classOptions.length && !classId) setClassId(String(classOptions[0].id))
+  }, [classOptions])
 
   useEffect(() => {
     if (classSections.length) setSectionId(String(classSections[0].id))
@@ -137,7 +166,7 @@ function MarkTab({ classes, sections }) {
     setBatch(null)
     setMsg('')
     setErr('')
-  }, [classId, sections])
+  }, [classId, classSections])
 
   async function loadStudents() {
     if (!sectionId) return
@@ -311,7 +340,7 @@ function MarkTab({ classes, sections }) {
   )
 }
 
-function PendingTab({ classes, sections }) {
+function PendingTab({ areas, classes, sections }) {
   const [classId, setClassId] = useState('')
   const [sectionId, setSectionId] = useState('')
   const [batches, setBatches] = useState([])
@@ -323,10 +352,8 @@ function PendingTab({ classes, sections }) {
   const [verifying, setVerifying] = useState(false)
   const [err, setErr] = useState('')
 
-  const classOptions = classesForPicker(classes)
-  const classSections = classId
-    ? sections.filter((s) => String(s.school_class_id) === classId)
-    : sections
+  const classOptions = useMemo(() => classesForPicker(areas, classes), [areas, classes])
+  const classSections = useMemo(() => sectionsForClass(sections, classId || null), [sections, classId])
 
   async function loadPending() {
     setLoading(true)
@@ -401,13 +428,14 @@ function PendingTab({ classes, sections }) {
           setSectionId('')
         }}
       />
-      <Picker
-        label="Section"
-        value={sectionId || 'all'}
-        options={[{ id: 'all', name: 'All sections' }, ...classSections]}
-        onChange={(v) => setSectionId(v === 'all' ? '' : v)}
-        disabled={!classId}
-      />
+      {classId ? (
+        <Picker
+          label="Section"
+          value={sectionId || 'all'}
+          options={[{ id: 'all', name: 'All sections' }, ...classSections]}
+          onChange={(v) => setSectionId(v === 'all' ? '' : v)}
+        />
+      ) : null}
       <Pressable style={styles.btn} onPress={loadPending} disabled={loading}>
         <Text style={styles.btnText}>{loading ? 'Loading…' : 'Refresh'}</Text>
       </Pressable>
@@ -457,7 +485,7 @@ function PendingTab({ classes, sections }) {
   )
 }
 
-function StatusTab({ classes, sections, canMark, canViewSummary }) {
+function StatusTab({ areas, classes, sections, canMark, canViewSummary }) {
   const [classId, setClassId] = useState('')
   const [sectionId, setSectionId] = useState('')
   const [batches, setBatches] = useState([])
@@ -468,12 +496,12 @@ function StatusTab({ classes, sections, canMark, canViewSummary }) {
   const [loading, setLoading] = useState(false)
   const [err, setErr] = useState('')
 
-  const classOptions = classesForPicker(classes)
-  const classSections = sections.filter((s) => String(s.school_class_id) === classId)
+  const classOptions = useMemo(() => classesForPicker(areas, classes), [areas, classes])
+  const classSections = useMemo(() => sectionsForClass(sections, classId), [sections, classId])
 
   useEffect(() => {
-    if (classes.length && !classId) setClassId(String(classes[0].id))
-  }, [classes])
+    if (classOptions.length && !classId) setClassId(String(classOptions[0].id))
+  }, [classOptions])
 
   useEffect(() => {
     if (classSections.length) setSectionId(String(classSections[0].id))
@@ -482,7 +510,7 @@ function StatusTab({ classes, sections, canMark, canViewSummary }) {
     setLoaded(false)
     setExpandedId(null)
     setDetail(null)
-  }, [classId, sections])
+  }, [classId, classSections])
 
   async function loadBatches() {
     if (!sectionId) return
@@ -579,7 +607,7 @@ function StatusTab({ classes, sections, canMark, canViewSummary }) {
   )
 }
 
-function SummaryTab({ classes, sections }) {
+function SummaryTab({ areas, classes, sections }) {
   const [classId, setClassId] = useState('')
   const [sectionId, setSectionId] = useState('')
   const [from, setFrom] = useState(monthStartInputDate())
@@ -598,10 +626,8 @@ function SummaryTab({ classes, sections }) {
   const [loading, setLoading] = useState(false)
   const [err, setErr] = useState('')
 
-  const classOptions = classesForPicker(classes)
-  const filteredSections = classId
-    ? sections.filter((s) => String(s.school_class_id) === classId)
-    : sections
+  const classOptions = useMemo(() => classesForPicker(areas, classes), [areas, classes])
+  const filteredSections = useMemo(() => sectionsForClass(sections, classId || null), [sections, classId])
 
   const canLoad = Boolean(sectionId || classId)
 
@@ -656,13 +682,14 @@ function SummaryTab({ classes, sections }) {
           setSectionId('')
         }}
       />
-      <Picker
-        label="Section"
-        value={sectionId || 'all'}
-        options={[{ id: 'all', name: 'All sections' }, ...filteredSections]}
-        onChange={(v) => setSectionId(v === 'all' ? '' : v)}
-        disabled={!classId}
-      />
+      {classId ? (
+        <Picker
+          label="Section"
+          value={sectionId || 'all'}
+          options={[{ id: 'all', name: 'All sections' }, ...filteredSections]}
+          onChange={(v) => setSectionId(v === 'all' ? '' : v)}
+        />
+      ) : null}
       <Text style={styles.label}>From (YYYY-MM-DD)</Text>
       <TextInput style={styles.input} value={from} onChangeText={setFrom} />
       <Text style={styles.label}>To (YYYY-MM-DD)</Text>
@@ -736,6 +763,7 @@ export default function StaffAttendanceScreen({ permissions = [] }) {
   const [tab, setTab] = useState(() =>
     defaultTabId(buildTabs(permissionNames(permissions)), permissionNames(permissions)),
   )
+  const [areas, setAreas] = useState([])
   const [classes, setClasses] = useState([])
   const [sections, setSections] = useState([])
   const [loading, setLoading] = useState(true)
@@ -762,20 +790,23 @@ export default function StaffAttendanceScreen({ permissions = [] }) {
     setErr('')
     withTimeout(
       Promise.all([
+        apiClient.get('/efsc/academic/areas'),
         apiClient.get('/efsc/academic/classes'),
         apiClient.get('/efsc/academic/sections'),
       ]),
       20000,
       'Attendance setup',
     )
-      .then(([c, s]) => {
+      .then(([a, c, s]) => {
         if (cancelled) return
+        setAreas(a.data?.data ?? a.data ?? [])
         setClasses(c.data?.data ?? c.data ?? [])
         setSections(s.data?.data ?? s.data ?? [])
       })
       .catch((e) => {
         if (cancelled) return
         setErr(formatError(e))
+        setAreas([])
         setClasses([])
         setSections([])
       })
@@ -813,17 +844,18 @@ export default function StaffAttendanceScreen({ permissions = [] }) {
           </Pressable>
         ))}
       </ScrollView>
-      {tab === 'pending' ? <PendingTab classes={classes} sections={sections} /> : null}
-      {tab === 'mark' ? <MarkTab classes={classes} sections={sections} /> : null}
+      {tab === 'pending' ? <PendingTab areas={areas} classes={classes} sections={sections} /> : null}
+      {tab === 'mark' ? <MarkTab areas={areas} classes={classes} sections={sections} /> : null}
       {tab === 'status' ? (
         <StatusTab
+          areas={areas}
           classes={classes}
           sections={sections}
           canMark={canMark}
           canViewSummary={canViewSummary}
         />
       ) : null}
-      {tab === 'summary' ? <SummaryTab classes={classes} sections={sections} /> : null}
+      {tab === 'summary' ? <SummaryTab areas={areas} classes={classes} sections={sections} /> : null}
     </ScrollView>
   )
 }

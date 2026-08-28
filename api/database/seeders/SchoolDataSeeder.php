@@ -60,10 +60,12 @@ class SchoolDataSeeder extends Seeder
             $year->update(['is_current' => true]);
         }
 
+        $areaSequence = 0;
         foreach (self::STRUCTURE as $areaName => $classes) {
-            $area = Area::query()->firstOrCreate(
+            $areaSequence++;
+            $area = Area::query()->updateOrCreate(
                 ['academic_year_id' => $year->id, 'name' => $areaName],
-                ['section_head_user_id' => null]
+                ['sequence' => $areaSequence, 'section_head_user_id' => null]
             );
 
             $classSequence = 0;

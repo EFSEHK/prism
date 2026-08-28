@@ -34,7 +34,7 @@ class AcademicController extends Controller
             $q->where('academic_year_id', $request->query('academic_year_id'));
         }
 
-        return response()->json($q->orderBy('name')->get());
+        return response()->json($q->orderBy('sequence')->orderBy('name')->get());
     }
 
     public function sectionHeadsIndex(Request $request)
@@ -127,6 +127,10 @@ class AcademicController extends Controller
         $data = $request->validate(array_merge([
             'academic_year_id' => 'required|exists:academic_years,id',
         ], $this->areaPayloadRules()));
+
+        if (! array_key_exists('sequence', $data) || $data['sequence'] === null) {
+            $data['sequence'] = $this->nextAreaSequence((int) $data['academic_year_id']);
+        }
 
         $area = Area::create($data)->load(['academicYear:id,name', 'sectionHead:id,name,email']);
 
@@ -260,6 +264,7 @@ class AcademicController extends Controller
     {
         return [
             'name' => 'required|string|max:255',
+            'sequence' => 'nullable|integer|min:0',
             'section_head_user_id' => [
                 'nullable',
                 'integer',
@@ -271,6 +276,13 @@ class AcademicController extends Controller
                 },
             ],
         ];
+    }
+
+    private function nextAreaSequence(int $academicYearId): int
+    {
+        $max = Area::query()->where('academic_year_id', $academicYearId)->max('sequence');
+
+        return $max === null ? 1 : ((int) $max + 1);
     }
 
     private function nextClassSequence(int $areaId): int
