@@ -55,7 +55,7 @@ class AcademicController extends Controller
             $q->where('area_id', $request->query('area_id'));
         }
 
-        return response()->json($q->orderBy('name')->get());
+        return response()->json($q->orderBy('sequence')->orderBy('name')->get());
     }
 
     public function sectionsIndex(Request $request)
@@ -67,7 +67,7 @@ class AcademicController extends Controller
             $q->where('school_class_id', $request->query('school_class_id'));
         }
 
-        return response()->json($q->orderBy('name')->get());
+        return response()->json($q->orderBy('sequence')->orderBy('name')->get());
     }
 
     public function studyGroupsIndex(Request $request)
@@ -156,7 +156,12 @@ class AcademicController extends Controller
         $data = $request->validate([
             'area_id' => 'required|exists:areas,id',
             'name' => 'required|string|max:255',
+            'sequence' => 'nullable|integer|min:0',
         ]);
+
+        if (! array_key_exists('sequence', $data) || $data['sequence'] === null) {
+            $data['sequence'] = $this->nextClassSequence((int) $data['area_id']);
+        }
 
         return response()->json(SchoolClass::create($data)->load('area:id,name'), 201);
     }
@@ -166,6 +171,7 @@ class AcademicController extends Controller
         abort_unless($request->user()->can('manage_academic_structure'), 403);
         $data = $request->validate([
             'name' => 'required|string|max:255',
+            'sequence' => 'nullable|integer|min:0',
         ]);
         $schoolClass->update($data);
 
@@ -186,7 +192,12 @@ class AcademicController extends Controller
         $data = $request->validate([
             'school_class_id' => 'required|exists:school_classes,id',
             'name' => 'required|string|max:255',
+            'sequence' => 'nullable|integer|min:0',
         ]);
+
+        if (! array_key_exists('sequence', $data) || $data['sequence'] === null) {
+            $data['sequence'] = $this->nextSectionSequence((int) $data['school_class_id']);
+        }
 
         return response()->json(Section::create($data)->load('schoolClass:id,name'), 201);
     }
@@ -196,6 +207,7 @@ class AcademicController extends Controller
         abort_unless($request->user()->can('manage_academic_structure'), 403);
         $data = $request->validate([
             'name' => 'required|string|max:255',
+            'sequence' => 'nullable|integer|min:0',
         ]);
         $section->update($data);
 
@@ -259,6 +271,20 @@ class AcademicController extends Controller
                 },
             ],
         ];
+    }
+
+    private function nextClassSequence(int $areaId): int
+    {
+        $max = SchoolClass::query()->where('area_id', $areaId)->max('sequence');
+
+        return $max === null ? 1 : ((int) $max + 1);
+    }
+
+    private function nextSectionSequence(int $schoolClassId): int
+    {
+        $max = Section::query()->where('school_class_id', $schoolClassId)->max('sequence');
+
+        return $max === null ? 1 : ((int) $max + 1);
     }
 
     private function canReadAcademic(Request $request): bool

@@ -39,9 +39,9 @@ class SchoolDataSeederTest extends TestCase
             ->where('name', '6th')
             ->firstOrFail();
 
-        $this->assertEqualsCanonicalizing(
+        $this->assertEquals(
             ['Green', 'Blue', 'Orange'],
-            $sixth->sections()->pluck('name')->all()
+            $sixth->sections()->orderBy('sequence')->pluck('name')->all()
         );
 
         $collegeGirls = Area::query()
@@ -54,9 +54,9 @@ class SchoolDataSeederTest extends TestCase
             ->where('name', '11th')
             ->firstOrFail();
 
-        $this->assertEqualsCanonicalizing(
+        $this->assertEquals(
             ['White', 'Green', 'Blue', 'Red'],
-            $eleventhGirls->sections()->pluck('name')->all()
+            $eleventhGirls->sections()->orderBy('sequence')->pluck('name')->all()
         );
     }
 
