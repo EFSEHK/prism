@@ -14,6 +14,7 @@ import { apiClient } from '../apiClient'
 import { formatDate, formatTime, childName, formatError, paginatedItems } from '../utils/format'
 import { Section, Card, EmptyNote, ui } from '../components/ui'
 import ChildAvatar from '../components/ChildAvatar'
+import { useHardwareBack } from '../hooks/useHardwareBack'
 
 function ScreenWrap({ children, refreshing, onRefresh }) {
   return (
@@ -437,6 +438,13 @@ export function MarksScreen({ permissions = [] } = {}) {
     }
   }
   useEffect(() => { load() }, [])
+
+  useHardwareBack(() => {
+    if (!detail) return false
+    setDetail(null)
+    return true
+  }, [detail])
+
   if (loading) return <ActivityIndicator style={styles.center} />
   if (detail) {
     return (

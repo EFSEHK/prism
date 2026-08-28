@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
 import {
   View,
   Text,
@@ -54,6 +54,11 @@ import { ui } from './components/ui'
 import { runStartupUpdateChecks } from './services/appUpdates'
 import { loadSession, saveSession, clearSession } from './services/session'
 import { learnerFeatures, staffFeaturesFor, isCatalogComingSoon, isCatalogLive, moduleStatus } from './features'
+import { useHardwareBack } from './hooks/useHardwareBack'
+
+function isRootTab(id) {
+  return id === 'dashboard' || id === 'home'
+}
 
 const DASHBOARD_INCLUDE =
   'homework,timetable,marks,broadcasts,fees,online_classes,leave,datesheet,notifications'
@@ -77,6 +82,29 @@ export default function App() {
   const [viewAsUsersLoading, setViewAsUsersLoading] = useState(false)
   const [impersonateUser, setImpersonateUser] = useState(null)
   const [modules, setModules] = useState([])
+  const navStackRef = useRef(['home'])
+
+  function syncNavStack(next) {
+    navStackRef.current = next
+  }
+
+  function resetNavigation(tabId) {
+    syncNavStack([tabId])
+    setTab(tabId)
+  }
+
+  function navigateTo(id) {
+    if (!id) return
+    setTab(id)
+    const stack = navStackRef.current
+    if (stack[stack.length - 1] === id) return
+    if (isRootTab(id)) {
+      syncNavStack([id])
+      return
+    }
+    const root = isRootTab(stack[0]) ? stack[0] : id
+    syncNavStack(isRootTab(stack[stack.length - 1]) ? [root, id] : [...stack, id])
+  }
 
   useEffect(() => {
     runStartupUpdateChecks()
@@ -116,7 +144,7 @@ export default function App() {
           if (roles.includes('parent') || roles.includes('student')) {
             await enterLearnerContext(roles)
           } else {
-            setTab('dashboard')
+            resetNavigation('dashboard')
           }
         } catch {
           if (cancelled) return
@@ -157,7 +185,9 @@ export default function App() {
     const kids = dashboard?.children ?? []
     if (kids.length === 0) return
     setSelectedChild(kids[0])
-    setTab((current) => (current === 'home' ? 'dashboard' : current))
+    if (navStackRef.current[navStackRef.current.length - 1] === 'home') {
+      resetNavigation('dashboard')
+    }
   }, [impersonateUser, viewAsRole, user, selectedChild, dashboard])
 
   const actualRoleNames = (user?.roles || []).map((r) => r.name)
@@ -225,17 +255,17 @@ export default function App() {
       } else {
         setSelectedChild(null)
       }
-      setTab('dashboard')
+      resetNavigation('dashboard')
       return
     }
     setSelectedChild(null)
-    setTab('home')
+    resetNavigation('home')
   }
 
   async function enterContext({ roles }) {
     setDashboard(null)
     setSelectedChild(null)
-    setTab('home')
+    resetNavigation('home')
     setErr('')
 
     await refreshModulesSafe()
@@ -250,7 +280,7 @@ export default function App() {
         setLoading(false)
       }
     } else {
-      setTab('dashboard')
+      resetNavigation('dashboard')
     }
   }
 
@@ -300,7 +330,7 @@ export default function App() {
     setViewAsRole('')
     setDashboard(null)
     setSelectedChild(null)
-    setTab('dashboard')
+    resetNavigation('dashboard')
     setErr('')
     setMenuOpen(false)
     await refreshModulesSafe()
@@ -314,7 +344,7 @@ export default function App() {
     setUser(null)
     setSelectedChild(null)
     setModules([])
-    setTab('home')
+    resetNavigation('home')
     try {
       const { data } = await apiClient.post('/login', {
         email: String(email || '').trim(),
@@ -344,7 +374,7 @@ export default function App() {
       if (roles.includes('parent') || roles.includes('student')) {
         await enterLearnerContext(roles)
       } else {
-        setTab('dashboard')
+        resetNavigation('dashboard')
       }
     } catch (e) {
       setAuthToken('')
@@ -378,7 +408,7 @@ export default function App() {
     setViewAsOptions([])
     setViewAsUsers([])
     setImpersonateUser(null)
-    setTab('home')
+    resetNavigation('home')
     setMenuOpen(false)
     setErr('')
   }
@@ -389,7 +419,7 @@ export default function App() {
     try {
       await loadDashboard(child.id)
       setSelectedChild(child)
-      setTab('dashboard')
+      resetNavigation('dashboard')
     } catch (e) {
       setErr(formatError(e))
     } finally {
@@ -399,7 +429,7 @@ export default function App() {
 
   function switchChild() {
     setSelectedChild(null)
-    setTab('home')
+    resetNavigation('home')
     loadDashboard().catch(() => {})
   }
 
@@ -456,12 +486,38 @@ export default function App() {
   const learnerFeatureList = learnerFeatures(modules)
   const unread = dashboard?.unread_notifications ?? 0
 
+  function handleAndroidBack() {
+    if (!showApp) return false
+
+    if (menuOpen) {
+      setMenuOpen(false)
+      return true
+    }
+
+    const stack = navStackRef.current
+    if (stack.length > 1) {
+      const next = stack.slice(0, -1)
+      syncNavStack(next)
+      setTab(next[next.length - 1])
+      return true
+    }
+
+    if (isParentRole && hasSelectedChild) {
+      switchChild()
+      return true
+    }
+
+    return false
+  }
+
+  useHardwareBack(handleAndroidBack, [showApp, menuOpen, isParentRole, hasSelectedChild])
+
   function goHome() {
     if (isStaffRole || isStudentRole || hasSelectedChild) {
-      setTab('dashboard')
+      resetNavigation('dashboard')
       return
     }
-    setTab('home')
+    resetNavigation('home')
   }
 
   function selectFeatureSafe(id) {
@@ -471,14 +527,14 @@ export default function App() {
       }
       if (id !== 'dashboard' && id !== 'home' && !isCatalogLive(modules, id) && isStaffRole) {
         setErr('This feature is not available.')
-        setTab('dashboard')
+        resetNavigation('dashboard')
         return
       }
       setErr('')
-      setTab(id)
+      navigateTo(id)
     } catch (e) {
       setErr(formatError(e) || 'Something went wrong — please try again')
-      setTab(isStaffRole || isStudentRole || hasSelectedChild ? 'dashboard' : 'home')
+      resetNavigation(isStaffRole || isStudentRole || hasSelectedChild ? 'dashboard' : 'home')
     }
   }
 
@@ -552,7 +608,7 @@ export default function App() {
               <Text style={{ color: '#64748b', marginBottom: 16 }}>
                 This screen is not available. Please try again from the dashboard.
               </Text>
-              <Pressable style={styles.button} onPress={() => setTab('dashboard')}>
+              <Pressable style={styles.button} onPress={() => resetNavigation('dashboard')}>
                 <Text style={styles.buttonText}>Back to dashboard</Text>
               </Pressable>
             </View>
@@ -776,7 +832,7 @@ export default function App() {
           <View style={styles.body}>
             <NavigationErrorBoundary
               key={tab}
-              onReset={() => setTab(isStaffRole || isStudentRole || hasSelectedChild ? 'dashboard' : 'home')}
+              onReset={() => resetNavigation(isStaffRole || isStudentRole || hasSelectedChild ? 'dashboard' : 'home')}
             >
               {renderTab()}
             </NavigationErrorBoundary>
