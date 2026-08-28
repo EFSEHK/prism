@@ -29,6 +29,11 @@ class DashboardController extends Controller
                     'description' => 'Open the Spatie Health overview for live system checks.',
                     'url' => route('dashboard.health'),
                 ],
+                [
+                    'label' => 'Release settings',
+                    'description' => 'Upload Android APK, iOS IPA, and manage mobile app versions.',
+                    'url' => route('dev-portal.settings'),
+                ],
             ],
         ]);
     }
