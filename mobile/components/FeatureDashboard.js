@@ -7,7 +7,9 @@ import {
   StyleSheet,
   Alert,
   Animated,
+  Platform,
 } from 'react-native'
+import * as Application from 'expo-application'
 import { FEATURE_ICON_MAP } from './FeatureIcons'
 import ChildAvatar from './ChildAvatar'
 import { childName } from '../utils/format'
@@ -16,6 +18,9 @@ import { ui } from './ui'
 const GREY_TINT = '#94a3b8'
 const GREY_SOFT = '#f1f5f9'
 const COMING_SOON = 'Coming soon'
+const APP_VERSION = Application.nativeApplicationVersion
+  ? `v${Application.nativeApplicationVersion}`
+  : null
 
 export default function FeatureDashboard({
   features = [],
@@ -118,6 +123,10 @@ export default function FeatureDashboard({
             )
           })}
         </View>
+
+        {Platform.OS !== 'web' && APP_VERSION ? (
+          <Text style={styles.version}>{APP_VERSION}</Text>
+        ) : null}
       </ScrollView>
 
       {toast ? (
@@ -192,6 +201,12 @@ const styles = StyleSheet.create({
     minHeight: 32,
   },
   tileLabelMuted: {
+    color: '#94a3b8',
+  },
+  version: {
+    marginTop: 24,
+    textAlign: 'center',
+    fontSize: 12,
     color: '#94a3b8',
   },
   toast: {
