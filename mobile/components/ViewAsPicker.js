@@ -1,4 +1,5 @@
 import { useMemo, useState } from 'react'
+import { useHardwareBack } from '../hooks/useHardwareBack'
 import {
   View,
   Text,
@@ -36,6 +37,12 @@ export default function ViewAsPicker({
   const [open, setOpen] = useState(false)
   const [mode, setMode] = useState('role')
   const [search, setSearch] = useState('')
+
+  useHardwareBack(() => {
+    if (!open) return false
+    setOpen(false)
+    return true
+  }, [open])
 
   const selectedLabel = options.find((r) => r.name === value)?.label ?? ''
   const impersonatableUsers = useMemo(

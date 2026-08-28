@@ -36,10 +36,29 @@ function statusLabel(status) {
 }
 
 function batchClassSection(batch) {
-  const cls = batch.section?.school_class?.name ?? batch.section?.schoolClass?.name
+  const schoolClass = batch.section?.school_class ?? batch.section?.schoolClass
+  const cls = schoolClass ? classLabel(schoolClass) : null
   const sec = batch.section?.name
   if (cls && sec) return `${cls} · ${sec}`
   return cls || sec || '—'
+}
+
+function classGender(areaName) {
+  return areaName?.toLowerCase().includes('boy') ? 'Boys' : 'Girls'
+}
+
+function classLabel(c) {
+  if (!c?.name) return '—'
+  return `${c.name} (${classGender(c.area?.name)})`
+}
+
+function breakdownClassLabel(row) {
+  if (!row?.class_name) return '—'
+  return `${row.class_name} (${classGender(row.area_name)})`
+}
+
+function classesForPicker(classes) {
+  return classes.map((c) => ({ id: c.id, name: classLabel(c) }))
 }
 
 function permissionNames(list) {
@@ -102,6 +121,7 @@ function MarkTab({ classes, sections }) {
   const [msg, setMsg] = useState('')
   const [err, setErr] = useState('')
 
+  const classOptions = classesForPicker(classes)
   const classSections = sections.filter((s) => String(s.school_class_id) === classId)
   const markLocked = Boolean(batch && ['submitted', 'verified'].includes(batch.status))
 
@@ -213,7 +233,7 @@ function MarkTab({ classes, sections }) {
   return (
     <View>
       <Text style={styles.h2}>Mark Attendance</Text>
-      <Picker label="Class" value={classId} options={classes} onChange={setClassId} />
+      <Picker label="Class" value={classId} options={classOptions} onChange={setClassId} />
       <Picker
         label="Section"
         value={sectionId}
@@ -302,6 +322,7 @@ function PendingTab({ classes, sections }) {
   const [verifying, setVerifying] = useState(false)
   const [err, setErr] = useState('')
 
+  const classOptions = classesForPicker(classes)
   const classSections = classId
     ? sections.filter((s) => String(s.school_class_id) === classId)
     : sections
@@ -373,7 +394,7 @@ function PendingTab({ classes, sections }) {
       <Picker
         label="Class"
         value={classId || 'all'}
-        options={[{ id: 'all', name: 'All classes' }, ...classes]}
+        options={[{ id: 'all', name: 'All classes' }, ...classOptions]}
         onChange={(v) => {
           setClassId(v === 'all' ? '' : v)
           setSectionId('')
@@ -446,6 +467,7 @@ function StatusTab({ classes, sections, canMark, canViewSummary }) {
   const [loading, setLoading] = useState(false)
   const [err, setErr] = useState('')
 
+  const classOptions = classesForPicker(classes)
   const classSections = sections.filter((s) => String(s.school_class_id) === classId)
 
   useEffect(() => {
@@ -510,7 +532,7 @@ function StatusTab({ classes, sections, canMark, canViewSummary }) {
       <Text style={styles.hint}>
         View submitted and approved attendance. Drafts remain editable under Mark Attendance.
       </Text>
-      <Picker label="Class" value={classId} options={classes} onChange={setClassId} />
+      <Picker label="Class" value={classId} options={classOptions} onChange={setClassId} />
       <Picker
         label="Section"
         value={sectionId}
@@ -556,8 +578,7 @@ function StatusTab({ classes, sections, canMark, canViewSummary }) {
   )
 }
 
-function SummaryTab({ classes, sections, areas }) {
-  const [areaId, setAreaId] = useState('')
+function SummaryTab({ classes, sections }) {
   const [classId, setClassId] = useState('')
   const [sectionId, setSectionId] = useState('')
   const [from, setFrom] = useState(monthStartInputDate())
@@ -576,17 +597,12 @@ function SummaryTab({ classes, sections, areas }) {
   const [loading, setLoading] = useState(false)
   const [err, setErr] = useState('')
 
-  const filteredClasses = areaId
-    ? classes.filter((c) => String(c.area_id) === areaId)
-    : classes
-
+  const classOptions = classesForPicker(classes)
   const filteredSections = classId
     ? sections.filter((s) => String(s.school_class_id) === classId)
-    : areaId
-      ? sections.filter((s) => filteredClasses.some((c) => c.id === s.school_class_id))
-      : sections
+    : sections
 
-  const canLoad = Boolean(sectionId || areaId || classId)
+  const canLoad = Boolean(sectionId || classId)
 
   async function loadSummary() {
     if (!canLoad) {
@@ -600,7 +616,6 @@ function SummaryTab({ classes, sections, areas }) {
     setErr('')
     try {
       const params = {}
-      if (areaId) params.area_id = areaId
       if (classId) params.school_class_id = classId
       if (sectionId) params.section_id = sectionId
       if (from) params.from = from
@@ -632,19 +647,9 @@ function SummaryTab({ classes, sections, areas }) {
     <View>
       <Text style={styles.h2}>Attendance Summary</Text>
       <Picker
-        label="Area"
-        value={areaId || 'all'}
-        options={[{ id: 'all', name: 'All areas' }, ...areas]}
-        onChange={(v) => {
-          setAreaId(v === 'all' ? '' : v)
-          setClassId('')
-          setSectionId('')
-        }}
-      />
-      <Picker
         label="Class"
         value={classId || 'all'}
-        options={[{ id: 'all', name: 'All classes' }, ...filteredClasses]}
+        options={[{ id: 'all', name: 'All classes' }, ...classOptions]}
         onChange={(v) => {
           setClassId(v === 'all' ? '' : v)
           setSectionId('')
@@ -655,6 +660,7 @@ function SummaryTab({ classes, sections, areas }) {
         value={sectionId || 'all'}
         options={[{ id: 'all', name: 'All sections' }, ...filteredSections]}
         onChange={(v) => setSectionId(v === 'all' ? '' : v)}
+        disabled={!classId}
       />
       <Text style={styles.label}>From (YYYY-MM-DD)</Text>
       <TextInput style={styles.input} value={from} onChangeText={setFrom} />
@@ -666,7 +672,7 @@ function SummaryTab({ classes, sections, areas }) {
 
       {err ? <Text style={ui.err}>{err}</Text> : null}
       {loaded && mode === 'none' ? (
-        <EmptyNote text="Select an area or class for a cumulative summary, or select a section for per-student totals." />
+        <EmptyNote text="Select a class for a cumulative summary, or select a section for per-student totals." />
       ) : null}
 
       {loaded && mode === 'cumulative' ? (
@@ -694,12 +700,12 @@ function SummaryTab({ classes, sections, areas }) {
             </View>
           </View>
           {breakdown.length === 0 ? (
-            <EmptyNote text="No sections found for the selected area or class." />
+            <EmptyNote text="No sections found for the selected class." />
           ) : (
             breakdown.map((row) => (
               <Card
                 key={row.section_id}
-                title={`${row.class_name} · ${row.section_name}`}
+                title={`${breakdownClassLabel(row)} · ${row.section_name}`}
                 sub={`Total ${row.total} · Present ${row.present} · Absent ${row.absent} · Leave ${row.leave}`}
               />
             ))
@@ -731,7 +737,6 @@ export default function StaffAttendanceScreen({ permissions = [] }) {
   )
   const [classes, setClasses] = useState([])
   const [sections, setSections] = useState([])
-  const [areas, setAreas] = useState([])
   const [loading, setLoading] = useState(true)
   const [err, setErr] = useState('')
 
@@ -751,23 +756,20 @@ export default function StaffAttendanceScreen({ permissions = [] }) {
       Promise.all([
         apiClient.get('/efsc/academic/classes'),
         apiClient.get('/efsc/academic/sections'),
-        apiClient.get('/efsc/academic/areas'),
       ]),
       20000,
       'Attendance setup',
     )
-      .then(([c, s, a]) => {
+      .then(([c, s]) => {
         if (cancelled) return
         setClasses(c.data?.data ?? c.data ?? [])
         setSections(s.data?.data ?? s.data ?? [])
-        setAreas(a.data?.data ?? a.data ?? [])
       })
       .catch((e) => {
         if (cancelled) return
         setErr(formatError(e))
         setClasses([])
         setSections([])
-        setAreas([])
       })
       .finally(() => {
         if (!cancelled) setLoading(false)
@@ -813,9 +815,7 @@ export default function StaffAttendanceScreen({ permissions = [] }) {
           canViewSummary={canViewSummary}
         />
       ) : null}
-      {tab === 'summary' ? (
-        <SummaryTab classes={classes} sections={sections} areas={areas} />
-      ) : null}
+      {tab === 'summary' ? <SummaryTab classes={classes} sections={sections} /> : null}
     </ScrollView>
   )
 }

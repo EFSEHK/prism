@@ -309,7 +309,7 @@ class AttendanceController extends Controller
         }
 
         $sectionsInScope = Section::query()
-            ->with('schoolClass:id,name')
+            ->with(['schoolClass:id,name,area_id', 'schoolClass.area:id,name'])
             ->when(
                 ! empty($filters['school_class_id']),
                 fn ($q) => $q->where('school_class_id', $filters['school_class_id'])
@@ -337,6 +337,7 @@ class AttendanceController extends Controller
                 'section_id' => $section->id,
                 'section_name' => $section->name,
                 'class_name' => $section->schoolClass?->name ?? '—',
+                'area_name' => $section->schoolClass?->area?->name ?? '—',
                 'total' => $present + $absent + $leave,
                 'present' => $present,
                 'absent' => $absent,

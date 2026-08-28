@@ -235,20 +235,10 @@
       <h2>Attendance Summary</h2>
       <div class="enroll-filters">
         <div class="field picker-field">
-          <span class="field-label">Area</span>
-          <SearchableSelect
-            v-model="summaryAreaId"
-            :options="areaOptions"
-            placeholder="All areas"
-            search-placeholder="Search areas…"
-            @change="onSummaryAreaChange"
-          />
-        </div>
-        <div class="field picker-field">
           <span class="field-label">Class</span>
           <SearchableSelect
             v-model="summaryClassId"
-            :options="summaryClassOptions"
+            :options="classOptions"
             placeholder="All classes"
             search-placeholder="Search classes…"
             @change="onSummaryClassChange"
@@ -261,6 +251,7 @@
             :options="summarySectionOptions"
             placeholder="All sections"
             search-placeholder="Search sections…"
+            :disabled="!summaryClassId"
           />
         </div>
       </div>
@@ -283,7 +274,7 @@
 
       <p v-if="summaryErr" class="error">{{ summaryErr }}</p>
       <p v-else-if="summaryLoaded && summaryMode === 'none'" class="empty">
-        Select an area or class for a cumulative summary, or select a section for per-student totals.
+        Select a class for a cumulative summary, or select a section for per-student totals.
       </p>
 
       <template v-else-if="summaryLoaded && summaryMode === 'cumulative'">
@@ -309,7 +300,7 @@
             <span class="total-label">School days</span>
           </div>
         </div>
-        <p v-if="!cumulativeBreakdown.length" class="empty">No sections found for the selected area or class.</p>
+        <p v-if="!cumulativeBreakdown.length" class="empty">No sections found for the selected class.</p>
         <div v-else class="table-wrap summary-breakdown">
           <table class="data-table">
             <thead>
@@ -324,7 +315,7 @@
             </thead>
             <tbody>
               <tr v-for="row in cumulativeBreakdown" :key="row.section_id">
-                <td>{{ row.class_name }}</td>
+                <td>{{ breakdownClassLabel(row) }}</td>
                 <td class="cell-name">{{ row.section_name }}</td>
                 <td class="col-status">{{ row.total }}</td>
                 <td class="col-status">{{ row.present }}</td>
@@ -395,7 +386,6 @@ const attendanceStatuses = [
 ]
 const activeTab = ref('mark')
 
-const areas = ref([])
 const allClasses = ref([])
 const allSections = ref([])
 
@@ -437,7 +427,6 @@ const statusDetailLoading = ref(false)
 
 const verifying = ref(false)
 
-const summaryAreaId = ref('')
 const summaryClassId = ref('')
 const summarySectionId = ref('')
 const summaryFrom = ref(monthStartInputDate())
@@ -451,23 +440,30 @@ const loadingSummary = ref(false)
 const summaryErr = ref('')
 
 const canLoadSummary = computed(
-  () => Boolean(summarySectionId.value || summaryAreaId.value || summaryClassId.value),
+  () => Boolean(summarySectionId.value || summaryClassId.value),
 )
 
 function toOptions(items) {
   return items.map((i) => ({ value: String(i.id), label: i.name }))
 }
 
+function classGender(areaName) {
+  return areaName?.toLowerCase().includes('boy') ? 'Boys' : 'Girls'
+}
+
 function classLabel(c) {
-  const area = c.area?.name
-  return area ? `${c.name} (${area})` : c.name
+  if (!c?.name) return '—'
+  return `${c.name} (${classGender(c.area?.name)})`
+}
+
+function breakdownClassLabel(row) {
+  if (!row?.class_name) return '—'
+  return `${row.class_name} (${classGender(row.area_name)})`
 }
 
 const classOptions = computed(() =>
   allClasses.value.map((c) => ({ value: String(c.id), label: classLabel(c) }))
 )
-
-const areaOptions = computed(() => toOptions(areas.value))
 
 const markSections = computed(() =>
   classId.value
@@ -491,26 +487,12 @@ const markSectionOptions = computed(() => toOptions(markSections.value))
 const pendingSectionOptions = computed(() => toOptions(pendingSections.value))
 const statusSectionOptions = computed(() => toOptions(statusSections.value))
 
-const summaryClasses = computed(() =>
-  summaryAreaId.value
-    ? allClasses.value.filter((c) => String(c.area_id) === summaryAreaId.value)
-    : allClasses.value
+const summarySections = computed(() =>
+  summaryClassId.value
+    ? allSections.value.filter((s) => String(s.school_class_id) === summaryClassId.value)
+    : allSections.value
 )
 
-const summarySections = computed(() => {
-  if (summaryClassId.value) {
-    return allSections.value.filter((s) => String(s.school_class_id) === summaryClassId.value)
-  }
-  if (summaryAreaId.value) {
-    const classIds = new Set(summaryClasses.value.map((c) => c.id))
-    return allSections.value.filter((s) => classIds.has(s.school_class_id))
-  }
-  return allSections.value
-})
-
-const summaryClassOptions = computed(() =>
-  summaryClasses.value.map((c) => ({ value: String(c.id), label: classLabel(c) }))
-)
 const summarySectionOptions = computed(() => toOptions(summarySections.value))
 
 function statusLabel(status) {
@@ -521,7 +503,8 @@ function statusLabel(status) {
 }
 
 function batchClassSection(batch) {
-  const cls = batch.section?.school_class?.name ?? batch.section?.schoolClass?.name
+  const schoolClass = batch.section?.school_class ?? batch.section?.schoolClass
+  const cls = schoolClass ? classLabel(schoolClass) : null
   const sec = batch.section?.name
   if (cls && sec) return `${cls} · ${sec}`
   return cls || sec || '—'
@@ -541,12 +524,10 @@ onMounted(async () => {
 })
 
 async function loadAcademic() {
-  const [areaRes, classRes, secRes] = await Promise.all([
-    api.get('/efsc/academic/areas').catch(() => ({ data: [] })),
+  const [classRes, secRes] = await Promise.all([
     api.get('/efsc/academic/classes').catch(() => ({ data: [] })),
     api.get('/efsc/academic/sections').catch(() => ({ data: [] })),
   ])
-  areas.value = areaRes.data?.data ?? areaRes.data ?? []
   allClasses.value = classRes.data?.data ?? classRes.data ?? []
   allSections.value = secRes.data?.data ?? secRes.data ?? []
   if (allClasses.value.length) {
@@ -579,12 +560,6 @@ function onStatusClassChange() {
   statusDetail.value = null
 }
 
-function onSummaryAreaChange() {
-  summaryClassId.value = ''
-  summarySectionId.value = ''
-  maybeAutoLoadSummary()
-}
-
 function onSummaryClassChange() {
   summarySectionId.value = ''
   maybeAutoLoadSummary()
@@ -593,7 +568,7 @@ function onSummaryClassChange() {
 function maybeAutoLoadSummary() {
   if (activeTab.value !== 'summary') return
   if (summarySectionId.value) return
-  if (!summaryAreaId.value && !summaryClassId.value) {
+  if (!summaryClassId.value) {
     summaryLoaded.value = false
     summaryMode.value = 'none'
     cumulativeBreakdown.value = []
@@ -818,7 +793,6 @@ async function loadSummary() {
   summaryErr.value = ''
   try {
     const params = {}
-    if (summaryAreaId.value) params.area_id = summaryAreaId.value
     if (summaryClassId.value) params.school_class_id = summaryClassId.value
     if (summarySectionId.value) params.section_id = summarySectionId.value
     if (summaryFrom.value) params.from = summaryFrom.value

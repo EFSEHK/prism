@@ -54,6 +54,7 @@ import { ui } from './components/ui'
 import { runStartupUpdateChecks } from './services/appUpdates'
 import { loadSession, saveSession, clearSession } from './services/session'
 import { learnerFeatures, staffFeaturesFor, isCatalogComingSoon, isCatalogLive, moduleStatus } from './features'
+import { useHardwareBack } from './hooks/useHardwareBack'
 
 const DASHBOARD_INCLUDE =
   'homework,timetable,marks,broadcasts,fees,online_classes,leave,datesheet,notifications'
@@ -463,6 +464,29 @@ export default function App() {
     }
     setTab('home')
   }
+
+  const isOnRootScreen = tab === 'dashboard' || tab === 'home'
+
+  useHardwareBack(() => {
+    if (!showApp) return false
+
+    if (menuOpen) {
+      setMenuOpen(false)
+      return true
+    }
+
+    if (!isOnRootScreen) {
+      goHome()
+      return true
+    }
+
+    if (isParentRole && hasSelectedChild) {
+      switchChild()
+      return true
+    }
+
+    return false
+  }, [showApp, menuOpen, tab, isOnRootScreen, isParentRole, hasSelectedChild])
 
   function selectFeatureSafe(id) {
     try {
