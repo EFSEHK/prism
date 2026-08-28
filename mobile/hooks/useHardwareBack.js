@@ -2,7 +2,7 @@ import { useEffect } from 'react'
 import { BackHandler } from 'react-native'
 
 /**
- * Intercept the Android hardware back button.
+ * Intercept the Android hardware / gesture back action.
  * Handler should return true when the event is consumed.
  */
 export function useHardwareBack(handler, deps = []) {

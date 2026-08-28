@@ -15,6 +15,7 @@ import { apiClient } from '../apiClient'
 import { formatError } from '../utils/format'
 import { withTimeout } from '../utils/withTimeout'
 import { Card, EmptyNote, Section, ui } from '../components/ui'
+import { useHardwareBack } from '../hooks/useHardwareBack'
 
 const ACADEMIC_ROLES = ['superadmin', 'admin', 'developer', 'computer_operator']
 const ROSTER_ROLES = ['computer_operator', 'section_head', 'class_incharge']
@@ -1243,6 +1244,13 @@ export default function ConfigurationScreen({ permissions = [], roles = [] }) {
   const [err, setErr] = useState('')
   const [msg, setMsg] = useState('')
   const [refreshKey, setRefreshKey] = useState(0)
+  const defaultTab = tabs[0]?.id || 'structure'
+
+  useHardwareBack(() => {
+    if (tab === defaultTab) return false
+    setTab(defaultTab)
+    return true
+  }, [tab, defaultTab])
 
   useEffect(() => {
     if (!tabs.length) return

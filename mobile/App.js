@@ -1,52 +1,13 @@
-import { useState, useEffect, useCallback } from 'react'
-import {
-  View,
-  Text,
-  TextInput,
-  ScrollView,
-  StyleSheet,
-  ActivityIndicator,
-  Pressable,
-  Keyboard,
-} from 'react-native'
+import { useState, useEffect, useCallback, useRef } from 'react'
+import { View, Text, TextInput, ScrollView, StyleSheet, ActivityIndicator, Pressable, Keyboard } from 'react-native'
 import { StatusBar } from 'expo-status-bar'
-import {
-  apiClient,
-  API_DISPLAY,
-  API_BRIDGE_HOST,
-  USES_EMULATOR_API,
-  setAuthToken,
-  setViewAsRole,
-  setViewAsUser,
-  clearViewAs,
-} from './apiClient'
-import SideMenu, {
-  BellIcon,
-  HamburgerIcon,
-  HomeIcon,
-  navItemsForContext,
-  staffNavItemsFromModules,
-} from './components/SideMenu'
+import { apiClient, API_DISPLAY, API_BRIDGE_HOST, USES_EMULATOR_API, setAuthToken, setViewAsRole, setViewAsUser, clearViewAs } from './apiClient'
+import SideMenu, { BellIcon, HamburgerIcon, HomeIcon, navItemsForContext, staffNavItemsFromModules } from './components/SideMenu'
 import EyeIcon from './components/EyeIcon'
 import ViewAsPicker from './components/ViewAsPicker'
 import FeatureDashboard from './components/FeatureDashboard'
-import {
-  ParentHomeScreen,
-  HomeworkScreen,
-  MarksScreen,
-  AttendanceScreen,
-  StaffAttendanceScreen,
-  FeedScreen,
-  OnlineClassScreen,
-  LeaveScreen,
-  TimetableScreen,
-  FeesScreen,
-} from './screens/ParentScreens'
-import {
-  ApprovalsScreen,
-  UsersScreen,
-  PermissionsScreen,
-} from './screens/StaffModuleScreens'
+import { ParentHomeScreen, HomeworkScreen, MarksScreen, AttendanceScreen, StaffAttendanceScreen, FeedScreen, OnlineClassScreen, LeaveScreen, TimetableScreen, FeesScreen } from './screens/ParentScreens'
+import { ApprovalsScreen, UsersScreen, PermissionsScreen } from './screens/StaffModuleScreens'
 import ConfigurationScreen from './screens/ConfigurationScreen'
 import NavigationErrorBoundary from './components/NavigationErrorBoundary'
 import { childName, formatError } from './utils/format'
@@ -56,8 +17,11 @@ import { loadSession, saveSession, clearSession } from './services/session'
 import { learnerFeatures, staffFeaturesFor, isCatalogComingSoon, isCatalogLive, moduleStatus } from './features'
 import { useHardwareBack } from './hooks/useHardwareBack'
 
-const DASHBOARD_INCLUDE =
-  'homework,timetable,marks,broadcasts,fees,online_classes,leave,datesheet,notifications'
+function isRootTab(id) {
+  return id === 'dashboard' || id === 'home'
+}
+
+const DASHBOARD_INCLUDE = 'homework,timetable,marks,broadcasts,fees,online_classes,leave,datesheet,notifications'
 
 export default function App() {
   const [email, setEmail] = useState('parent@efsc-ya.com')
@@ -78,6 +42,29 @@ export default function App() {
   const [viewAsUsersLoading, setViewAsUsersLoading] = useState(false)
   const [impersonateUser, setImpersonateUser] = useState(null)
   const [modules, setModules] = useState([])
+  const navStackRef = useRef(['home'])
+
+  function syncNavStack(next) {
+    navStackRef.current = next
+  }
+
+  function resetNavigation(tabId) {
+    syncNavStack([tabId])
+    setTab(tabId)
+  }
+
+  function navigateTo(id) {
+    if (!id) return
+    setTab(id)
+    const stack = navStackRef.current
+    if (stack[stack.length - 1] === id) return
+    if (isRootTab(id)) {
+      syncNavStack([id])
+      return
+    }
+    const root = isRootTab(stack[0]) ? stack[0] : id
+    syncNavStack(isRootTab(stack[stack.length - 1]) ? [root, id] : [...stack, id])
+  }
 
   useEffect(() => {
     runStartupUpdateChecks()
@@ -117,7 +104,7 @@ export default function App() {
           if (roles.includes('parent') || roles.includes('student')) {
             await enterLearnerContext(roles)
           } else {
-            setTab('dashboard')
+            resetNavigation('dashboard')
           }
         } catch {
           if (cancelled) return
@@ -149,16 +136,14 @@ export default function App() {
 
   // Students never use the parent child-picker; bind self if dashboard has a profile.
   useEffect(() => {
-    const roles = impersonateUser
-      ? (impersonateUser.roles || []).map((r) => r.name)
-      : viewAsRole
-        ? [viewAsRole]
-        : (user?.roles || []).map((r) => r.name)
+    const roles = impersonateUser ? (impersonateUser.roles || []).map((r) => r.name) : viewAsRole ? [viewAsRole] : (user?.roles || []).map((r) => r.name)
     if (!roles.includes('student') || roles.includes('parent') || selectedChild) return
     const kids = dashboard?.children ?? []
     if (kids.length === 0) return
     setSelectedChild(kids[0])
-    setTab((current) => (current === 'home' ? 'dashboard' : current))
+    if (navStackRef.current[navStackRef.current.length - 1] === 'home') {
+      resetNavigation('dashboard')
+    }
   }, [impersonateUser, viewAsRole, user, selectedChild, dashboard])
 
   const actualRoleNames = (user?.roles || []).map((r) => r.name)
@@ -190,7 +175,7 @@ export default function App() {
 
   const loadModules = useCallback(async () => {
     const { data } = await apiClient.get('/efsc/modules', { params: { platform: 'mobile' } })
-    const list = Array.isArray(data?.data) ? data.data : (Array.isArray(data) ? data : [])
+    const list = Array.isArray(data?.data) ? data.data : Array.isArray(data) ? data : []
     setModules(list.filter((m) => m && moduleStatus(m) !== 'disabled'))
     return list
   }, [])
@@ -226,17 +211,17 @@ export default function App() {
       } else {
         setSelectedChild(null)
       }
-      setTab('dashboard')
+      resetNavigation('dashboard')
       return
     }
     setSelectedChild(null)
-    setTab('home')
+    resetNavigation('home')
   }
 
   async function enterContext({ roles }) {
     setDashboard(null)
     setSelectedChild(null)
-    setTab('home')
+    resetNavigation('home')
     setErr('')
 
     await refreshModulesSafe()
@@ -251,7 +236,7 @@ export default function App() {
         setLoading(false)
       }
     } else {
-      setTab('dashboard')
+      resetNavigation('dashboard')
     }
   }
 
@@ -279,7 +264,7 @@ export default function App() {
         name: data.name,
         email: data.email,
         roles: data.roles || [],
-        permissions: permissionNames,
+        permissions: permissionNames
       }
       setImpersonateUser(next)
       setViewAsUser(next.id)
@@ -301,7 +286,7 @@ export default function App() {
     setViewAsRole('')
     setDashboard(null)
     setSelectedChild(null)
-    setTab('dashboard')
+    resetNavigation('dashboard')
     setErr('')
     setMenuOpen(false)
     await refreshModulesSafe()
@@ -315,11 +300,11 @@ export default function App() {
     setUser(null)
     setSelectedChild(null)
     setModules([])
-    setTab('home')
+    resetNavigation('home')
     try {
       const { data } = await apiClient.post('/login', {
         email: String(email || '').trim(),
-        password: String(password || '').trim(),
+        password: String(password || '').trim()
       })
       if (!data?.access_token) throw new Error('No access token in response')
       setAuthToken(data.access_token)
@@ -345,7 +330,7 @@ export default function App() {
       if (roles.includes('parent') || roles.includes('student')) {
         await enterLearnerContext(roles)
       } else {
-        setTab('dashboard')
+        resetNavigation('dashboard')
       }
     } catch (e) {
       setAuthToken('')
@@ -379,7 +364,7 @@ export default function App() {
     setViewAsOptions([])
     setViewAsUsers([])
     setImpersonateUser(null)
-    setTab('home')
+    resetNavigation('home')
     setMenuOpen(false)
     setErr('')
   }
@@ -390,7 +375,7 @@ export default function App() {
     try {
       await loadDashboard(child.id)
       setSelectedChild(child)
-      setTab('dashboard')
+      resetNavigation('dashboard')
     } catch (e) {
       setErr(formatError(e))
     } finally {
@@ -400,7 +385,7 @@ export default function App() {
 
   function switchChild() {
     setSelectedChild(null)
-    setTab('home')
+    resetNavigation('home')
     loadDashboard().catch(() => {})
   }
 
@@ -417,52 +402,61 @@ export default function App() {
     selectFeatureSafe('notifications')
   }
 
-  const roleNames = impersonateUser
-    ? (impersonateUser.roles || []).map((r) => r.name)
-    : viewAsRole
-      ? [viewAsRole]
-      : actualRoleNames
-  const effectivePermissions = impersonateUser
-    ? permissionNamesFrom(impersonateUser)
-    : viewAsRole
-      ? (viewAsOptions.find((o) => o.name === viewAsRole)?.permissions || [])
-      : permissionNamesFrom(user)
+  const roleNames = impersonateUser ? (impersonateUser.roles || []).map((r) => r.name) : viewAsRole ? [viewAsRole] : actualRoleNames
+  const effectivePermissions = impersonateUser ? permissionNamesFrom(impersonateUser) : viewAsRole ? viewAsOptions.find((o) => o.name === viewAsRole)?.permissions || [] : permissionNamesFrom(user)
   const isParentRole = roleNames.includes('parent')
   const isStudentRole = roleNames.includes('student')
   const isLearnerRole = isParentRole || isStudentRole
   const isStaffRole = !isLearnerRole
-  const moduleEnabledIds = new Set(
-    modules.filter((m) => moduleStatus(m) !== 'disabled').map((m) => m.id),
-  )
-  const comingSoonIds = new Set(
-    modules.filter((m) => moduleStatus(m) === 'coming_soon').map((m) => m.id),
-  )
+  const moduleEnabledIds = new Set(modules.filter((m) => moduleStatus(m) !== 'disabled').map((m) => m.id))
+  const comingSoonIds = new Set(modules.filter((m) => moduleStatus(m) === 'coming_soon').map((m) => m.id))
   const attendanceEnabled = isCatalogLive(modules, 'attendance')
   const showApp = token && !err && (isLearnerRole ? !!dashboard : true)
   const hasSelectedChild = Boolean(selectedChild)
-  const navItems = isStaffRole
-    ? staffNavItemsFromModules(modules)
-    : navItemsForContext(hasSelectedChild, false, isStudentRole, moduleEnabledIds, comingSoonIds)
+  const navItems = isStaffRole ? staffNavItemsFromModules(modules) : navItemsForContext(hasSelectedChild, false, isStudentRole, moduleEnabledIds, comingSoonIds)
   const activeLabel = navItems.find((item) => item.id === tab)?.label ?? 'Home'
   const children = dashboard?.children ?? []
-  const learnerChild = selectedChild || (isStudentRole ? children[0] ?? null : null)
+  const learnerChild = selectedChild || (isStudentRole ? (children[0] ?? null) : null)
   const headerSubtitle = activeLabel
   const selectedChildLabel = learnerChild ? childName(learnerChild) : ''
-  const headerRightName = selectedChildLabel
-    || (impersonateUser?.name)
-    || user?.name
-    || ''
+  const headerRightName = selectedChildLabel || impersonateUser?.name || user?.name || ''
   const displayUserName = impersonateUser?.name || user?.name || ''
   const staffFeatureList = staffFeaturesFor(modules)
   const learnerFeatureList = learnerFeatures(modules)
   const unread = dashboard?.unread_notifications ?? 0
 
+  function handleAndroidBack() {
+    if (!showApp) return false
+
+    if (menuOpen) {
+      setMenuOpen(false)
+      return true
+    }
+
+    const stack = navStackRef.current
+    if (stack.length > 1) {
+      const next = stack.slice(0, -1)
+      syncNavStack(next)
+      setTab(next[next.length - 1])
+      return true
+    }
+
+    if (isParentRole && hasSelectedChild) {
+      switchChild()
+      return true
+    }
+
+    return false
+  }
+
+  useHardwareBack(handleAndroidBack, [showApp, menuOpen, isParentRole, hasSelectedChild])
+
   function goHome() {
     if (isStaffRole || isStudentRole || hasSelectedChild) {
-      setTab('dashboard')
+      resetNavigation('dashboard')
       return
     }
-    setTab('home')
+    resetNavigation('home')
   }
 
   const isOnRootScreen = tab === 'dashboard' || tab === 'home'
@@ -495,27 +489,19 @@ export default function App() {
       }
       if (id !== 'dashboard' && id !== 'home' && !isCatalogLive(modules, id) && isStaffRole) {
         setErr('This feature is not available.')
-        setTab('dashboard')
+        resetNavigation('dashboard')
         return
       }
       setErr('')
-      setTab(id)
+      navigateTo(id)
     } catch (e) {
       setErr(formatError(e) || 'Something went wrong — please try again')
-      setTab(isStaffRole || isStudentRole || hasSelectedChild ? 'dashboard' : 'home')
+      resetNavigation(isStaffRole || isStudentRole || hasSelectedChild ? 'dashboard' : 'home')
     }
   }
 
   function renderFeatureDashboard({ child = null, features, subtitle }) {
-    return (
-      <FeatureDashboard
-        features={features}
-        child={child}
-        userName={displayUserName}
-        subtitle={subtitle}
-        onSelectFeature={selectFeatureSafe}
-      />
-    )
+    return <FeatureDashboard features={features} child={child} userName={displayUserName} subtitle={subtitle} onSelectFeature={selectFeatureSafe} />
   }
 
   function renderTab() {
@@ -523,25 +509,19 @@ export default function App() {
       if (tab === 'dashboard' || tab === 'home') {
         return renderFeatureDashboard({
           features: staffFeatureList,
-          subtitle: staffFeatureList.length
-            ? 'Choose a feature to continue'
-            : 'No mobile features for this role yet',
+          subtitle: staffFeatureList.length ? 'Choose a feature to continue' : 'No mobile features for this role yet'
         })
       }
       if (isCatalogComingSoon(modules, tab)) {
         return renderFeatureDashboard({
           features: staffFeatureList,
-          subtitle: staffFeatureList.length
-            ? 'Choose a feature to continue'
-            : 'No mobile features for this role yet',
+          subtitle: staffFeatureList.length ? 'Choose a feature to continue' : 'No mobile features for this role yet'
         })
       }
       if (!isCatalogLive(modules, tab) && tab !== 'dashboard' && tab !== 'home') {
         return renderFeatureDashboard({
           features: staffFeatureList,
-          subtitle: staffFeatureList.length
-            ? 'Choose a feature to continue'
-            : 'No mobile features for this role yet',
+          subtitle: staffFeatureList.length ? 'Choose a feature to continue' : 'No mobile features for this role yet'
         })
       }
       switch (tab) {
@@ -573,10 +553,8 @@ export default function App() {
           return (
             <View style={{ flex: 1, padding: 24, justifyContent: 'center' }}>
               <Text style={{ fontSize: 18, fontWeight: '700', marginBottom: 8 }}>Something went wrong</Text>
-              <Text style={{ color: '#64748b', marginBottom: 16 }}>
-                This screen is not available. Please try again from the dashboard.
-              </Text>
-              <Pressable style={styles.button} onPress={() => setTab('dashboard')}>
+              <Text style={{ color: '#64748b', marginBottom: 16 }}>This screen is not available. Please try again from the dashboard.</Text>
+              <Pressable style={styles.button} onPress={() => resetNavigation('dashboard')}>
                 <Text style={styles.buttonText}>Back to dashboard</Text>
               </Pressable>
             </View>
@@ -586,23 +564,17 @@ export default function App() {
 
     // Parents must pick a child; students skip this and land on the dashboard.
     if (isParentRole && !hasSelectedChild) {
-      return (
-        <ParentHomeScreen dashboard={dashboard} user={user} onSelectChild={selectChild} />
-      )
+      return <ParentHomeScreen dashboard={dashboard} user={user} onSelectChild={selectChild} />
     }
 
     const childId = learnerChild?.id
-    const featureOpen = tab === 'dashboard'
-      || tab === 'home'
-      || (moduleEnabledIds.has(tab) && !comingSoonIds.has(tab))
+    const featureOpen = tab === 'dashboard' || tab === 'home' || (moduleEnabledIds.has(tab) && !comingSoonIds.has(tab))
 
     if (!featureOpen) {
       return renderFeatureDashboard({
         child: learnerChild,
         features: learnerFeatureList,
-        subtitle: unread > 0
-          ? `${unread} unread notification${unread === 1 ? '' : 's'}`
-          : 'Choose a feature to continue',
+        subtitle: unread > 0 ? `${unread} unread notification${unread === 1 ? '' : 's'}` : 'Choose a feature to continue'
       })
     }
 
@@ -612,9 +584,7 @@ export default function App() {
         return renderFeatureDashboard({
           child: learnerChild,
           features: learnerFeatureList,
-          subtitle: unread > 0
-            ? `${unread} unread notification${unread === 1 ? '' : 's'}`
-            : 'Choose a feature to continue',
+          subtitle: unread > 0 ? `${unread} unread notification${unread === 1 ? '' : 's'}` : 'Choose a feature to continue'
         })
       case 'homework':
         return <HomeworkScreen permissions={effectivePermissions} isLearner />
@@ -638,7 +608,7 @@ export default function App() {
         return renderFeatureDashboard({
           child: learnerChild,
           features: learnerFeatureList,
-          subtitle: 'Choose a feature to continue',
+          subtitle: 'Choose a feature to continue'
         })
     }
   }
@@ -659,53 +629,22 @@ export default function App() {
         <ScrollView contentContainerStyle={styles.login} keyboardShouldPersistTaps="handled">
           <Text style={styles.title}>EFSC-YA</Text>
           <Text style={styles.hint}>API: {API_DISPLAY}</Text>
-          {API_BRIDGE_HOST ? (
-            <Text style={styles.hint}>LAN: {API_BRIDGE_HOST}</Text>
-          ) : null}
-          {USES_EMULATOR_API ? (
-            <Text style={styles.warn}>
-              Emulator fallback (10.0.2.2). On a real phone set EXPO_PUBLIC_API_LAN_IP and rebuild the APK.
-            </Text>
-          ) : null}
+          {API_BRIDGE_HOST ? <Text style={styles.hint}>LAN: {API_BRIDGE_HOST}</Text> : null}
+          {USES_EMULATOR_API ? <Text style={styles.warn}>Emulator fallback (10.0.2.2). On a real phone set EXPO_PUBLIC_API_LAN_IP and rebuild the APK.</Text> : null}
           {!token ? (
             <>
               <Text style={styles.label}>Admission no. / CNIC / Email</Text>
-              <TextInput
-                style={styles.input}
-                value={email}
-                onChangeText={setEmail}
-                autoCapitalize="none"
-                autoCorrect={false}
-                editable={!loading}
-              />
+              <TextInput style={styles.input} value={email} onChangeText={setEmail} autoCapitalize="none" autoCorrect={false} editable={!loading} />
               <Text style={styles.label}>Password</Text>
               <View style={styles.passwordField}>
-                <TextInput
-                  style={styles.passwordInput}
-                  value={password}
-                  onChangeText={setPassword}
-                  secureTextEntry={!showPassword}
-                  editable={!loading}
-                  onSubmitEditing={login}
-                />
-                <Pressable
-                  style={styles.passwordToggle}
-                  onPress={() => setShowPassword((v) => !v)}
-                  disabled={loading}
-                  accessibilityLabel={showPassword ? 'Hide password' : 'Show password'}
-                  accessibilityRole="button"
-                  hitSlop={8}
-                >
+                <TextInput style={styles.passwordInput} value={password} onChangeText={setPassword} secureTextEntry={!showPassword} editable={!loading} onSubmitEditing={login} />
+                <Pressable style={styles.passwordToggle} onPress={() => setShowPassword((v) => !v)} disabled={loading} accessibilityLabel={showPassword ? 'Hide password' : 'Show password'} accessibilityRole="button" hitSlop={8}>
                   <EyeIcon hidden={showPassword} />
                 </Pressable>
               </View>
               {err ? <Text style={ui.err}>{err}</Text> : null}
               {loading ? <ActivityIndicator style={{ marginBottom: 12 }} /> : null}
-              <Pressable
-                style={[styles.button, loading && styles.buttonDisabled]}
-                onPress={login}
-                disabled={loading}
-              >
+              <Pressable style={[styles.button, loading && styles.buttonDisabled]} onPress={login} disabled={loading}>
                 <Text style={styles.buttonText}>{loading ? 'Please wait…' : 'Login'}</Text>
               </Pressable>
             </>
@@ -726,12 +665,7 @@ export default function App() {
       ) : (
         <>
           <View style={styles.header}>
-            <Pressable
-              onPress={goHome}
-              style={styles.menuBtn}
-              hitSlop={8}
-              accessibilityLabel="Home"
-            >
+            <Pressable onPress={goHome} style={styles.menuBtn} hitSlop={8} accessibilityLabel="Home">
               <HomeIcon />
             </Pressable>
             <View style={styles.headerCenter}>
@@ -739,55 +673,35 @@ export default function App() {
               <Text style={styles.headerSubtitle}>{headerSubtitle}</Text>
             </View>
             <View style={styles.headerRight}>
-              <Text numberOfLines={1} style={styles.headerRightName}>{headerRightName}</Text>
+              <Text numberOfLines={1} style={styles.headerRightName}>
+                {headerRightName}
+              </Text>
               {isImpersonating ? (
                 <>
                   <View style={styles.headerSeparator} />
-                  <Pressable
-                    onPress={exitImpersonation}
-                    style={styles.exitViewBtn}
-                    hitSlop={6}
-                    accessibilityLabel="Back to Super Admin"
-                  >
-                    <Text style={styles.exitViewText} numberOfLines={1}>Back</Text>
+                  <Pressable onPress={exitImpersonation} style={styles.exitViewBtn} hitSlop={6} accessibilityLabel="Back to Super Admin">
+                    <Text style={styles.exitViewText} numberOfLines={1}>
+                      Back
+                    </Text>
                   </Pressable>
                 </>
               ) : canViewAs ? (
                 <>
                   <View style={styles.headerSeparator} />
-                  <ViewAsPicker
-                    options={viewAsOptions}
-                    users={viewAsUsers}
-                    usersLoading={viewAsUsersLoading}
-                    value={viewAsRole}
-                    onChangeRole={(name) => applyViewAs(name)}
-                    onChangeUser={(u) => applyViewAsUser(u)}
-                  />
+                  <ViewAsPicker options={viewAsOptions} users={viewAsUsers} usersLoading={viewAsUsersLoading} value={viewAsRole} onChangeRole={(name) => applyViewAs(name)} onChangeUser={(u) => applyViewAsUser(u)} />
                 </>
               ) : null}
               <View style={styles.headerSeparator} />
-              <Pressable
-                onPress={openNotificationsFromHeader}
-                style={styles.headerIconBtn}
-                hitSlop={8}
-                accessibilityLabel={`Open notifications${unread > 0 ? ` (${unread} unread)` : ''}`}
-              >
+              <Pressable onPress={openNotificationsFromHeader} style={styles.headerIconBtn} hitSlop={8} accessibilityLabel={`Open notifications${unread > 0 ? ` (${unread} unread)` : ''}`}>
                 <BellIcon />
                 {unread > 0 ? (
                   <View style={styles.notificationBadge}>
-                    <Text style={styles.notificationBadgeText}>
-                      {unread > 99 ? '99+' : String(unread)}
-                    </Text>
+                    <Text style={styles.notificationBadgeText}>{unread > 99 ? '99+' : String(unread)}</Text>
                   </View>
                 ) : null}
               </Pressable>
               <View style={styles.headerSeparator} />
-              <Pressable
-                onPress={() => setMenuOpen(true)}
-                style={styles.headerMenuBtn}
-                hitSlop={8}
-                accessibilityLabel="Open menu"
-              >
+              <Pressable onPress={() => setMenuOpen(true)} style={styles.headerMenuBtn} hitSlop={8} accessibilityLabel="Open menu">
                 <HamburgerIcon />
               </Pressable>
             </View>
@@ -798,21 +712,11 @@ export default function App() {
             </View>
           ) : null}
           <View style={styles.body}>
-            <NavigationErrorBoundary
-              key={tab}
-              onReset={() => setTab(isStaffRole || isStudentRole || hasSelectedChild ? 'dashboard' : 'home')}
-            >
+            <NavigationErrorBoundary key={tab} onReset={() => resetNavigation(isStaffRole || isStudentRole || hasSelectedChild ? 'dashboard' : 'home')}>
               {renderTab()}
             </NavigationErrorBoundary>
           </View>
-          <SideMenu
-            visible={menuOpen}
-            active={tab}
-            items={navItems}
-            onChange={handleNavChange}
-            onClose={() => setMenuOpen(false)}
-            onLogout={logout}
-          />
+          <SideMenu visible={menuOpen} active={tab} items={navItems} onChange={handleNavChange} onClose={() => setMenuOpen(false)} onLogout={logout} />
         </>
       )}
     </View>
@@ -833,11 +737,11 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     padding: 12,
     marginBottom: 12,
-    backgroundColor: '#fff',
+    backgroundColor: '#fff'
   },
   passwordField: {
     position: 'relative',
-    marginBottom: 12,
+    marginBottom: 12
   },
   passwordInput: {
     borderWidth: 1,
@@ -845,7 +749,7 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     padding: 12,
     paddingRight: 48,
-    backgroundColor: '#fff',
+    backgroundColor: '#fff'
   },
   passwordToggle: {
     position: 'absolute',
@@ -854,14 +758,14 @@ const styles = StyleSheet.create({
     bottom: 0,
     width: 44,
     alignItems: 'center',
-    justifyContent: 'center',
+    justifyContent: 'center'
   },
   ok: { color: '#15803d', marginBottom: 8 },
   button: {
     backgroundColor: '#2563eb',
     paddingVertical: 14,
     borderRadius: 8,
-    alignItems: 'center',
+    alignItems: 'center'
   },
   buttonDisabled: { opacity: 0.6 },
   buttonText: { color: '#fff', fontSize: 16, fontWeight: '600' },
@@ -871,7 +775,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     borderWidth: 1,
     borderColor: '#cbd5e1',
-    borderRadius: 8,
+    borderRadius: 8
   },
   logoutText: { color: '#475569', fontWeight: '600' },
   header: {
@@ -882,14 +786,14 @@ const styles = StyleSheet.create({
     paddingBottom: 8,
     backgroundColor: '#fff',
     borderBottomWidth: 1,
-    borderBottomColor: '#e2e8f0',
+    borderBottomColor: '#e2e8f0'
   },
   menuBtn: {
     padding: 4,
-    marginRight: 12,
+    marginRight: 12
   },
   headerCenter: {
-    flex: 1,
+    flex: 1
   },
   headerTitle: { fontSize: 18, fontWeight: '700', color: '#0f172a' },
   headerSubtitle: { fontSize: 12, color: '#64748b', marginTop: 2 },
@@ -898,20 +802,20 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     maxWidth: '56%',
     flexShrink: 1,
-    minWidth: 0,
+    minWidth: 0
   },
   headerRightName: {
     color: '#334155',
     fontWeight: '600',
     fontSize: 13,
     maxWidth: 96,
-    flexShrink: 1,
+    flexShrink: 1
   },
   headerSeparator: {
     width: 1,
     height: 18,
     backgroundColor: '#cbd5e1',
-    marginHorizontal: 6,
+    marginHorizontal: 6
   },
   exitViewBtn: {
     borderWidth: 1,
@@ -919,25 +823,25 @@ const styles = StyleSheet.create({
     backgroundColor: '#eff6ff',
     borderRadius: 4,
     paddingHorizontal: 8,
-    paddingVertical: 4,
+    paddingVertical: 4
   },
   exitViewText: {
     fontSize: 11,
     color: '#2563eb',
-    fontWeight: '700',
+    fontWeight: '700'
   },
   headerMenuBtn: {
     width: 28,
     height: 28,
     alignItems: 'center',
-    justifyContent: 'center',
+    justifyContent: 'center'
   },
   headerIconBtn: {
     width: 28,
     height: 28,
     alignItems: 'center',
     justifyContent: 'center',
-    position: 'relative',
+    position: 'relative'
   },
   notificationBadge: {
     position: 'absolute',
@@ -949,13 +853,13 @@ const styles = StyleSheet.create({
     borderRadius: 999,
     backgroundColor: '#dc2626',
     alignItems: 'center',
-    justifyContent: 'center',
+    justifyContent: 'center'
   },
   notificationBadgeText: {
     color: '#fff',
     fontSize: 9,
     fontWeight: '700',
-    lineHeight: 11,
+    lineHeight: 11
   },
   body: { flex: 1 },
   loadingOverlay: {
@@ -964,6 +868,6 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(248, 250, 252, 0.75)',
     alignItems: 'center',
     justifyContent: 'center',
-    zIndex: 10,
-  },
+    zIndex: 10
+  }
 })

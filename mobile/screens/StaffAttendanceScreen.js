@@ -12,6 +12,7 @@ import { apiClient } from '../apiClient'
 import { formatDate, formatError, sortByRollNo } from '../utils/format'
 import { withTimeout } from '../utils/withTimeout'
 import { Card, EmptyNote, ui } from '../components/ui'
+import { useHardwareBack } from '../hooks/useHardwareBack'
 
 const ATTENDANCE_STATUSES = [
   { value: 'present', label: 'Present' },
@@ -742,6 +743,13 @@ export default function StaffAttendanceScreen({ permissions = [] }) {
 
   const canMark = perms.includes('mark_attendance')
   const canViewSummary = perms.includes('view_attendance_reports') || perms.includes('verify_attendance')
+  const defaultTab = useMemo(() => defaultTabId(tabs, perms), [tabs, perms])
+
+  useHardwareBack(() => {
+    if (tab === defaultTab) return false
+    setTab(defaultTab)
+    return true
+  }, [tab, defaultTab])
 
   useEffect(() => {
     const next = defaultTabId(tabs, perms)

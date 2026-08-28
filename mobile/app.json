@@ -2,7 +2,7 @@
   "expo": {
     "name": "EFSC-YA",
     "slug": "EFSC-YA-school",
-    "version": "1.0.0",
+    "version": "1.0.2",
     "orientation": "portrait",
     "userInterfaceStyle": "light",
     "assetBundlePatterns": [
@@ -22,7 +22,7 @@
     },
     "android": {
       "package": "com.school.efscya",
-      "versionCode": 1,
+      "versionCode": 3,
       "usesCleartextTraffic": true,
       "permissions": [
         "REQUEST_INSTALL_PACKAGES"
