@@ -18,7 +18,7 @@ async function installApk(localUri) {
   })
 }
 
-function promptInstall({ version, releaseNotes, apkUrl }) {
+function promptInstall({ version, releaseNotes }) {
   return new Promise((resolve) => {
     const message = [
       `Version ${version} is available.`,
@@ -36,10 +36,32 @@ function promptInstall({ version, releaseNotes, apkUrl }) {
   })
 }
 
+async function downloadApk(url, target, onProgress) {
+  const downloadResumable = FileSystem.createDownloadResumable(
+    url,
+    target,
+    {},
+    (progress) => {
+      const total = progress.totalBytesExpectedToWrite
+      const written = progress.totalBytesWritten
+      const ratio = total > 0 ? written / total : 0
+      onProgress?.({
+        phase: 'apk-download',
+        progress: ratio,
+        bytesWritten: written,
+        bytesTotal: total,
+      })
+    }
+  )
+
+  return downloadResumable.downloadAsync()
+}
+
 /**
  * Compare installed build with API and optionally download + install APK.
+ * @param {{ onStatus?: (status: object | null) => void }} options
  */
-export async function checkApkUpdate() {
+export async function checkApkUpdate({ onStatus } = {}) {
   if (Platform.OS !== 'android') {
     return
   }
@@ -56,23 +78,33 @@ export async function checkApkUpdate() {
     const shouldUpdate = await promptInstall({
       version: data.version,
       releaseNotes: data.release_notes,
-      apkUrl: data.apk_url,
     })
 
     if (!shouldUpdate) {
       return
     }
 
-    const target = `${FileSystem.cacheDirectory}efsc-ya-update.apk`
-    const download = await FileSystem.downloadAsync(data.apk_url, target)
+    onStatus?.({
+      phase: 'apk-download',
+      progress: 0,
+      bytesWritten: 0,
+      bytesTotal: 0,
+    })
 
-    if (download.status !== 200) {
+    const target = `${FileSystem.cacheDirectory}efsc-ya-update.apk`
+    const download = await downloadApk(data.apk_url, target, onStatus)
+
+    if (!download || download.status !== 200) {
+      onStatus?.(null)
       await Linking.openURL(data.apk_url)
       return
     }
 
+    onStatus?.({ phase: 'installing', progress: 1 })
     await installApk(download.uri)
+    onStatus?.(null)
   } catch {
+    onStatus?.(null)
     // Non-blocking: app should still open if update check fails offline.
   }
 }

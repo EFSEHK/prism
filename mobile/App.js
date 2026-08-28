@@ -12,7 +12,7 @@ import ConfigurationScreen from './screens/ConfigurationScreen'
 import NavigationErrorBoundary from './components/NavigationErrorBoundary'
 import { childName, formatError } from './utils/format'
 import { ui } from './components/ui'
-import { runStartupUpdateChecks } from './services/appUpdates'
+import AppUpdateManager from './components/AppUpdateManager'
 import { loadSession, saveSession, clearSession } from './services/session'
 import { learnerFeatures, staffFeaturesFor, isCatalogComingSoon, isCatalogLive, moduleStatus } from './features'
 import { useHardwareBack } from './hooks/useHardwareBack'
@@ -65,10 +65,6 @@ export default function App() {
     const root = isRootTab(stack[0]) ? stack[0] : id
     syncNavStack(isRootTab(stack[stack.length - 1]) ? [root, id] : [...stack, id])
   }
-
-  useEffect(() => {
-    runStartupUpdateChecks()
-  }, [])
 
   useEffect(() => {
     setAuthToken(token)
@@ -613,18 +609,17 @@ export default function App() {
     }
   }
 
-  if (booting) {
-    return (
-      <View style={[styles.root, styles.boot]}>
-        <StatusBar style="dark" />
-        <ActivityIndicator size="large" color="#0f766e" />
-      </View>
-    )
-  }
-
   return (
-    <View style={styles.root}>
-      <StatusBar style="dark" />
+    <>
+      <AppUpdateManager />
+      {booting ? (
+        <View style={[styles.root, styles.boot]}>
+          <StatusBar style="dark" />
+          <ActivityIndicator size="large" color="#0f766e" />
+        </View>
+      ) : (
+        <View style={styles.root}>
+          <StatusBar style="dark" />
       {!showApp ? (
         <ScrollView contentContainerStyle={styles.login} keyboardShouldPersistTaps="handled">
           <Text style={styles.title}>EFSC-YA</Text>
@@ -719,7 +714,9 @@ export default function App() {
           <SideMenu visible={menuOpen} active={tab} items={navItems} onChange={handleNavChange} onClose={() => setMenuOpen(false)} onLogout={logout} />
         </>
       )}
-    </View>
+        </View>
+      )}
+    </>
   )
 }
 
