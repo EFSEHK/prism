@@ -66,14 +66,20 @@ class SchoolDataSeeder extends Seeder
                 ['section_head_user_id' => null]
             );
 
+            $classSequence = 0;
             foreach ($classes as $className => $sections) {
-                $schoolClass = SchoolClass::query()->firstOrCreate(
-                    ['area_id' => $area->id, 'name' => $className]
+                $classSequence++;
+                $schoolClass = SchoolClass::query()->updateOrCreate(
+                    ['area_id' => $area->id, 'name' => $className],
+                    ['sequence' => $classSequence]
                 );
 
+                $sectionSequence = 0;
                 foreach ($sections as $sectionName) {
-                    Section::query()->firstOrCreate(
-                        ['school_class_id' => $schoolClass->id, 'name' => $sectionName]
+                    $sectionSequence++;
+                    Section::query()->updateOrCreate(
+                        ['school_class_id' => $schoolClass->id, 'name' => $sectionName],
+                        ['sequence' => $sectionSequence]
                     );
                 }
             }

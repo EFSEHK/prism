@@ -10,7 +10,11 @@ class Section extends Model
 {
     use SoftDeletes;
 
-    protected $fillable = ['school_class_id', 'name'];
+    protected $fillable = ['school_class_id', 'name', 'sequence'];
+
+    protected $casts = [
+        'sequence' => 'integer',
+    ];
 
     public function schoolClass(): BelongsTo
     {

@@ -13,7 +13,11 @@ class SchoolClass extends Model
 
     protected $table = 'school_classes';
 
-    protected $fillable = ['area_id', 'name'];
+    protected $fillable = ['area_id', 'name', 'sequence'];
+
+    protected $casts = [
+        'sequence' => 'integer',
+    ];
 
     public function area(): BelongsTo
     {
@@ -22,6 +26,6 @@ class SchoolClass extends Model
 
     public function sections(): HasMany
     {
-        return $this->hasMany(Section::class);
+        return $this->hasMany(Section::class)->orderBy('sequence')->orderBy('name');
     }
 }

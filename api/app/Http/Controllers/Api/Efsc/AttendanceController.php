@@ -295,7 +295,9 @@ class AttendanceController extends Controller
             ->join('school_classes', 'sections.school_class_id', '=', 'school_classes.id')
             ->selectRaw('sections.id as section_id, sections.name as section_name, school_classes.name as class_name, attendance_records.status, COUNT(*) as total')
             ->groupBy('sections.id', 'sections.name', 'school_classes.name', 'attendance_records.status')
+            ->orderBy('school_classes.sequence')
             ->orderBy('school_classes.name')
+            ->orderBy('sections.sequence')
             ->orderBy('sections.name')
             ->get();
 
@@ -322,7 +324,9 @@ class AttendanceController extends Controller
                 )
             )
             ->join('school_classes', 'sections.school_class_id', '=', 'school_classes.id')
+            ->orderBy('school_classes.sequence')
             ->orderBy('school_classes.name')
+            ->orderBy('sections.sequence')
             ->orderBy('sections.name')
             ->select('sections.id', 'sections.name', 'sections.school_class_id')
             ->get();

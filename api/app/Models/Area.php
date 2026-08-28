@@ -25,6 +25,6 @@ class Area extends Model
 
     public function schoolClasses(): HasMany
     {
-        return $this->hasMany(SchoolClass::class);
+        return $this->hasMany(SchoolClass::class)->orderBy('sequence')->orderBy('name');
     }
 }

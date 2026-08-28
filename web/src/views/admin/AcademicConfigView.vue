@@ -94,12 +94,14 @@
         <table v-if="classes.length" class="data-table structure-table">
           <thead>
             <tr>
+              <th class="col-sequence">Seq</th>
               <th>Name</th>
               <th class="col-actions">Actions</th>
             </tr>
           </thead>
           <tbody>
             <tr v-for="c in classes" :key="c.id" class="row-clickable" @click="selectClass(c)">
+              <td class="col-sequence">{{ c.sequence }}</td>
               <td>{{ c.name }}</td>
               <td class="col-actions" @click.stop>
                 <button type="button" class="row-action" @click="openEditClass(c)">Edit</button>
@@ -115,12 +117,14 @@
         <table v-if="sections.length" class="data-table structure-table">
           <thead>
             <tr>
+              <th class="col-sequence">Seq</th>
               <th>Name</th>
               <th class="col-actions">Actions</th>
             </tr>
           </thead>
           <tbody>
             <tr v-for="s in sections" :key="s.id">
+              <td class="col-sequence">{{ s.sequence }}</td>
               <td>{{ s.name }}</td>
               <td class="col-actions">
                 <button type="button" class="row-action" @click="openEditSection(s)">Edit</button>
@@ -182,6 +186,10 @@
 
           <form v-else-if="structureModal === 'class'" class="modal-form" @submit.prevent="submitStructureModal">
             <div class="field">
+              <span class="field-label">Sequence</span>
+              <input v-model.number="classForm.sequence" type="number" min="0" step="1" placeholder="1" />
+            </div>
+            <div class="field">
               <span class="field-label">Class name</span>
               <input v-model="classForm.name" required placeholder="10th" autofocus />
             </div>
@@ -192,6 +200,10 @@
           </form>
 
           <form v-else-if="structureModal === 'section'" class="modal-form" @submit.prevent="submitStructureModal">
+            <div class="field">
+              <span class="field-label">Sequence</span>
+              <input v-model.number="sectionForm.sequence" type="number" min="0" step="1" placeholder="1" />
+            </div>
             <div class="field">
               <span class="field-label">Section name</span>
               <input v-model="sectionForm.name" required placeholder="White" autofocus />
@@ -590,8 +602,8 @@ const structureModalSubmitLabel = computed(() => {
 
 const yearForm = reactive({ name: '', starts_on: '', ends_on: '', is_current: false })
 const areaForm = reactive({ name: '', sectionHeadUserId: '' })
-const classForm = reactive({ name: '' })
-const sectionForm = reactive({ name: '' })
+const classForm = reactive({ name: '', sequence: null })
+const sectionForm = reactive({ name: '', sequence: null })
 const groupForm = reactive({ name: '' })
 const subjectForm = reactive({ name: '', code: '' })
 const studentForm = reactive({
@@ -836,7 +848,9 @@ function resetStructureForms() {
   areaForm.name = ''
   areaForm.sectionHeadUserId = ''
   classForm.name = ''
+  classForm.sequence = null
   sectionForm.name = ''
+  sectionForm.sequence = null
   editingYearId.value = null
   editingAreaId.value = null
   editingClassId.value = null
@@ -872,6 +886,7 @@ function openEditClass(c) {
   resetStructureForms()
   editingClassId.value = c.id
   classForm.name = c.name
+  classForm.sequence = c.sequence ?? null
   structureModal.value = 'class'
 }
 
@@ -879,6 +894,7 @@ function openEditSection(s) {
   resetStructureForms()
   editingSectionId.value = s.id
   sectionForm.name = s.name
+  sectionForm.sequence = s.sequence ?? null
   structureModal.value = 'section'
 }
 
@@ -1015,6 +1031,7 @@ async function createClass() {
     await api.post('/efsc/academic/classes', {
       area_id: Number(structure.areaId),
       name: classForm.name,
+      ...(classForm.sequence != null && classForm.sequence !== '' ? { sequence: Number(classForm.sequence) } : {}),
     })
     await loadClasses()
     closeStructureModal()
@@ -1029,7 +1046,10 @@ async function createClass() {
 async function updateClass() {
   saving.value = true
   try {
-    await api.put(`/efsc/academic/classes/${editingClassId.value}`, { name: classForm.name })
+    await api.put(`/efsc/academic/classes/${editingClassId.value}`, {
+      name: classForm.name,
+      ...(classForm.sequence != null && classForm.sequence !== '' ? { sequence: Number(classForm.sequence) } : {}),
+    })
     await loadClasses()
     closeStructureModal()
     flashOk('Class updated.')
@@ -1062,6 +1082,7 @@ async function createSection() {
     await api.post('/efsc/academic/sections', {
       school_class_id: Number(structure.classId),
       name: sectionForm.name,
+      ...(sectionForm.sequence != null && sectionForm.sequence !== '' ? { sequence: Number(sectionForm.sequence) } : {}),
     })
     await loadSections()
     closeStructureModal()
@@ -1076,7 +1097,10 @@ async function createSection() {
 async function updateSection() {
   saving.value = true
   try {
-    await api.put(`/efsc/academic/sections/${editingSectionId.value}`, { name: sectionForm.name })
+    await api.put(`/efsc/academic/sections/${editingSectionId.value}`, {
+      name: sectionForm.name,
+      ...(sectionForm.sequence != null && sectionForm.sequence !== '' ? { sequence: Number(sectionForm.sequence) } : {}),
+    })
     await loadSections()
     closeStructureModal()
     flashOk('Section updated.')
@@ -1381,6 +1405,13 @@ onMounted(async () => {
 }
 .structure-table .row-clickable {
   cursor: pointer;
+}
+.col-sequence {
+  width: 1%;
+  white-space: nowrap;
+  text-align: center;
+  color: #64748b;
+  font-variant-numeric: tabular-nums;
 }
 .col-actions {
   width: 1%;
