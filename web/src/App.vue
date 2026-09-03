@@ -46,6 +46,8 @@
             </span>
           </button>
           <span class="user-sep" aria-hidden="true" />
+          <RouterLink to="/change-password" class="link">Change password</RouterLink>
+          <span class="user-sep" aria-hidden="true" />
           <button type="button" class="link" @click="logout">Logout</button>
         </div>
       </div>

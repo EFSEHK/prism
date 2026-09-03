@@ -10,6 +10,7 @@ import { useAdminPortal } from '../composables/useAdminPortal'
 import { useModulesStore } from '../stores/modules'
 import LandingView from '../views/LandingView.vue'
 import LoginView from '../views/LoginView.vue'
+import ChangePasswordView from '../views/ChangePasswordView.vue'
 import DashboardView from '../views/DashboardView.vue'
 import ParentHomeView from '../views/ParentHomeView.vue'
 import ChildDashboardView from '../views/ChildDashboardView.vue'
@@ -42,6 +43,7 @@ const router = createRouter({
   routes: [
     { path: '/', component: LandingView, meta: { public: true } },
     { path: '/login', component: LoginView, meta: { guest: true } },
+    { path: '/change-password', component: ChangePasswordView, meta: { public: true } },
     { path: '/home', component: roleView(ParentHomeView, DashboardView), meta: { auth: true } },
     { path: '/dashboard', component: ChildDashboardView, meta: { auth: true, requiresChild: true } },
     { path: '/admin', component: AdminPortalView, meta: { auth: true, adminPortalAccess: true } },

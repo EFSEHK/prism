@@ -1,8 +1,8 @@
 import { useState, useEffect, useCallback, useRef } from 'react'
-import { View, Text, TextInput, ScrollView, StyleSheet, ActivityIndicator, Pressable, Keyboard } from 'react-native'
+import { View, Text, TextInput, ScrollView, StyleSheet, ActivityIndicator, Pressable, Keyboard, Modal, SafeAreaView } from 'react-native'
 import { StatusBar } from 'expo-status-bar'
 import { apiClient, API_DISPLAY, API_BRIDGE_HOST, USES_EMULATOR_API, setAuthToken, setViewAsRole, setViewAsUser, clearViewAs } from './apiClient'
-import SideMenu, { BellIcon, HamburgerIcon, HomeIcon, navItemsForContext, staffNavItemsFromModules } from './components/SideMenu'
+import SideMenu, { BellIcon, HamburgerIcon, HomeIcon } from './components/SideMenu'
 import EyeIcon from './components/EyeIcon'
 import ViewAsPicker from './components/ViewAsPicker'
 import FeatureDashboard from './components/FeatureDashboard'
@@ -10,6 +10,7 @@ import { ParentHomeScreen, HomeworkScreen, MarksScreen, AttendanceScreen, StaffA
 import { ApprovalsScreen, UsersScreen, PermissionsScreen } from './screens/StaffModuleScreens'
 import ConfigurationScreen from './screens/ConfigurationScreen'
 import NavigationErrorBoundary from './components/NavigationErrorBoundary'
+import ChangePasswordScreen from './screens/ChangePasswordScreen'
 import { childName, formatError } from './utils/format'
 import { ui } from './components/ui'
 import AppUpdateManager from './components/AppUpdateManager'
@@ -24,9 +25,14 @@ function isRootTab(id) {
 const DASHBOARD_INCLUDE = 'homework,timetable,marks,broadcasts,fees,online_classes,leave,datesheet,notifications'
 
 export default function App() {
-  const [email, setEmail] = useState('parent@efsc-ya.com')
-  const [password, setPassword] = useState('Test.123')
+  const [email, setEmail] = useState('')
+  const [password, setPassword] = useState('')
   const [showPassword, setShowPassword] = useState(false)
+  const [changePasswordOpen, setChangePasswordOpen] = useState(false)
+  const [currentPassword, setCurrentPassword] = useState('')
+  const [newPassword, setNewPassword] = useState('')
+  const [confirmPassword, setConfirmPassword] = useState('')
+  const [changePasswordSuccess, setChangePasswordSuccess] = useState('')
   const [token, setToken] = useState('')
   const [user, setUser] = useState(null)
   const [dashboard, setDashboard] = useState(null)
@@ -288,6 +294,52 @@ export default function App() {
     await refreshModulesSafe()
   }
 
+  function openChangePassword() {
+    if (user?.email) setEmail(user.email)
+    setErr('')
+    setChangePasswordSuccess('')
+    setChangePasswordOpen(true)
+  }
+
+  function closeChangePassword() {
+    setChangePasswordOpen(false)
+    setCurrentPassword('')
+    setNewPassword('')
+    setConfirmPassword('')
+    setChangePasswordSuccess('')
+    setErr('')
+  }
+
+  async function changePassword(options = {}) {
+    if (options.clientError) {
+      setErr(options.clientError)
+      setChangePasswordSuccess('')
+      return
+    }
+
+    Keyboard.dismiss()
+    setErr('')
+    setChangePasswordSuccess('')
+    setLoading(true)
+    try {
+      const { data } = await apiClient.post('/change-password', {
+        email: String(email || '').trim(),
+        current_password: String(currentPassword || '').trim(),
+        password: String(newPassword || ''),
+        password_confirmation: String(confirmPassword || ''),
+      })
+      setChangePasswordSuccess(data?.message || 'Password updated successfully.')
+      setCurrentPassword('')
+      setNewPassword('')
+      setConfirmPassword('')
+      setPassword('')
+    } catch (e) {
+      setErr(formatError(e))
+    } finally {
+      setLoading(false)
+    }
+  }
+
   async function login() {
     Keyboard.dismiss()
     setErr('')
@@ -385,14 +437,6 @@ export default function App() {
     loadDashboard().catch(() => {})
   }
 
-  function handleNavChange(id) {
-    if (id === 'home' && selectedChild) {
-      switchChild()
-      return
-    }
-    selectFeatureSafe(id)
-  }
-
   function openNotificationsFromHeader() {
     setMenuOpen(false)
     selectFeatureSafe('notifications')
@@ -409,8 +453,7 @@ export default function App() {
   const attendanceEnabled = isCatalogLive(modules, 'attendance')
   const showApp = token && !err && (isLearnerRole ? !!dashboard : true)
   const hasSelectedChild = Boolean(selectedChild)
-  const navItems = isStaffRole ? staffNavItemsFromModules(modules) : navItemsForContext(hasSelectedChild, false, isStudentRole, moduleEnabledIds, comingSoonIds)
-  const activeLabel = navItems.find((item) => item.id === tab)?.label ?? 'Home'
+  const activeLabel = tab === 'dashboard' || tab === 'home' ? 'Home' : 'EFSC-YA'
   const children = dashboard?.children ?? []
   const learnerChild = selectedChild || (isStudentRole ? (children[0] ?? null) : null)
   const headerSubtitle = activeLabel
@@ -711,17 +754,46 @@ export default function App() {
               {renderTab()}
             </NavigationErrorBoundary>
           </View>
-          <SideMenu visible={menuOpen} active={tab} items={navItems} onChange={handleNavChange} onClose={() => setMenuOpen(false)} onLogout={logout} />
+          <SideMenu
+            visible={menuOpen}
+            onClose={() => setMenuOpen(false)}
+            onChangePassword={() => {
+              setMenuOpen(false)
+              openChangePassword()
+            }}
+            onLogout={logout}
+          />
         </>
       )}
         </View>
       )}
+      <Modal visible={changePasswordOpen} animationType="slide" onRequestClose={closeChangePassword}>
+        <SafeAreaView style={styles.changePasswordModal}>
+          <ChangePasswordScreen
+            email={email}
+            onEmailChange={setEmail}
+            currentPassword={currentPassword}
+            onCurrentPasswordChange={setCurrentPassword}
+            newPassword={newPassword}
+            onNewPasswordChange={setNewPassword}
+            confirmPassword={confirmPassword}
+            onConfirmPasswordChange={setConfirmPassword}
+            loading={loading}
+            err={err}
+            success={changePasswordSuccess}
+            onSubmit={changePassword}
+            onBack={closeChangePassword}
+            backLabel={showApp ? 'Close' : 'Back to login'}
+          />
+        </SafeAreaView>
+      </Modal>
     </>
   )
 }
 
 const styles = StyleSheet.create({
   root: { flex: 1, backgroundColor: '#f8fafc' },
+  changePasswordModal: { flex: 1, backgroundColor: '#f8fafc' },
   boot: { alignItems: 'center', justifyContent: 'center' },
   login: { padding: 20, paddingTop: 48, paddingBottom: 40 },
   title: { fontSize: 24, fontWeight: '700', marginBottom: 8 },

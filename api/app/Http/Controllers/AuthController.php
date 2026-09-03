@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\User;
+use App\Rules\StrongPassword;
 use App\Support\LoginIdentifier;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -106,6 +107,36 @@ class AuthController extends Controller
                 'error' => $e->getMessage()
             ], 500);
         }
+    }
+
+    public function changePassword(Request $request)
+    {
+        $rawIdentifier = trim((string) $request->input('email', ''));
+        $email = LoginIdentifier::resolveEmail($rawIdentifier);
+
+        $request->validate([
+            'email' => 'required|string|max:255',
+            'current_password' => 'required|string',
+            'password' => ['required', 'string', 'confirmed', new StrongPassword($rawIdentifier, $email)],
+        ]);
+
+        $currentPassword = trim((string) $request->input('current_password'));
+        $newPassword = (string) $request->input('password');
+
+        $user = User::where('email', $email)->first();
+
+        if (! $user && str_contains($rawIdentifier, '@')) {
+            $user = User::where('email', strtolower($rawIdentifier))->first();
+        }
+
+        if (! $user || ! Hash::check($currentPassword, $user->password)) {
+            return response()->json(['message' => 'Current password is incorrect.'], 401);
+        }
+
+        $user->password = $newPassword;
+        $user->save();
+
+        return response()->json(['message' => 'Password updated successfully.']);
     }
 
     public function logout(Request $request)
