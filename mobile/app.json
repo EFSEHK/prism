@@ -2,12 +2,10 @@
   "expo": {
     "name": "EFSC-YA",
     "slug": "EFSC-YA-school",
-    "version": "1.0.2",
+    "version": "1.0.3",
     "orientation": "portrait",
     "userInterfaceStyle": "light",
-    "assetBundlePatterns": [
-      "**/*"
-    ],
+    "assetBundlePatterns": ["**/*"],
     "runtimeVersion": {
       "policy": "appVersion"
     },
@@ -22,19 +20,15 @@
     },
     "android": {
       "package": "com.school.efscya",
-      "versionCode": 3,
+      "versionCode": 4,
       "usesCleartextTraffic": true,
-      "permissions": [
-        "REQUEST_INSTALL_PACKAGES"
-      ]
+      "permissions": ["REQUEST_INSTALL_PACKAGES"]
     },
     "web": {
       "bundler": "metro",
       "output": "single"
     },
-    "plugins": [
-      "expo-asset"
-    ],
+    "plugins": ["expo-asset"],
     "extra": {
       "apiUrl": "https://sap-api.innovisiq.com/api"
     }
