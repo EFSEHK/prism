@@ -67,6 +67,7 @@
 @section('content')
     <div class="page">
         <div class="panel">
+            <img class="app-logo app-logo-lg" src="{{ asset('logo.png') }}" alt="{{ config('app.name') }} logo" width="72" height="72">
             <div class="eyebrow">Local development</div>
             <h1>{{ config('app.name') }} API</h1>
             <p class="lead">

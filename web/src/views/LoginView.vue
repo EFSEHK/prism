@@ -2,6 +2,7 @@
   <div class="login-page">
     <div class="login-card">
       <header class="login-header">
+        <img class="login-logo" src="/logo.png" alt="EFSC-YA logo" width="72" height="72" />
         <h1>EFSC-YA</h1>
         <p class="subtitle">School platform — sign in</p>
       </header>
@@ -122,6 +123,15 @@ async function submit() {
 .login-header {
   margin-bottom: 1.75rem;
   text-align: center;
+}
+
+.login-logo {
+  display: block;
+  width: 72px;
+  height: 72px;
+  margin: 0 auto 0.85rem;
+  border-radius: 16px;
+  object-fit: contain;
 }
 
 .login-header h1 {

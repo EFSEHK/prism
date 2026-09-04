@@ -45,6 +45,7 @@
 @section('content')
     <div class="page">
         <div class="panel">
+            <img class="app-logo app-logo-lg" src="{{ asset('logo.png') }}" alt="{{ config('app.name') }} logo" width="72" height="72">
             <h1>Developer portal</h1>
             <p>Restricted access for <strong>developer</strong> and <strong>superadmin</strong> accounts only.</p>
 

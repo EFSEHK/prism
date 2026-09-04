@@ -4,7 +4,13 @@
     "slug": "EFSC-YA-school",
     "version": "1.0.3",
     "orientation": "portrait",
+    "icon": "./assets/icon.png",
     "userInterfaceStyle": "light",
+    "splash": {
+      "image": "./assets/splash.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#ffffff"
+    },
     "assetBundlePatterns": ["**/*"],
     "runtimeVersion": {
       "policy": "appVersion"
@@ -16,17 +22,24 @@
     },
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "com.school.efscya"
+      "bundleIdentifier": "com.school.efscya",
+      "icon": "./assets/icon.png"
     },
     "android": {
       "package": "com.school.efscya",
       "versionCode": 4,
       "usesCleartextTraffic": true,
-      "permissions": ["REQUEST_INSTALL_PACKAGES"]
+      "permissions": ["REQUEST_INSTALL_PACKAGES"],
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/adaptive-icon.png",
+        "backgroundColor": "#ffffff"
+      },
+      "icon": "./assets/icon.png"
     },
     "web": {
       "bundler": "metro",
-      "output": "single"
+      "output": "single",
+      "favicon": "./assets/icon.png"
     },
     "plugins": ["expo-asset"],
     "extra": {

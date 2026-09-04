@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from 'react'
-import { View, Text, TextInput, ScrollView, StyleSheet, ActivityIndicator, Pressable, Keyboard, Modal, SafeAreaView } from 'react-native'
+import { View, Text, TextInput, ScrollView, StyleSheet, ActivityIndicator, Pressable, Keyboard, Modal, SafeAreaView, Image } from 'react-native'
 import { StatusBar } from 'expo-status-bar'
 import { apiClient, API_DISPLAY, API_BRIDGE_HOST, USES_EMULATOR_API, setAuthToken, setViewAsRole, setViewAsUser, clearViewAs } from './apiClient'
 import SideMenu, { BellIcon, HamburgerIcon, HomeIcon } from './components/SideMenu'
@@ -23,6 +23,7 @@ function isRootTab(id) {
 }
 
 const DASHBOARD_INCLUDE = 'homework,timetable,marks,broadcasts,fees,online_classes,leave,datesheet,notifications'
+const appLogo = require('./assets/logo.png')
 
 export default function App() {
   const [email, setEmail] = useState('')
@@ -658,6 +659,7 @@ export default function App() {
       {booting ? (
         <View style={[styles.root, styles.boot]}>
           <StatusBar style="dark" />
+          <Image source={appLogo} style={styles.bootLogo} resizeMode="contain" accessibilityLabel="EFSC-YA logo" />
           <ActivityIndicator size="large" color="#0f766e" />
         </View>
       ) : (
@@ -665,6 +667,7 @@ export default function App() {
           <StatusBar style="dark" />
       {!showApp ? (
         <ScrollView contentContainerStyle={styles.login} keyboardShouldPersistTaps="handled">
+          <Image source={appLogo} style={styles.loginLogo} resizeMode="contain" accessibilityLabel="EFSC-YA logo" />
           <Text style={styles.title}>EFSC-YA</Text>
           <Text style={styles.hint}>API: {API_DISPLAY}</Text>
           {API_BRIDGE_HOST ? <Text style={styles.hint}>LAN: {API_BRIDGE_HOST}</Text> : null}
@@ -707,7 +710,10 @@ export default function App() {
               <HomeIcon />
             </Pressable>
             <View style={styles.headerCenter}>
-              <Text style={styles.headerTitle}>EFSC-YA</Text>
+              <View style={styles.headerBrand}>
+                <Image source={appLogo} style={styles.headerLogo} resizeMode="contain" accessibilityLabel="EFSC-YA logo" />
+                <Text style={styles.headerTitle}>EFSC-YA</Text>
+              </View>
               <Text style={styles.headerSubtitle}>{headerSubtitle}</Text>
             </View>
             <View style={styles.headerRight}>
@@ -795,7 +801,9 @@ const styles = StyleSheet.create({
   root: { flex: 1, backgroundColor: '#f8fafc' },
   changePasswordModal: { flex: 1, backgroundColor: '#f8fafc' },
   boot: { alignItems: 'center', justifyContent: 'center' },
+  bootLogo: { width: 88, height: 88, borderRadius: 20, marginBottom: 20 },
   login: { padding: 20, paddingTop: 48, paddingBottom: 40 },
+  loginLogo: { width: 88, height: 88, borderRadius: 20, marginBottom: 12 },
   title: { fontSize: 24, fontWeight: '700', marginBottom: 8 },
   hint: { fontSize: 11, color: '#64748b', marginBottom: 4 },
   warn: { fontSize: 11, color: '#b45309', marginBottom: 12 },
@@ -863,6 +871,16 @@ const styles = StyleSheet.create({
   },
   headerCenter: {
     flex: 1
+  },
+  headerBrand: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8
+  },
+  headerLogo: {
+    width: 28,
+    height: 28,
+    borderRadius: 7
   },
   headerTitle: { fontSize: 18, fontWeight: '700', color: '#0f172a' },
   headerSubtitle: { fontSize: 12, color: '#64748b', marginTop: 2 },

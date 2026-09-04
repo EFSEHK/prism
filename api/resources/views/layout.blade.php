@@ -4,6 +4,9 @@
         <meta charset="utf-8">
         <meta name="viewport" content="width=device-width, initial-scale=1">
         <title>@yield('title', config('app.name', 'LASK'))</title>
+        <link rel="icon" href="{{ asset('favicon.ico') }}" sizes="any">
+        <link rel="icon" type="image/png" href="{{ asset('logo-64.png') }}">
+        <link rel="apple-touch-icon" href="{{ asset('logo-192.png') }}">
         <link rel="preconnect" href="https://fonts.bunny.net">
         <link href="https://fonts.bunny.net/css?family=instrument-sans:400,500,600,700" rel="stylesheet" />
         <script>
@@ -125,6 +128,27 @@
 
             .theme-toggle {
                 min-width: 148px;
+            }
+
+            .app-logo {
+                display: block;
+                width: 56px;
+                height: 56px;
+                object-fit: contain;
+                border-radius: 14px;
+            }
+
+            .app-logo-sm {
+                width: 40px;
+                height: 40px;
+                border-radius: 12px;
+            }
+
+            .app-logo-lg {
+                width: 72px;
+                height: 72px;
+                border-radius: 18px;
+                margin-bottom: 16px;
             }
         </style>
         @yield('styles')

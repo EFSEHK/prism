@@ -49,7 +49,10 @@
     <div class="page">
         <div class="panel">
             <div class="header">
-                <h1>Release settings</h1>
+                <div style="display:flex;align-items:center;gap:12px;">
+                    <img class="app-logo app-logo-sm" src="{{ asset('logo.png') }}" alt="{{ config('app.name') }} logo" width="40" height="40">
+                    <h1>Release settings</h1>
+                </div>
                 <div class="actions">
                     <a href="{{ route('dashboard') }}" class="button button-secondary">Dashboard</a>
                     <a href="{{ route('welcome') }}" class="button button-secondary">Welcome page</a>

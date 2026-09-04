@@ -2,7 +2,10 @@
   <div class="app">
     <header v-if="auth.token" class="top">
       <div class="top-bar">
-        <span class="brand">EFSC-YA</span>
+        <span class="brand">
+          <img class="brand-logo" src="/logo-64.png" alt="" width="28" height="28" />
+          EFSC-YA
+        </span>
         <div class="user-actions">
           <span v-if="displayName" class="user-name">{{ displayName }}</span>
           <template v-if="isImpersonating">
@@ -326,6 +329,16 @@ async function switchChild() {
 }
 .brand {
   font-weight: 700;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+.brand-logo {
+  width: 28px;
+  height: 28px;
+  border-radius: 7px;
+  object-fit: contain;
+  background: #fff;
 }
 .user-actions {
   display: flex;

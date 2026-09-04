@@ -12,8 +12,45 @@ $appJson = Get-Content (Join-Path $mobile 'app.json') -Raw | ConvertFrom-Json
 $version = [string]$appJson.expo.version
 if (-not $version) { throw 'app.json expo.version is missing' }
 
+$versionCode = [int]$appJson.expo.android.versionCode
+if (-not $versionCode -or $versionCode -lt 1) {
+    throw 'app.json expo.android.versionCode is missing or invalid'
+}
+
 $apkName = "sap-efsc-$version.apk"
 $prodUrl = 'https://sap-api.innovisiq.com/api'
+$gradleFile = Join-Path $android 'app\build.gradle'
+
+function Sync-GradleVersion {
+    # Gradle reads versionCode/versionName from build.gradle, not app.json.
+    # Keep them in sync so uploaded APKs match /api/mobile/version.
+    if (-not (Test-Path $gradleFile)) {
+        throw "Missing $gradleFile - run expo prebuild first"
+    }
+
+    $lines = Get-Content $gradleFile
+    $foundCode = $false
+    $foundName = $false
+    $updated = foreach ($line in $lines) {
+        if ($line -match '^\s*versionCode\s+\d+\s*$') {
+            $foundCode = $true
+            $line -replace 'versionCode\s+\d+', "versionCode $versionCode"
+        }
+        elseif ($line -match '^\s*versionName\s+".*"\s*$') {
+            $foundName = $true
+            $line -replace 'versionName\s+".*"', "versionName `"$version`""
+        }
+        else {
+            $line
+        }
+    }
+
+    if (-not $foundCode) { throw "versionCode not found in build.gradle" }
+    if (-not $foundName) { throw "versionName not found in build.gradle" }
+
+    Set-Content -Path $gradleFile -Value $updated
+    Write-Host "Synced build.gradle -> versionName=$version versionCode=$versionCode"
+}
 
 $env:JAVA_HOME = 'C:\Program Files\Android\Android Studio\jbr'
 $env:ANDROID_HOME = Join-Path $env:LOCALAPPDATA 'Android\Sdk'
@@ -53,7 +90,9 @@ function Clear-JsBundleCache {
 try {
     Write-Host "======== Building $apkName ========"
     Write-Host "EXPO_PUBLIC_API_URL=$prodUrl"
-    Write-Host "version=$version"
+    Write-Host "version=$version versionCode=$versionCode"
+
+    Sync-GradleVersion
 
     if (Test-Path $envDev) { Move-Item $envDev $envDevBak -Force }
     $env:EXPO_PUBLIC_API_URL = $prodUrl
@@ -84,6 +123,27 @@ try {
     Copy-Item $apkSrc $dest -Force
     $size = (Get-Item $dest).Length
     Write-Host "Copied -> $dest ($size bytes)"
+
+    $buildTools = Get-ChildItem (Join-Path $env:LOCALAPPDATA 'Android\Sdk\build-tools') -Directory -ErrorAction SilentlyContinue |
+        Sort-Object Name -Descending |
+        Select-Object -First 1
+    if ($buildTools) {
+        $aapt = Join-Path $buildTools.FullName 'aapt.exe'
+        if (Test-Path $aapt) {
+            $badging = & $aapt dump badging $dest 2>$null | Select-String "versionCode='(\d+)' versionName='([^']*)'"
+            if ($badging) {
+                $apkCode = [int]$badging.Matches[0].Groups[1].Value
+                $apkNameVersion = $badging.Matches[0].Groups[2].Value
+                Write-Host "APK badging -> versionName=$apkNameVersion versionCode=$apkCode"
+                if ($apkCode -ne $versionCode) {
+                    throw "APK versionCode $apkCode does not match app.json versionCode $versionCode"
+                }
+                if ($apkNameVersion -ne $version) {
+                    throw "APK versionName $apkNameVersion does not match app.json version $version"
+                }
+            }
+        }
+    }
 }
 finally {
     Restore-EnvFiles

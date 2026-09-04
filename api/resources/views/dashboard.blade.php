@@ -33,14 +33,10 @@
         .brand-mark {
             width: 48px;
             height: 48px;
-            display: grid;
-            place-items: center;
             border-radius: 16px;
-            background: linear-gradient(135deg, #2563eb, #0f766e);
-            color: #fff;
-            font-weight: 700;
-            letter-spacing: 0.08em;
+            object-fit: contain;
             box-shadow: var(--shadow);
+            background: #fff;
         }
 
         .brand-copy h1 {
@@ -283,7 +279,7 @@
     <div class="page">
         <header class="header">
             <div class="brand">
-                <div class="brand-mark">LS</div>
+                <img class="brand-mark" src="{{ asset('logo.png') }}" alt="{{ config('app.name', 'LASK') }} logo" width="48" height="48">
                 <div class="brand-copy">
                     <h1>{{ config('app.name', 'LASK') }} Dashboard</h1>
                     <p>Quick access to your observability tools and live Laravel/MySQL stats.</p>

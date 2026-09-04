@@ -1,6 +1,7 @@
 <template>
   <div class="admin-portal">
     <header class="portal-hero">
+      <img class="portal-logo" src="/logo-64.png" alt="" width="40" height="40" />
       <p class="portal-kicker">EFSC-YA</p>
       <h1>Administration portal</h1>
       <p class="portal-lead">
@@ -50,6 +51,15 @@ const { visibleLinks } = useAdminPortal()
   padding: 1.75rem 1.5rem 1.5rem;
   margin-bottom: 1.5rem;
   box-shadow: 0 8px 24px rgb(0 0 0 / 0.12);
+}
+
+.portal-logo {
+  width: 40px;
+  height: 40px;
+  border-radius: 10px;
+  object-fit: contain;
+  background: #fff;
+  margin-bottom: 0.75rem;
 }
 
 .portal-kicker {

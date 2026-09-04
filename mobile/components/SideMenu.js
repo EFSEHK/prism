@@ -1,5 +1,7 @@
-import { View, Text, Pressable, StyleSheet, Modal } from 'react-native'
+import { View, Text, Pressable, StyleSheet, Modal, Image } from 'react-native'
 import Svg, { Path } from 'react-native-svg'
+
+const appLogo = require('../assets/logo.png')
 
 export function HamburgerIcon({ color = '#0f172a' }) {
   return (
@@ -66,7 +68,10 @@ export default function SideMenu({ visible, onClose, onChangePassword, onLogout 
       <View style={styles.overlay}>
         <Pressable style={styles.backdrop} onPress={onClose} accessibilityLabel="Close menu" />
         <View style={styles.drawer}>
-          <Text style={styles.drawerTitle}>Menu</Text>
+          <View style={styles.drawerHeader}>
+            <Image source={appLogo} style={styles.drawerLogo} resizeMode="contain" accessibilityLabel="EFSC-YA logo" />
+            <Text style={styles.drawerTitle}>Menu</Text>
+          </View>
           {onChangePassword ? (
             <Pressable onPress={handleChangePassword} style={styles.item}>
               <Text style={styles.label}>Change password</Text>
@@ -103,14 +108,26 @@ const styles = StyleSheet.create({
     borderLeftWidth: 1,
     borderLeftColor: '#e2e8f0',
   },
+  drawerHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    paddingHorizontal: 20,
+    marginBottom: 12,
+  },
+  drawerLogo: {
+    width: 32,
+    height: 32,
+    borderRadius: 8,
+  },
   drawerTitle: {
     fontSize: 13,
     fontWeight: '700',
     color: '#64748b',
     textTransform: 'uppercase',
     letterSpacing: 0.8,
-    paddingHorizontal: 20,
-    marginBottom: 12,
+    marginBottom: 0,
+    paddingHorizontal: 0,
   },
   menuSeparator: {
     borderTopWidth: 1,

@@ -1,7 +1,7 @@
 <template>
   <div class="landing">
     <section class="hero-panel">
-      <div class="brand-mark">EF</div>
+      <img class="brand-mark" src="/logo.png" alt="EFSC-YA logo" width="56" height="56" />
       <div class="eyebrow">Elementary Foundation School Chakwal — Youth Academy</div>
       <h1 class="headline">EFSC-YA School Portal</h1>
       <p class="subtitle">
@@ -114,14 +114,11 @@ onMounted(async () => {
 .brand-mark {
   width: 56px;
   height: 56px;
-  display: grid;
-  place-items: center;
+  display: block;
   border-radius: 18px;
-  background: linear-gradient(135deg, #2563eb, #0f766e);
-  color: #fff;
-  font-weight: 700;
-  font-size: 1.1rem;
+  object-fit: contain;
   margin-bottom: 22px;
+  background: #fff;
 }
 
 .eyebrow {
