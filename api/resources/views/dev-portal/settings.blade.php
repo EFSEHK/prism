@@ -41,6 +41,26 @@
         .error-list { background: var(--error-bg); border: 1px solid var(--error-border); color: var(--error-text); }
         .current-file { margin-top: 8px; font-size: 0.9rem; color: var(--muted); }
         .current-file a { color: var(--primary); text-decoration: underline; }
+        .current-release {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px 18px;
+            align-items: center;
+            margin: 0 0 18px;
+            padding: 14px 16px;
+            border-radius: 14px;
+            border: 1px solid var(--info-border);
+            background: var(--info-bg);
+            color: var(--info-text);
+            font-size: 0.95rem;
+        }
+        .current-release strong { font-weight: 700; }
+        .current-release code {
+            padding: 2px 8px;
+            border-radius: 8px;
+            background: var(--soft-badge);
+            color: var(--text);
+        }
         @media (max-width: 720px) { .grid { grid-template-columns: 1fr; } }
     </style>
 @endsection
@@ -86,6 +106,18 @@
                 </div>
 
                 <h2 class="section-title">Android</h2>
+                <div class="current-release">
+                    <span>Current uploaded version:</span>
+                    <span>
+                        <strong>{{ $settings->android_version }}</strong>
+                        <code>code {{ $settings->android_version_code }}</code>
+                    </span>
+                    @if ($androidApkUrl)
+                        <a href="{{ $androidApkUrl }}" target="_blank" rel="noopener">Download APK</a>
+                    @else
+                        <span style="opacity:0.8;">No APK uploaded</span>
+                    @endif
+                </div>
                 <div class="grid">
                     <div class="field">
                         <label for="android_version">Version name</label>

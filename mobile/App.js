@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react'
 import { View, Text, TextInput, ScrollView, StyleSheet, ActivityIndicator, Pressable, Keyboard, Modal, SafeAreaView, Image } from 'react-native'
 import { StatusBar } from 'expo-status-bar'
+import * as Application from 'expo-application'
 import { apiClient, API_DISPLAY, API_BRIDGE_HOST, USES_EMULATOR_API, setAuthToken, setViewAsRole, setViewAsUser, clearViewAs } from './apiClient'
 import SideMenu, { BellIcon, HamburgerIcon, HomeIcon } from './components/SideMenu'
 import EyeIcon from './components/EyeIcon'
@@ -24,6 +25,11 @@ function isRootTab(id) {
 
 const DASHBOARD_INCLUDE = 'homework,timetable,marks,broadcasts,fees,online_classes,leave,datesheet,notifications'
 const appLogo = require('./assets/logo.png')
+const APP_VERSION = Application.nativeApplicationVersion
+  ? Application.nativeBuildVersion
+    ? `v${Application.nativeApplicationVersion} (${Application.nativeBuildVersion})`
+    : `v${Application.nativeApplicationVersion}`
+  : null
 
 export default function App() {
   const [email, setEmail] = useState('')
@@ -669,6 +675,7 @@ export default function App() {
         <ScrollView contentContainerStyle={styles.login} keyboardShouldPersistTaps="handled">
           <Image source={appLogo} style={styles.loginLogo} resizeMode="contain" accessibilityLabel="EFSC-YA logo" />
           <Text style={styles.title}>EFSC-YA</Text>
+          {APP_VERSION ? <Text style={styles.version}>Android {APP_VERSION}</Text> : null}
           <Text style={styles.hint}>API: {API_DISPLAY}</Text>
           {API_BRIDGE_HOST ? <Text style={styles.hint}>LAN: {API_BRIDGE_HOST}</Text> : null}
           {USES_EMULATOR_API ? <Text style={styles.warn}>Emulator fallback (10.0.2.2). On a real phone set EXPO_PUBLIC_API_LAN_IP and rebuild the APK.</Text> : null}
@@ -805,6 +812,7 @@ const styles = StyleSheet.create({
   login: { padding: 20, paddingTop: 48, paddingBottom: 40 },
   loginLogo: { width: 88, height: 88, borderRadius: 20, marginBottom: 12 },
   title: { fontSize: 24, fontWeight: '700', marginBottom: 8 },
+  version: { fontSize: 13, color: '#64748b', marginBottom: 10 },
   hint: { fontSize: 11, color: '#64748b', marginBottom: 4 },
   warn: { fontSize: 11, color: '#b45309', marginBottom: 12 },
   label: { fontSize: 14, color: '#334155', marginBottom: 4 },
