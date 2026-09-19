@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback, useRef } from 'react'
 import { View, Text, TextInput, ScrollView, StyleSheet, ActivityIndicator, Pressable, Keyboard, Modal, SafeAreaView, Image, Platform } from 'react-native'
 import { StatusBar } from 'expo-status-bar'
 import * as Application from 'expo-application'
-import { apiClient, API_DISPLAY, API_BRIDGE_HOST, USES_EMULATOR_API, setAuthToken, setViewAsRole, setViewAsUser, clearViewAs } from './apiClient'
+import { apiClient, API_DISPLAY, API_BRIDGE_HOST, USES_EMULATOR_API, setAuthToken, setViewAsRole, setViewAsUser, clearViewAs, setOnUnauthorized } from './apiClient'
 import SideMenu, { BellIcon, HamburgerIcon, HomeIcon } from './components/SideMenu'
 import EyeIcon from './components/EyeIcon'
 import ViewAsPicker from './components/ViewAsPicker'
@@ -421,6 +421,33 @@ export default function App() {
     setMenuOpen(false)
     setErr('')
   }
+
+  // Expired / invalid token → drop back to login (e.g. after switching API host).
+  useEffect(() => {
+    let clearing = false
+    setOnUnauthorized(() => {
+      if (clearing) return
+      clearing = true
+      setAuthToken('')
+      clearViewAs()
+      clearSession().finally(() => {
+        setToken('')
+        setUser(null)
+        setDashboard(null)
+        setSelectedChild(null)
+        setModules([])
+        setViewAsRoleState('')
+        setViewAsOptions([])
+        setViewAsUsers([])
+        setImpersonateUser(null)
+        resetNavigation('home')
+        setMenuOpen(false)
+        setErr('Session expired. Log in again.')
+        clearing = false
+      })
+    })
+    return () => setOnUnauthorized(null)
+  }, [])
 
   async function selectChild(child) {
     setLoading(true)

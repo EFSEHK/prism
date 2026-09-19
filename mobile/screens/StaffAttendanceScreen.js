@@ -120,20 +120,24 @@ function Picker({ label, value, options, onChange, disabled }) {
   return (
     <View style={[styles.pickerWrap, disabled && styles.disabled]}>
       <Text style={styles.label}>{label}</Text>
-      <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.chipRow}>
-        {options.map((opt) => (
-          <Pressable
-            key={String(opt.id)}
-            onPress={() => !disabled && onChange(String(opt.id))}
-            style={[styles.chip, value === String(opt.id) && styles.chipActive]}
-            disabled={disabled}
-          >
-            <Text style={[styles.chipText, value === String(opt.id) && styles.chipTextActive]}>
-              {opt.name}
-            </Text>
-          </Pressable>
-        ))}
-      </ScrollView>
+      {!options.length ? (
+        <Text style={styles.hint}>None available</Text>
+      ) : (
+        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.chipRow}>
+          {options.map((opt) => (
+            <Pressable
+              key={String(opt.id)}
+              onPress={() => !disabled && onChange(String(opt.id))}
+              style={[styles.chip, value === String(opt.id) && styles.chipActive]}
+              disabled={disabled}
+            >
+              <Text style={[styles.chipText, value === String(opt.id) && styles.chipTextActive]}>
+                {opt.name}
+              </Text>
+            </Pressable>
+          ))}
+        </ScrollView>
+      )}
     </View>
   )
 }
@@ -279,11 +283,24 @@ function MarkTab({ areas, classes, sections }) {
 
       {students.map((s, index) => (
         <View key={s.id} style={styles.studentBlock}>
-          <Text style={styles.studentName}>
-            {index + 1}. {s.roll_no ? `${s.roll_no} · ` : ''}
-            {s.first_name} {s.last_name}
-          </Text>
-          {s.father_name ? <Text style={styles.meta}>Father: {s.father_name}</Text> : null}
+          <View style={styles.studentHeader}>
+            <View style={styles.serialBadge}>
+              <Text style={styles.serialBadgeText}>{index + 1}</Text>
+            </View>
+            <View style={styles.studentInfo}>
+              <Text style={styles.studentName} numberOfLines={1}>
+                {s.first_name} {s.last_name}
+              </Text>
+              <Text style={styles.studentMeta} numberOfLines={1}>
+                {[
+                  s.roll_no ? `Roll ${s.roll_no}` : null,
+                  s.father_name ? `Father: ${s.father_name}` : null,
+                ]
+                  .filter(Boolean)
+                  .join(' · ') || 'No roll no'}
+              </Text>
+            </View>
+          </View>
           <View style={styles.statusRow}>
             {ATTENDANCE_STATUSES.map((opt) => {
               const active = (statuses[s.id] || 'present') === opt.value
@@ -747,7 +764,8 @@ function SummaryTab({ areas, classes, sections }) {
           {rows.map((row) => (
             <Card
               key={row.student_id}
-              title={`${row.roll_no ? `${row.roll_no} · ` : ''}${row.first_name} ${row.last_name}`}
+              title={`${row.first_name} ${row.last_name}`}
+              meta={row.roll_no ? `Roll ${row.roll_no}` : undefined}
               sub={`Present ${row.present} · Absent ${row.absent} · Leave ${row.leave}`}
             />
           ))}
@@ -915,12 +933,25 @@ const styles = StyleSheet.create({
   btnSecondaryText: { color: '#334155' },
   actionRow: { flexDirection: 'row', gap: 8 },
   studentBlock: {
-    paddingVertical: 10,
+    paddingVertical: 12,
     borderBottomWidth: 1,
     borderBottomColor: '#f1f5f9',
   },
+  studentHeader: { flexDirection: 'row', alignItems: 'flex-start', gap: 10 },
+  serialBadge: {
+    minWidth: 28,
+    height: 28,
+    borderRadius: 8,
+    backgroundColor: '#f1f5f9',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 6,
+  },
+  serialBadgeText: { fontSize: 12, fontWeight: '700', color: '#64748b' },
+  studentInfo: { flex: 1, minWidth: 0 },
   studentName: { fontSize: 15, color: '#0f172a', fontWeight: '600' },
-  statusRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 6, marginTop: 8 },
+  studentMeta: { fontSize: 12, color: '#64748b', marginTop: 2 },
+  statusRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 6, marginTop: 8, marginLeft: 38 },
   statusChip: {
     paddingHorizontal: 10,
     paddingVertical: 6,

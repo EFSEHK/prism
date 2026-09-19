@@ -72,6 +72,43 @@ class AimsImportTest extends TestCase
         $this->assertSame(1, DataImportLog::query()->count());
     }
 
+    public function test_students_csv_import_accepts_aims_native_headers(): void
+    {
+        $year = AcademicYear::query()->create([
+            'name' => '2026-27',
+            'starts_on' => '2026-04-01',
+            'ends_on' => '2027-03-31',
+            'is_current' => true,
+        ]);
+        $area = Area::query()->create(['academic_year_id' => $year->id, 'name' => 'Boys']);
+        $schoolClass = SchoolClass::query()->create(['area_id' => $area->id, 'name' => '6TH', 'grade_level' => '6TH']);
+        $section = Section::query()->create(['school_class_id' => $schoolClass->id, 'name' => 'GREEN']);
+        StudyGroup::query()->create(['name' => '6TH GREEN BOYS']);
+
+        $user = User::factory()->create();
+        $user->assignRole('accountant');
+        $user->givePermissionTo('import_aims_data');
+
+        $csv = "uid,cnic,student name,class,roll no,status\n";
+        $csv .= "10003,3520212345673,Omar Ali,6TH GREEN BOYS,14,ADMITTED\n";
+
+        $file = UploadedFile::fake()->createWithContent('students_aims.csv', $csv);
+
+        $this->actingAs($user)->postJson('/api/efsc/import/aims/students', [
+            'file' => $file,
+        ])
+            ->assertOk()
+            ->assertJsonPath('stats.succeeded', 1)
+            ->assertJsonPath('stats.skipped', 0);
+
+        $this->assertDatabaseHas('students', [
+            'admission_no' => '10003',
+            'first_name' => 'Omar',
+            'last_name' => 'Ali',
+            'section_id' => $section->id,
+        ]);
+    }
+
     public function test_import_requires_permission(): void
     {
         $user = User::factory()->create();

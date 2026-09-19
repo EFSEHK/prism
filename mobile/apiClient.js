@@ -58,6 +58,26 @@ export const API_BASE = api.baseURL
 export const apiClient = api.client
 export const USES_EMULATOR_API = api.baseURL.includes('10.0.2.2')
 
+let onUnauthorized = null
+
+/** Register a handler for 401 responses (e.g. clear session and show login). */
+export function setOnUnauthorized(handler) {
+  onUnauthorized = typeof handler === 'function' ? handler : null
+}
+
+apiClient.interceptors.response.use(
+  (response) => response,
+  (error) => {
+    const status = error.response?.status
+    const url = String(error.config?.url || '')
+    const isAuthAttempt = url.includes('/login') || url.includes('/logout')
+    if (status === 401 && !isAuthAttempt && onUnauthorized) {
+      onUnauthorized()
+    }
+    return Promise.reject(error)
+  },
+)
+
 /** Set Bearer token immediately (use before async calls right after login). */
 export function setAuthToken(token) {
   if (token) {

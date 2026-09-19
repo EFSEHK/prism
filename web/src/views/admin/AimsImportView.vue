@@ -82,7 +82,7 @@ import api from '../../api/client'
 import AdminBackNav from '../../components/AdminBackNav.vue'
 
 const importCards = [
-  { type: 'students', title: 'Students', description: 'SAP export: admission_no, cnic, full_name, class_label, roll_no, status', endpoint: 'students' },
+  { type: 'students', title: 'Students', description: 'SAP export: uid (or admission_no), cnic, student name (or full_name), class (or class_label), roll no, status', endpoint: 'students' },
   { type: 'attendance', title: 'Attendance', description: 'Daily attendance CSV from AIMS (SAP export)', endpoint: 'attendance' },
   { type: 'fee_vouchers', title: 'Fee vouchers', description: 'Fee voucher CSV from AIMS (SAP export)', endpoint: 'fee-vouchers' },
   { type: 'fee_deposits', title: 'Fee deposits', description: 'Fee deposit CSV from AIMS (SAP export)', endpoint: 'fee-deposits' },
