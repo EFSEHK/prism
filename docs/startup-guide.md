@@ -92,6 +92,35 @@ Expo opens the app in the browser (typically **http://localhost:8081**, or the p
 
 ---
 
+## 2b. Launch the Mobile app with Expo Go (dev phone)
+
+Use this for quick device checks (push, camera, real touch) without building an APK. Install **Expo Go** from the Play Store, then:
+
+```bash
+cd mobile
+npm install
+cp .env.example .env
+```
+
+In `.env` for a physical phone on the same Wi‑Fi:
+
+```env
+EXPO_PUBLIC_API_URL=http://prism.test/api
+EXPO_PUBLIC_API_LAN_IP=YOUR_PC_WIFI_IP
+```
+
+Then:
+
+```bash
+npx expo start
+```
+
+Scan the QR code with Expo Go (or the camera / Expo Go’s scanner). The app loads from your PC; set `EXPO_PUBLIC_API_LAN_IP` so the phone can reach Laragon (see §3.3).
+
+**Dev only** — not for school distribution. Production / shared testing still uses the standalone APK below.
+
+---
+
 ## 3. Test on a real Android phone (APK — first install)
 
 Production / device testing uses a **standalone Android APK** (`com.school.efscya`), not Expo Go.
